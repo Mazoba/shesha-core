@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\common.props" />
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>.\Shesha.Scheduler.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>.\Shesha.Scheduler.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Example\**" />
+    <EmbeddedResource Remove="Example\**" />
+    <None Remove="Example\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Abp" Version="5.0.0" />
+    <PackageReference Include="Abp.AspNetCore" Version="5.0.0" />
+    <PackageReference Include="Cronos" Version="0.7.0" />
+    <PackageReference Include="FluentMigrator" Version="3.2.1" />
+    <PackageReference Include="Hangfire.Core" Version="1.7.6" />
+    <PackageReference Include="log4net" Version="2.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shesha.Application\Shesha.Application.csproj" />
+    <ProjectReference Include="..\Shesha.Framework\Shesha.Framework.csproj" />
+    <ProjectReference Include="..\Shesha.NHibernate\Shesha.NHibernate.csproj" />
+    <ProjectReference Include="..\Shesha.Web.Controls\Shesha.Web.Controls.csproj" />
+  </ItemGroup>
+
+</Project>
