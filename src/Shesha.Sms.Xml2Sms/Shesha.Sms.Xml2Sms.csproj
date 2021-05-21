@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\common.props" />
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>Shesha.Sms</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Abp" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shesha.Application\Shesha.Application.csproj" />
+    <ProjectReference Include="..\Shesha.Framework\Shesha.Framework.csproj" />
+  </ItemGroup>
+
+</Project>

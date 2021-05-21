@@ -1,0 +1,275 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Abp;
+using Abp.BackgroundJobs;
+using Abp.Domain.Repositories;
+using Abp.Notifications;
+using Microsoft.AspNetCore.Mvc;
+using NHibernate.Linq;
+using Shesha.AutoMapper.Dto;
+using Shesha.Domain;
+using Shesha.Domain.Enums;
+using Shesha.Email;
+using Shesha.Notifications.Dto;
+using Shesha.Services;
+using Shesha.Utilities;
+using Shesha.Web.DataTable;
+
+namespace Shesha.Notifications
+{
+    /// <summary>
+    /// Notification application service
+    /// </summary>
+    public class NotificationAppService: SheshaCrudServiceBase<Notification, NotificationDto, Guid>, INotificationAppService
+    {
+        private readonly INotificationPublisher _notificationPublisher;
+        private readonly IBackgroundJobManager _backgroundJobManager;
+        private readonly IStoredFileService _fileService;
+
+        public NotificationAppService(IRepository<Notification, Guid> repository, INotificationPublisher notificationPublisher, IBackgroundJobManager backgroundJobManager, IStoredFileService fileService) : base(repository)
+        {
+            _notificationPublisher = notificationPublisher;
+            _backgroundJobManager = backgroundJobManager;
+            _fileService = fileService;
+        }
+
+        /// <summary>
+        /// Notifications index table
+        /// </summary>
+        /// <returns></returns>
+        public static DataTableConfig IndexTable()
+        {
+            var table = new DataTableConfig<Notification, Guid>("Notifications_Index");
+
+            table.AddProperty(e => e.Name, c => c.SortAscending());
+            table.AddProperty(e => e.Description);
+            
+            table.AddProperty(e => e.CreationTime, c => c.Caption("Created On").Visible(false));
+            table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").Visible(false));
+
+            return table;
+        }
+
+        /// inheritedDoc
+        public async Task PublishAsync(string notificationName,
+            NotificationData data,
+            List<Person> recipients)
+        {
+            if (recipients == null)
+                throw new Exception($"{nameof(recipients)} must not be null");
+
+            var userIds = recipients.Where(p => p.User != null)
+                .Select(p => new UserIdentifier(AbpSession.TenantId, p.User.Id))
+                .ToArray();
+            if (!userIds.Any())
+                return;
+
+            await _notificationPublisher.PublishAsync(notificationName,
+                data,
+                userIds: userIds
+            );
+        }
+
+        /// <summary>
+        /// Notifications autocomplete
+        /// </summary>
+        /// <param name="term"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<List<AutocompleteItemDto>> Autocomplete(string term)
+        {
+            term = (term ?? "").ToLower();
+
+            var notifications = await Repository.GetAll()
+                .Where(p => (p.Name ?? "").ToLower().Contains(term))
+                .OrderBy(p => p.Name)
+                .Take(10)
+                .Select(p => new AutocompleteItemDto
+                {
+                    DisplayText = p.Name.Trim(),
+                    Value = p.Id.ToString()
+                })
+                .ToListAsync();
+
+            return notifications;
+        }
+
+        #region Direct email notifications
+
+        /// <summary>
+        /// Publish email notification
+        /// </summary>
+        /// <param name="notificationName">Name of the notification. Default email template of the specified notification will be used</param>
+        /// <param name="data">Data that is used to fill template</param>
+        /// <param name="emailAddress">Recipient email address</param>
+        /// <returns></returns>
+        public async Task PublishEmailNotificationAsync<TData>(string notificationName,
+            TData data,
+            string emailAddress,
+            List<NotificationAttachmentDto> attachments = null) where TData: NotificationData
+        {
+            if (string.IsNullOrWhiteSpace(emailAddress))
+                throw new Exception($"{nameof(emailAddress)} must not be null");
+
+            var wrappedData = new ShaNotificationData(data)
+            {
+                SendType = RefListNotificationType.Email,
+                RecipientText = emailAddress,
+                Attachments = attachments
+            };
+            await _notificationPublisher.PublishAsync(notificationName, wrappedData);
+        }
+
+        /// <summary>
+        /// Publish email notification using explicitly specified template
+        /// </summary>
+        /// <param name="templateId">Id of the template</param>
+        /// <param name="data">Data that is used to fill template</param>
+        /// <param name="emailAddress">Recipient email address</param>
+        /// <param name="attachments">Attachments</param>
+        /// <returns></returns>
+        public async Task PublishEmailNotificationAsync<TData>(Guid templateId,
+            TData data,
+            string emailAddress,
+            List<NotificationAttachmentDto> attachments = null) where TData : NotificationData
+        {
+            if (string.IsNullOrWhiteSpace(emailAddress))
+                throw new Exception($"{nameof(emailAddress)} must not be null");
+
+            var wrappedData = new ShaNotificationData(data)
+            {
+                SendType = RefListNotificationType.Email,
+                RecipientText = emailAddress,
+                TemplateId = templateId,
+                Attachments = attachments
+            };
+            await _notificationPublisher.PublishAsync("DirectEmail", wrappedData);
+        }
+
+        #endregion
+
+        #region Direct sms notifications
+
+        /// <summary>
+        /// Publish sms notification
+        /// </summary>
+        /// <param name="notificationName">Name of the notification. Default email template of the specified notification will be used</param>
+        /// <param name="data">Data that is used to fill template</param>
+        /// <param name="mobileNo">Recipient mobile number</param>
+        /// <returns></returns>
+        public async Task PublishSmsNotificationAsync<TData>(string notificationName,
+            TData data,
+            string mobileNo) where TData : NotificationData
+        {
+            if (string.IsNullOrWhiteSpace(mobileNo))
+                throw new Exception($"{nameof(mobileNo)} must not be null");
+
+            var wrappedData = new ShaNotificationData(data)
+            {
+                SendType = RefListNotificationType.SMS,
+                RecipientText = mobileNo
+            };
+            await _notificationPublisher.PublishAsync(notificationName, wrappedData);
+        }
+
+        /// <summary>
+        /// Publish sms notification using explicitly specified template
+        /// </summary>
+        /// <param name="templateId">Id of the template</param>
+        /// <param name="data">Data that is used to fill template</param>
+        /// <param name="mobileNo">Recipient mobile number</param>
+        /// <returns></returns>
+        public async Task PublishSmsNotificationAsync<TData>(Guid templateId,
+            TData data,
+            string mobileNo) where TData : NotificationData
+        {
+            if (string.IsNullOrWhiteSpace(mobileNo))
+                throw new Exception($"{nameof(mobileNo)} must not be null");
+
+            var wrappedData = new ShaNotificationData(data)
+            {
+                SendType = RefListNotificationType.SMS,
+                RecipientText = mobileNo,
+                TemplateId = templateId
+            };
+            await _notificationPublisher.PublishAsync("DirectSms", wrappedData);
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Note: for temporary usage only
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
+        public async Task ReSendAbpNotification(List<Guid> ids)
+        {
+            foreach (var id in ids)
+            {
+                await _backgroundJobManager.EnqueueAsync<NotificationDistributionJob, NotificationDistributionJobArgs>(
+                    new NotificationDistributionJobArgs(
+                        id
+                    )
+                );
+            }
+        }
+
+        /// <summary>
+        /// Save notification attachment
+        /// </summary>
+        public async Task<NotificationAttachmentDto> SaveAttachmentAsync(string fileName, Stream stream)
+        {
+            var file = await _fileService.SaveFile(stream, fileName);
+            return new NotificationAttachmentDto()
+            {
+                FileName = fileName, 
+                StoredFileId = file.Id
+            };
+        }
+
+        /*
+        /// <summary>
+        /// Send test notification by sms
+        /// </summary>
+        public async Task TestSmsAsync(string mobileNo)
+        {
+            await PublishSmsNotificationAsync("test notification",
+                new TestNotificationData
+                {
+                    Greeting = "Man!",
+                    CustomMessage = "Lorem ipsum",
+                    UserName = "user!"
+                }, mobileNo);
+        }
+
+        /// <summary>
+        /// Send email notification with attachment
+        /// </summary>
+        public async Task TestEmailWithAttachment(string email)
+        {
+            var attachments = new List<NotificationAttachmentDto>();
+
+            var fileNames = new List<string> {@"d:\temp\avatar1.jpg", @"d:\temp\avatar2.jpg"};
+            foreach (var fileName in fileNames)
+            {
+                await using var stream = new FileStream(fileName, FileMode.Open);
+                attachments.Add(await SaveAttachmentAsync(Path.GetFileName(fileName), stream));
+            }
+            
+            await PublishEmailNotificationAsync("893c6d14-f9e7-42f4-a7a6-83e6b74fb4ae".ToGuid(),
+                new TestNotificationData
+                {
+                    Greeting = "Man!",
+                    CustomMessage = "Lorem ipsum",
+                    UserName = "user!",
+                }, 
+                email//,
+                //attachments
+            );
+        }
+        */
+    }
+}

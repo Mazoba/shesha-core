@@ -1,0 +1,1095 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Abp.Authorization;
+using Abp.Dependency;
+using Abp.Domain.Entities;
+using Abp.Domain.Repositories;
+using Abp.Domain.Uow;
+using Abp.ObjectMapping;
+using Abp.Runtime.Session;
+using Castle.Core.Logging;
+using JetBrains.Annotations;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
+using NHibernate;
+using Shesha.Configuration.Runtime;
+using Shesha.Domain;
+using Shesha.Domain.Enums;
+using Shesha.JsonLogic;
+using Shesha.NHibernate.Session;
+using Shesha.Services;
+using Shesha.Utilities;
+using Shesha.Web.DataTable.Columns;
+using Shesha.Web.DataTable.Excel;
+using Shesha.Web.DataTable.Model;
+
+namespace Shesha.Web.DataTable
+{
+    /// <summary>
+    /// Controller of the DataTable control
+    /// </summary>
+    //[AbpAuthorize()]
+    [Route("api/[controller]/[action]")]
+    [ApiController]
+    public class DataTableController: ControllerBase, ITransientDependency
+    {
+        private readonly IDataTableConfigurationStore _configurationStore;
+        private readonly IObjectMapper _objectMapper;
+        private readonly IIocResolver _iocResolver;
+        private readonly IRepository<StoredFilter, Guid> _filterRepository;
+        private readonly IRepository<ShaRole, Guid> _roleRepository;
+        private readonly IRepository<ShaRoleAppointedPerson, Guid> _rolePersonRepository;
+        private readonly IUnitOfWorkManager _unitOfWorkManager;
+        private readonly IJsonLogic2HqlConverter _jsonLogic2HqlConverter;
+        private readonly IDataTableHelper _helper;
+
+        public ILogger Logger { get; set; } = new NullLogger();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public DataTableController(IDataTableConfigurationStore configurationStore, IObjectMapper objectMapper, IIocResolver iocResolver, IRepository<StoredFilter, Guid> filterRepository, IRepository<ShaRole, Guid> roleRepository, IRepository<ShaRoleAppointedPerson, Guid> rolePersonRepository, IUnitOfWorkManager unitOfWorkManager, IJsonLogic2HqlConverter jsonLogic2HqlConverter, IDataTableHelper helper)
+        {
+            _configurationStore = configurationStore;
+            _objectMapper = objectMapper;
+            _iocResolver = iocResolver;
+            _filterRepository = filterRepository;
+            _roleRepository = roleRepository;
+            _rolePersonRepository = rolePersonRepository;
+            _unitOfWorkManager = unitOfWorkManager;
+            _jsonLogic2HqlConverter = jsonLogic2HqlConverter;
+            _helper = helper;
+        }
+
+        /// <summary>
+        /// Returns configuration of the DataTable by <paramref name="id"/>
+        /// </summary>
+        [HttpGet]
+        public DataTableConfigDto GetConfiguration(string id, CancellationToken cancellationToken)
+        {
+            // todo: check existence of the config
+            var config = _configurationStore.GetTableConfiguration(id, false);
+            if (config == null)
+                return null;
+
+            config.Columns = config.Columns.Where(c => c.IsAuthorized == null || c.IsAuthorized.Invoke()).ToList();
+            var dto = _objectMapper.Map<DataTableConfigDto>(config);
+
+            return dto;
+        }
+
+        /// <summary>
+        /// Returns data for the DateTable control
+        /// </summary>
+        [HttpPost]
+        public async Task<DataTableData> GetData(DataTableGetDataInput input, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(input?.Id))
+                throw new Exception("Id of the DataTableConfiguration must not be null");
+
+            var tableConfig = _configurationStore.GetTableConfiguration(input.Id);
+
+            var method = this.GetType().GetMethod(nameof(GetTableDataAsync));
+            if (method == null)
+                throw new Exception($"{nameof(GetTableDataAsync)} not found");
+
+            var genericMethod = method.MakeGenericMethod(tableConfig.RowType, tableConfig.IdType);
+            
+            var task = (Task)genericMethod.Invoke(this, new object[] { input, cancellationToken });
+            await task.ConfigureAwait(false);
+
+            var resultProperty = task.GetType().GetProperty("Result");
+            if (resultProperty == null)
+                throw new Exception("Result property not found");
+
+            return resultProperty.GetValue(task) as DataTableData;
+        }
+
+        /// <summary>
+        /// Exports DataTable to Excel
+        /// </summary>
+        [HttpPost]
+        public async Task<FileStreamResult> ExportToExcel(DataTableGetDataInput input, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(input?.Id))
+                throw new Exception("Id of the DataTableConfiguration must not be null");
+
+            var tableConfig = _configurationStore.GetTableConfiguration(input.Id);
+
+            var method = this.GetType().GetMethod(nameof(QueryRepositoryAsync));
+            if (method == null)
+                throw new Exception($"{nameof(QueryRepositoryAsync)} not found");
+
+            var genericMethod = method.MakeGenericMethod(tableConfig.RowType, tableConfig.IdType);
+
+            input.CurrentPage = 1;
+            input.PageSize = int.MaxValue;
+            var task = (Task)genericMethod.Invoke(this, new object[] { tableConfig, input, cancellationToken });
+            await task.ConfigureAwait(false);
+
+            var resultProperty = task.GetType().GetProperty("Result");
+            if (resultProperty == null)
+                throw new Exception("Result property not found");
+
+            var data = resultProperty.GetValue(task) as IQueryDataDto;
+            if (data == null)
+                throw new Exception("Failed to export to Excel");
+
+            var excelFileName = "Export.xlsx";
+            HttpContext.Response.Headers.Add("content-disposition", $"attachment;filename={excelFileName}");
+
+            var stream = ExcelUtility.ReadToExcelStream(data.Rows, tableConfig.Columns);
+
+            stream.Seek(0, SeekOrigin.Begin);
+
+            return new FileStreamResult(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        }
+
+        private IDisposable HandleSoftDeletedFilter<TEntity>(DataTableGetDataInput input)
+        {
+            if (typeof(ISoftDelete).IsAssignableFrom(typeof(TEntity)))
+            {
+                var isDeletedFilter = input.Filter.FirstOrDefault(f => f.ColumnId == nameof(ISoftDelete.IsDeleted));
+                if (isDeletedFilter != null)
+                {
+                    if (GetBoolean(isDeletedFilter.Filter) == true)
+                        return _unitOfWorkManager.Current.DisableFilter(AbpDataFilters.SoftDelete);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Generic version of GetTableDataAsync. Note: marked public for reflection
+        /// </summary>
+        public async Task<DataTableData> GetTableDataAsync<TEntity, TPrimaryKey>(DataTableGetDataInput input, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            var tableConfig = _configurationStore.GetTableConfiguration(input.Id);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            using (HandleSoftDeletedFilter<TEntity>(input))
+            {
+                var queryData = await QueryRepositoryAsync<TEntity, TPrimaryKey>(tableConfig, input, cancellationToken);
+
+                var authorizedColumns =
+                    tableConfig.Columns.Where(c => c.IsAuthorized == null || c.IsAuthorized.Invoke())
+                        .ToList();
+
+                var dataRows = new List<Dictionary<string, object>>();
+
+                foreach (var item in queryData.Rows)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var row = new Dictionary<string, object>();
+
+                    foreach (var col in authorizedColumns)
+                    {
+                        if (!(col.PropertyName ?? "").Equals("Id", StringComparison.InvariantCultureIgnoreCase) &&
+                            col.IsVisible && /* if the column is always hidden - it's handled on the client-side */
+                            !IsColumnVisibleOnClient(col.Name, input))
+                        {
+                            // column is not visible - return null
+                            row.Add(col.Name, null);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                var value = item != null
+                                    ? col.CellContent(item)
+                                    : null;
+
+                                value ??= string.Empty;
+
+                                row.Add(col.Name, value);
+                            }
+                            catch
+                            {
+                                throw;
+                            }
+                        }
+                    }
+
+                    dataRows.Add(row);
+                }
+
+                var totalPages = (int)Math.Ceiling((double)queryData.TotalRows / input.PageSize);
+
+                var result = new DataTableData
+                {
+                    TotalRowsBeforeFilter = queryData.TotalRowsBeforeFilter,
+                    TotalRows = queryData.TotalRows,
+                    TotalPages = totalPages,
+                    //Echo = dataTableParam.sEcho,
+                    Rows = dataRows
+                };
+
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Returns a list of data
+        /// </summary>
+        /// <param name="tableConfig">Configuration of the table</param>
+        /// <param name="input">DataTable params (part of the request from the client-side)</param>
+        /// <returns></returns>
+        public async Task<QueryDataDto<TEntity, TPrimaryKey>> QueryRepositoryAsync<TEntity, TPrimaryKey>([NotNull]DataTableConfig tableConfig,
+            [NotNull]DataTableGetDataInput input, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            try
+            {
+                var filterCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
+                AppendStandardFilterCriteria(tableConfig, input, filterCriteria);
+
+                // todo: Handle additional posted data (for child tables)
+                AppendChildEntityFilterParameters(tableConfig, input, filterCriteria);
+
+                AppendStoredFilters(tableConfig, input, filterCriteria);
+                AppendPredefinedFilters(tableConfig, input, filterCriteria);
+
+                tableConfig.OnRequestToFilterStatic?.Invoke(filterCriteria, input);
+                if (tableConfig.OnRequestToFilterStaticAsync != null)
+                    await tableConfig.OnRequestToFilterStaticAsync.Invoke(filterCriteria, input);
+
+                var data = new QueryDataDto<TEntity, TPrimaryKey>
+                {
+                    TotalRowsBeforeFilter = await CountAsync<TEntity, TPrimaryKey>(filterCriteria, cancellationToken)
+                };
+
+                var filterBefore = filterCriteria.Clone() as FilterCriteria;
+
+                // Applying any Table Configuration specific filter logic.
+                tableConfig.OnRequestToFilter?.Invoke(filterCriteria, input);
+                if (tableConfig.OnRequestToFilterAsync != null)
+                    await tableConfig.OnRequestToFilterAsync.Invoke(filterCriteria, input);
+
+                var orderBy = GetOrderByClause(tableConfig, input, filterCriteria.FilteringMethod);
+
+                var takeCount = input.PageSize > -1 
+                    ? input.PageSize 
+                    : int.MaxValue;
+
+                if (!string.IsNullOrWhiteSpace(input.QuickSearch))
+                    _helper.AppendQuickSearchCriteria(tableConfig, tableConfig.QuickSearchMode, input.QuickSearch, filterCriteria);
+
+                var skipCount = Math.Max(0, (input.CurrentPage - 1) * takeCount);
+
+                data.Entities = await FindAllAsync<TEntity, TPrimaryKey>(filterCriteria, skipCount, takeCount, orderBy, cancellationToken);
+
+                data.TotalRows = filterBefore != null && filterBefore.FilterClauses.Count == filterCriteria.FilterClauses.Count
+                    ? data.TotalRowsBeforeFilter
+                    : await CountAsync<TEntity, TPrimaryKey>(filterCriteria, cancellationToken);
+
+                return data;
+            }
+            catch
+            {
+                throw;
+            }
+        }
+
+        private void AppendChildEntityFilterParameters([NotNull] DataTableConfig tableConfig, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria)
+        {
+            if (!(tableConfig is IChildDataTableConfig childConfig))
+                return;
+
+            if (filterCriteria.FilteringMethod != FilterCriteria.FilterMethod.Hql)
+                throw new NotSupportedException($"Unsupported FilterMethod: {filterCriteria.FilteringMethod}");
+
+            if (string.IsNullOrWhiteSpace(input.ParentEntityId))
+            {
+                // if config is for child dataTable and parent info not passed - filter out all records
+                filterCriteria.FilterClauses.Add("1=0");
+                return;
+            }
+
+            var parsedId = Parser.ParseId(input.ParentEntityId, childConfig.ParentType);
+
+            switch (childConfig.RelationshipType)
+            {
+                case RelationshipType.ManyToMany:
+                    filterCriteria.FilterClauses.Add("exists (from " + childConfig.ParentType.FullName + " as par where par.Id = :parentId and ent in elements(par." + childConfig.Relationship_ChildsCollection + "))");
+                    filterCriteria.FilterParameters.Add("parentId", parsedId);
+                    break;
+                case RelationshipType.OneToMany:
+                    var paramName = childConfig.Relationship_LinkToParent.Replace(".", "_");
+                    filterCriteria.FilterClauses.Add("ent." + childConfig.Relationship_LinkToParent + ".Id = :" + paramName);
+                    filterCriteria.FilterParameters.Add(paramName, parsedId);
+                    break;
+                case RelationshipType.MultipleOwners:
+                    break;
+                default:
+                    throw new NotSupportedException(
+                        $"RelationshipType '{childConfig.RelationshipType}' is not supported");
+            }
+        }
+        
+        private void AppendStandardFilterCriteria([NotNull]DataTableConfig tableConfig,
+            [NotNull]DataTableGetDataInput input, [NotNull]FilterCriteria filterCriteria)
+        {
+            foreach (var filter in input.Filter)
+            {
+                if (filter.Filter == null)
+                    continue;
+
+                var column = tableConfig.Columns.FirstOrDefault(c => c.Name == filter.ColumnId);
+                if (column?.GeneralDataType == null)
+                    continue;
+
+                // workaround for booleans (we support only `equals`)
+                if (column.GeneralDataType == GeneralDataType.Boolean ||
+                    column.GeneralDataType == GeneralDataType.EntityReference)
+                    filter.FilterOption = FilterOperations.Equals;
+
+                if (string.IsNullOrWhiteSpace(filter.FilterOption) && (column.GeneralDataType == GeneralDataType.ReferenceList || column.GeneralDataType == GeneralDataType.MultiValueReferenceList))
+                    filter.FilterOption = FilterOperations.Contains;
+
+
+                // todo: check column types and filter type
+                switch (filter.FilterOption)
+                {
+                    case FilterOperations.Contains:
+                    {
+                        switch (column.GeneralDataType)
+                        {
+                            case GeneralDataType.ReferenceList:
+                            case GeneralDataType.MultiValueReferenceList:
+                            {
+                                var array = GetArray(filter.Filter);
+                                if (array != null && array.Any())
+                                {
+                                    var refListFilter = array.Select(i => GetDecimal(i))
+                                        .Where(i => i.HasValue)
+                                        .Select(i => $"ent.{column.PropertyName} = {i.Value}")
+                                        .Delimited(" or ");
+
+                                    if (!string.IsNullOrWhiteSpace(refListFilter))
+                                        filterCriteria.FilterClauses.Add(refListFilter);
+
+                                }
+                                else
+                                {
+                                    // backward compatibility
+                                    var decimalValue = GetDecimal(filter.Filter);
+                                    if (decimalValue.HasValue)
+                                        filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " = {0}",
+                                            decimalValue.Value);
+                                }
+
+                                break;
+                            }
+                            default:
+                            {
+                                // strings only
+                                var strValue = GetString(filter.Filter);
+                                if (!string.IsNullOrWhiteSpace(strValue))
+                                    filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " like {0}", "%" + strValue + "%");
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    case FilterOperations.StartsWith:
+                    {
+                        // strings only
+                        var strValue = GetString(filter.Filter);
+                        if (!string.IsNullOrWhiteSpace(strValue))
+                            filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " like {0}", strValue + "%");
+                        break;
+                    }
+                    case FilterOperations.EndsWith:
+                    {
+                            // strings only
+                        var strValue = GetString(filter.Filter);
+                        if (!string.IsNullOrWhiteSpace(strValue))
+                            filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " like {0}", "%" + strValue);
+                        break;
+                    }
+                    case FilterOperations.Equals:
+                    {
+                        switch (column.GeneralDataType)
+                        {
+                            case GeneralDataType.Text:
+                                var strValue = GetString(filter.Filter);
+                                if (!string.IsNullOrWhiteSpace(strValue))
+                                    filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " = {0}", strValue);
+                                break;
+                            case GeneralDataType.Numeric:
+                            case GeneralDataType.ReferenceList:
+                            case GeneralDataType.MultiValueReferenceList:
+                            {
+                                var decimalValue = GetDecimal(filter.Filter);
+                                if (decimalValue.HasValue)
+                                    filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " = {0}",
+                                        decimalValue.Value);
+                                break;
+                            }
+                            case GeneralDataType.EntityReference:
+                            {
+                                var id = GetString(filter.Filter)?.ToGuid();
+                                if (id != Guid.Empty)
+                                    filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + ".Id = {0}", id.Value);
+                                break;
+                            }
+                            case GeneralDataType.Date:
+                            {
+                                var dateValue = GetDate(filter.Filter);
+                                if (dateValue.HasValue)
+                                {
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} >= {{0}}",
+                                        dateValue.Value.Date.StartOfTheDay());
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} <= {{0}}",
+                                        dateValue.Value.EndOfTheDay());
+                                }
+
+                                break;
+                            }
+                            case GeneralDataType.DateTime:
+                            {
+                                var dateValue = GetDate(filter.Filter);
+                                if (dateValue.HasValue)
+                                {
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} >= {{0}}",
+                                        dateValue.Value.StripSeconds());
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} < {{0}}",
+                                        dateValue.Value.StripSeconds().AddMinutes(1));
+                                }
+
+                                break;
+                            }
+                            case GeneralDataType.Time:
+                            {
+                                var timeValue = GetTime(filter.Filter);
+                                if (timeValue.HasValue)
+                                {
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} >= {{0}}",
+                                        timeValue.Value.StripSeconds());
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} < {{0}}",
+                                        timeValue.Value.StripSeconds() + TimeSpan.FromMinutes(1));
+                                }
+
+                                break;
+                            }
+                            case GeneralDataType.Boolean:
+                            {
+                                var boolValue = GetBoolean(filter.Filter);
+                                if (boolValue.HasValue)
+                                    filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " = {0}",
+                                        boolValue.Value);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    case FilterOperations.LessThan:
+                    {
+                        // numeric
+                        var decimalValue = GetDecimal(filter.Filter);
+                        if (decimalValue.HasValue)
+                            filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " < {0}", decimalValue.Value);
+                        break;
+                    }
+                    case FilterOperations.GreaterThan:
+                    {
+                        // numeric
+                        var decimalValue = GetDecimal(filter.Filter);
+                        if (decimalValue.HasValue)
+                            filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " > {0}", decimalValue.Value);
+                        break;
+                    }
+                    case FilterOperations.Between:
+                    {
+                        // numeric, date
+                        var range = GetArray(filter.Filter);
+                        if (range?.Count != 2)
+                            continue;
+                        
+                        switch (column.GeneralDataType)
+                        {
+                            case GeneralDataType.Date:
+                            case GeneralDataType.DateTime:
+                            {
+                                var startDate = GetDate(range[0]);
+                                if (startDate.HasValue)
+                                {
+                                    if (column.GeneralDataType == GeneralDataType.Date)
+                                        startDate = startDate.Value.StartOfTheDay();
+
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} >= {{0}}", startDate.Value);
+                                }
+                                
+                                var endDate = GetDate(range[1]);
+                                if (endDate.HasValue)
+                                {
+                                    if (column.GeneralDataType == GeneralDataType.Date)
+                                        endDate = endDate.Value.EndOfTheDay();
+
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} <= {{0}}", endDate.Value);
+                                }
+
+                                break;
+                            }
+                            case GeneralDataType.Time:
+                            {
+                                var startTime = GetTime(range[0]);
+                                if (startTime.HasValue)
+                                {
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} >= {{0}}", startTime.Value.StripSeconds());
+                                }
+
+                                var endTime = GetTime(range[1]);
+                                if (endTime.HasValue)
+                                {
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} < {{0}}", endTime.Value.StripSeconds().Add(TimeSpan.FromMinutes(1)));
+                                }
+
+                                break;
+                            }
+                            case GeneralDataType.Numeric:
+                            {
+                                var startValue = GetDecimal(range[0]);
+                                if (startValue.HasValue)
+                                    filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " >= {0}", startValue.Value);
+
+                                var endValue = GetDecimal(range[1]);
+                                if (endValue.HasValue)
+                                    filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " <= {0}", endValue.Value);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    case FilterOperations.Before:
+                    {
+                        switch (column.GeneralDataType)
+                        {
+                            case GeneralDataType.Date:
+                            case GeneralDataType.DateTime:
+                            {
+                                // date
+                                var dateValue = GetDate(filter.Filter);
+
+                                if (dateValue.HasValue)
+                                {
+                                    if (column.GeneralDataType == GeneralDataType.Date)
+                                        dateValue = dateValue.Value.StartOfTheDay();
+
+                                    filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " < {0}", dateValue.Value);
+                                }
+
+                                break;
+                            }
+                            case GeneralDataType.Time:
+                            {
+                                var timeValue = GetTime(filter.Filter);
+                                if (timeValue.HasValue)
+                                {
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} < {{0}}",
+                                        timeValue.Value.StripSeconds());
+                                }
+
+                                break;
+                            }
+                        }
+
+                        break;
+                    }
+                    case FilterOperations.After:
+                    {
+                        switch (column.GeneralDataType)
+                        {
+                            case GeneralDataType.Date:
+                            case GeneralDataType.DateTime:
+                            {
+                                // date
+                                var dateValue = GetDate(filter.Filter);
+                                if (dateValue.HasValue)
+                                {
+                                    if (column.GeneralDataType == GeneralDataType.Date)
+                                        dateValue = dateValue.Value.EndOfTheDay();
+
+                                    filterCriteria.AddParameterisedCriterion("ent." + column.PropertyName + " > {0}",
+                                        dateValue.Value);
+                                }
+
+                                break;
+                            }
+                            case GeneralDataType.Time:
+                            {
+                                var timeValue = GetTime(filter.Filter);
+                                if (timeValue.HasValue)
+                                {
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} > {{0}}",
+                                        timeValue.Value.StripSeconds());
+                                }
+
+                                break;
+                            }
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static Person GetCurrentUser()
+        {
+            var abpSession = StaticContext.IocManager.Resolve<IAbpSession>();
+            if (abpSession.UserId == null)
+                return null;
+
+            var personService = StaticContext.IocManager.Resolve<IRepository<Person, Guid>>();
+            var person = personService.FirstOrDefault(c => c.User.Id == abpSession.GetUserId());
+            return person;
+        }
+
+        /// <summary>
+        /// Apply all selected stored filters
+        /// </summary>
+        private void AppendPredefinedFilters([NotNull] DataTableConfig tableConfig, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria)
+        {
+            if (input.SelectedFilters == null)
+                return;
+
+            // Validate stored filters: validate IDs then also validate that for Exclusive filters, user can only submit zero or 1 filters to apply
+            foreach (var filter in input.SelectedFilters)
+            {
+                if (filter.Expression == null || string.IsNullOrWhiteSpace(filter.Expression?.ToString()))
+                    continue;
+
+                // todo: migrate tags replacer from G2 reporting framework. For now, we only replace {userId}
+                var tagsDictionary = new Dictionary<string, string>
+                {
+                    {"{userId}", StaticContext.IocManager.Resolve<IAbpSession>().UserId.ToString()}
+                };
+
+                switch (filter.ExpressionType?.ToLower())
+                {
+                    //case RefListFilterExpressionType.JsonLogic:
+                    case "jsonlogic":
+                    default:
+                        {
+                            // JsonLogic is converted to HQL
+                            var jsonLogic = JObject.Parse(filter.Expression?.ToString());
+
+                            // convert json logic to HQL
+                            var context = new JsonLogic2HqlConverterContext();
+                            DataTableHelper.FillVariablesResolvers(tableConfig, context);
+                            DataTableHelper.FillContextMetadata(tableConfig, context);
+
+                            var hql = _jsonLogic2HqlConverter.Convert(jsonLogic, context);
+
+                            filterCriteria.FilterClauses.Add(hql);
+                            foreach (var parameter in context.FilterParameters)
+                            {
+                                filterCriteria.FilterParameters.Add(parameter.Key, parameter.Value);
+                            }
+                            
+                            break;
+                        }
+
+                    // HQL is default
+                    case "hql":
+                        {
+                            var hql = filter.Expression?.ToString();
+                            foreach (var tag in tagsDictionary)
+                                if (hql.Contains(tag.Key))
+                                    hql = hql.Replace(tag.Key, tag.Value);
+                            filterCriteria.FilterClauses.Add(hql);
+                            // Use parameters instead of replacing tags
+                            break;
+                        }
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Apply all selected stored filters
+        /// </summary>
+        private void AppendStoredFilters([NotNull] DataTableConfig tableConfig, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria)
+        {
+            var entityConfigurationStore = _iocResolver.Resolve<IEntityConfigurationStore>();
+            var filterIds = input.SelectedStoredFilterIds
+                .Where(id => input.SelectedFilters == null || !input.SelectedFilters.Any(f => f.Id == id))
+                .Select(id => id.ToGuid())
+                .Where(id => id != Guid.Empty)
+                .ToList();
+
+            // Validate stored filters: validate IDs then also validate that for Exclusive filters, user can only submit zero or 1 filters to apply
+            foreach (var filterId in filterIds)
+            {
+                // if filter included into request - skip, it'll be handled by another handler
+                if (input.SelectedFilters != null && input.SelectedFilters.Any(f => f.Id == filterId.ToString()))
+                    continue;
+
+                var storedFilter = _filterRepository.Get(filterId);
+                if (storedFilter.IsExclusive && input.SelectedStoredFilterIds.Count > 1)
+                    throw new Exception($"Only one Exclusive filter can be selected. Please either ensure one filter is selected or update {storedFilter.Name} filter with ID {storedFilter.Id} to not be exclusive");
+                
+                // Security: when visibility conditions are provided, restrict the filter
+                if (storedFilter.VisibleBy.Any())
+                {
+                    var shaRoleType = entityConfigurationStore.Get(typeof(ShaRole))?.TypeShortAlias;
+                    var visibleByRoles = storedFilter.VisibleBy.Where(v => v.OwnerType == shaRoleType)
+                        .Select(v => _roleRepository.Get(v.OwnerId.ToGuid())).ToList();
+                    var hasAccess = false;
+                    var currentUser = GetCurrentUser();
+                    foreach (var role in visibleByRoles)
+                    {
+                        if (_rolePersonRepository.GetAll().Any(c => c.Role == role && c.Person == currentUser))
+                        {
+                            hasAccess = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasAccess)
+                    {
+                        // Log the issue
+                        Logger.Error($"User has no access to {storedFilter.Name} filter with ID {storedFilter.Id}");
+                        // Add "1=0" clause for no data to be shown.
+                        filterCriteria.FilterClauses.Add("1=0");
+                    }
+                }
+
+                // todo: migrate tags replacer from G2 reporting framework. For now, we only replace {userId}
+                var tagsDictionary = new Dictionary<string, string>
+                {
+                    {"{userId}", StaticContext.IocManager.Resolve<IAbpSession>().UserId.ToString()}
+                };
+
+                switch (storedFilter.ExpressionType)
+                {
+                    case RefListFilterExpressionType.JsonLogic:
+                    {
+                        // JsonLogic is converted to HQL
+                        var jsonLogic = JObject.Parse(storedFilter.Expression);
+
+                        // convert json logic to HQL
+                        var hql = _jsonLogic2HqlConverter.Convert(jsonLogic, new JsonLogic2HqlConverterContext());
+
+                        filterCriteria.FilterClauses.Add(hql);
+                        break;
+                    }
+
+                    case RefListFilterExpressionType.Column:
+                        throw new NotImplementedException("This can only be used for reports. Please use HQL or Query Builder instead");
+                    
+                    // HQL is default
+                    case RefListFilterExpressionType.Hql:
+                    default:
+                    {
+                        var hql = storedFilter.Expression;
+                        foreach (var tag in tagsDictionary)
+                            if (hql.Contains(tag.Key))
+                                hql = hql.Replace(tag.Key, tag.Value);
+                        filterCriteria.FilterClauses.Add(hql);
+                        // Use parameters instead of replacing tags
+                        break;
+                    }
+                }
+            }
+        }
+
+        #region Json conversion.Mathods support both Newtonsoft.Json and System.Text.Json. For now we use Newtonsoft because a lot of things are still missing in the System.Text.Json
+
+        private List<object> GetArray(object value)
+        {
+            if (value is JArray jArray)
+            {
+                return jArray.AsEnumerable().Cast<object>().ToList();
+            }
+
+            if (value is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+            {
+                return jsonElement.EnumerateArray().Cast<object>().ToList();
+            }
+
+            return new List<object>();
+        }
+
+        private string GetString(object value)
+        {
+            if (value is JsonElement jsonElement)
+                return jsonElement.ValueKind != JsonValueKind.Null
+                    ? jsonElement.GetString()
+                    : null;
+            
+            return value.ToString();
+        }
+
+        private bool? GetBoolean(object value)
+        {
+            if (value is JsonElement jsonElement)
+                return jsonElement.ValueKind != JsonValueKind.Null
+                    ? jsonElement.GetBoolean()
+                    : (bool?)null;
+
+            return value is bool boolValue
+                ? boolValue
+                : (bool?)null;
+        }
+
+        private decimal? GetDecimal(object value)
+        {
+            if (value is JsonElement jsonElement)
+                return jsonElement.ValueKind != JsonValueKind.Null && jsonElement.TryGetDecimal(out var decimalValue)
+                    ? decimalValue
+                    : (decimal?)null;
+
+            var unwrapped = value is JValue jValue
+                ? jValue.Value
+                : value;
+
+            if (unwrapped is double doubleValue)
+                return Convert.ToDecimal(doubleValue);
+
+            if (unwrapped is Int64 longValue)
+                return Convert.ToDecimal(longValue);
+
+            if (unwrapped is int intValue)
+                return Convert.ToDecimal(intValue);
+
+            if (unwrapped is decimal decValue)
+                return decValue;
+
+            return null;
+        }
+
+        private DateTime? GetDate(object value)
+        {
+            if (value is JsonElement jsonElement)
+                return jsonElement.ValueKind != JsonValueKind.Null && jsonElement.TryGetDateTime(out var dateValue)
+                    ? dateValue
+                    : (DateTime?)null;
+
+            var stringValue = value is string strValue
+                ? strValue
+                : value is JValue jValue
+                    ? jValue.Value?.ToString()
+                    : null;
+
+            var formats = new List<string>
+            {
+                "dd/MM/yyyy HH:mm:ss",
+                "dd/MM/yyyy HH:mm",
+                "dd/MM/yyyy"
+            };
+
+            foreach (var format in formats)
+            {
+                if (DateTime.TryParseExact(stringValue, format, CultureInfo.InvariantCulture, DateTimeStyles.None,
+                    out var date))
+                    return date;
+            }
+            
+            return null;
+        }
+
+        private TimeSpan? GetTime(object value)
+        {
+            var stringValue = value is string strValue
+                ? strValue
+                : value is JValue jValue
+                    ? jValue.Value?.ToString()
+                    : null;
+
+            var formats = new List<string>
+            {
+                @"hh\:mm\:ss",
+                @"hh\:mm"
+            };
+
+            foreach (var format in formats)
+            {
+                var time = Parser.ParseTime(stringValue, format);
+                if (time != null)
+                    return time;
+            }
+
+            return null;
+        }
+
+
+        #endregion
+
+        #region HQL part - to be reviewed
+
+        public async Task<IList<TEntity>> FindAllAsync<TEntity, TPrimaryKey>(FilterCriteria criteria, int skip, int take, string orderBy, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            if (criteria.FilteringMethod != FilterCriteria.FilterMethod.Hql)
+                throw new NotImplementedException();
+
+            return await FindAllHqlAsync<TEntity>(criteria, skip, take, orderBy, cancellationToken);
+        }
+
+        private async Task<IList<TEntity>> FindAllHqlAsync<TEntity>(FilterCriteria criteria, int skip, int take, string orderBy, CancellationToken cancellationToken)
+        {
+            var q = CreateQueryHql<TEntity>(criteria, orderBy);
+
+            if (skip > 0)
+                q.SetFirstResult(skip);
+
+            if (take > 0)
+                q.SetMaxResults(take);
+
+            return await q.ListAsync<TEntity>(cancellationToken);
+        }
+
+        private IQuery CreateQueryHql<TEntity>(FilterCriteria criteria, string orderBy = null)
+        {
+            // Return empty list if user have no permissions to view entities of type T
+            var fullCriteria = GenerateHqlFilteringCriteria<TEntity>(criteria);
+
+            var sessionFactory = _iocResolver.Resolve<ISessionFactory>();
+            var session = sessionFactory.GetCurrentSession();
+
+            var q = string.IsNullOrEmpty(orderBy)
+                ? session.CreateQuery(typeof(TEntity), fullCriteria)
+                : session.CreateQuery(typeof(TEntity), fullCriteria, orderBy);
+
+            return q;
+        }
+
+        private IQuery CreateQueryCountHql<TEntity>(FilterCriteria criteria)
+        {
+            // Return empty list if user have no permissions to view entities of type T
+            var fullCriteria = GenerateHqlFilteringCriteria<TEntity>(criteria);
+
+            var sessionFactory = _iocResolver.Resolve<ISessionFactory>();
+            var session = sessionFactory.GetCurrentSession();
+
+            var q = session.CreateQueryCount(typeof(TEntity), fullCriteria);
+
+            return q;
+        }
+
+        private FilterCriteria GenerateHqlFilteringCriteria<TEntity>(FilterCriteria userCriteria)
+        {
+            var criteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
+
+            var frameworkCriteria = GenerateFrameworkHqlCriteria<TEntity>();
+            if (frameworkCriteria != null) 
+                criteria.AppendCriteria(frameworkCriteria);
+
+            //var customCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
+            //FilterResultsByHql(customCriteria);
+            //if (customCriteria != null)
+            //    criteria.AppendCriteria(customCriteria);
+
+            if (userCriteria != null)
+                criteria.AppendCriteria(userCriteria);
+
+            //ModifyFindAllCriteriaBeforeExecute(criteria);
+
+            return criteria;
+        }
+
+        /// <summary>
+        /// Generates a list of filtering criteria to be applied to any operation
+        /// </summary>
+        /// <returns></returns>
+        private FilterCriteria GenerateFrameworkHqlCriteria<TEntity>()
+        {
+            var criteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
+
+            // Adding any criteria to limit visibility based on 'Inactive' flag if applicable.
+            // note: it's already handled by SoftDelete filter!
+            /*
+            if (_unitOfWorkManager.Current.IsFilterEnabled(AbpDataFilters.SoftDelete) && 
+                typeof(ISoftDelete).IsAssignableFrom(typeof(TEntity)))
+            {
+                criteria.FilterClauses.Add($"ent.IsDeleted = false");
+            }
+            */
+
+            return criteria;
+        }
+
+        public async Task<Int64> CountAsync<TEntity, TPrimaryKey>(FilterCriteria criteria, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            var query = CreateQueryCountHql<TEntity>(criteria);
+            return await query.UniqueResultAsync<Int64>(cancellationToken);
+        }
+
+
+        #endregion
+
+        private bool IsColumnVisibleOnClient(string columnName, DataTableGetDataInput dataTableParam)
+        {
+            return true;
+            /*
+            if (string.IsNullOrWhiteSpace(columnName))
+                return false;
+            var indexOnClient = dataTableParam.sName.IndexOf(columnName);
+            return indexOnClient > -1 && indexOnClient <= dataTableParam.bVisible.Count - 1 && dataTableParam.bVisible[indexOnClient];
+            */
+        }
+
+        /// <summary>
+        /// Gets the required Order By clause based on the dataTableParam
+        /// </summary>
+        /// <returns>Returns the relevant Order By clause to apply when querying the Db through
+        /// a <typeparamref name="Shesha.Framework.Data.NHibernate.Repository"/>.</returns>
+        private string GetOrderByClause(DataTableConfig tableConfig, DataTableGetDataInput input, FilterCriteria.FilterMethod filteringMethod)
+        {
+            var entityConfigurationStore = _iocResolver.Resolve<IEntityConfigurationStore>();
+            var columnsToSort = !tableConfig.UserSortingDisabled && input.Sorting.Any()
+                ? input.Sorting.Select(sc =>
+                    {
+                        var column = tableConfig.Columns.FirstOrDefault(c => c.Name == sc.Id && c.IsSortable) as DataTablesDisplayPropertyColumn;
+                        var childEntityDisplayName = column?.GeneralDataType == GeneralDataType.EntityReference &&
+                                                     !string.IsNullOrWhiteSpace(column.EntityReferenceTypeShortAlias)
+                            ? entityConfigurationStore.Get(column.EntityReferenceTypeShortAlias)?.DisplayNamePropertyInfo
+                            : null;
+
+                        return new SortingInfo
+                        {
+                            Column = column,
+                            SortOrder = sc.Desc ? "desc" : "asc",
+                            ChildEntityDisplayProperty = childEntityDisplayName?.Name
+                        };
+                    })
+                    .Where(i => i.Column != null)
+                    .ToList()
+                : tableConfig.Columns.Select(c => c.DefaultSorting != null 
+                        ? new SortingInfo()
+                        {
+                            Column = c as DataTablesDisplayPropertyColumn,
+                            SortOrder = c.DefaultSorting == ListSortDirection.Descending ? "desc" : "asc",
+                            ChildEntityDisplayProperty = null
+                        }
+                        : null)
+                    .Where(i => i?.Column != null)
+                    .ToList();
+
+            // ChildEntityDisplayProperty
+            // 'ent.'-prefix helps by removing ambiguity in cases where query joins other tables/entities which may also have properties with the same name
+            var sortString = columnsToSort.Select(i => string.IsNullOrWhiteSpace(i.ChildEntityDisplayProperty)
+                ? $"ent.{i.Column.PropertyName} {i.SortOrder}"
+                : $"ent.{i.Column.PropertyName}.{i.ChildEntityDisplayProperty} {i.SortOrder}").Delimited(", ");
+
+            return sortString;
+        }
+
+        private class SortingInfo // todo: refactor and remove
+        {
+            public DataTablesDisplayPropertyColumn Column { get; set; }
+            public string SortOrder { get; set; }
+            public string ChildEntityDisplayProperty { get; set; }
+        }
+    }
+}
