@@ -463,7 +463,7 @@ namespace Shesha.Extensions
             {
                 var resultAr = new List<Int64>();
 
-                int currentVal = 1;
+                Int64 currentVal = 1;
                 while (currentVal <= val)
                 {
                     if ((val & currentVal) == currentVal)

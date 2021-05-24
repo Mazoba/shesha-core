@@ -35,7 +35,7 @@ namespace Shesha.Web.DataTable
     /// <summary>
     /// Controller of the DataTable control
     /// </summary>
-    //[AbpAuthorize()]
+    [AbpAuthorize()]
     [Route("api/[controller]/[action]")]
     [ApiController]
     public class DataTableController: ControllerBase, ITransientDependency
