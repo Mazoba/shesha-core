@@ -1,10 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using Abp.Application.Services.Dto;
-using Abp.Dependency;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
 using Shesha.Extensions;
@@ -58,12 +52,15 @@ namespace Shesha.Web.DataTable.Columns
                 switch (generalDataType)
                 {
                     case Configuration.Runtime.GeneralDataType.Enum:
+                    {
                         var itemValue = Convert.ToInt64(val);
                         return ReflectionHelper.GetEnumDescription(propConfig.EnumType, itemValue);
+                    }
                     case Configuration.Runtime.GeneralDataType.ReferenceList:
                         {
                             var refListHelper = StaticContext.IocManager.Resolve<IReferenceListHelper>();
-                            var displayText = refListHelper.GetItemDisplayText(propConfig.ReferenceListNamespace, propConfig.ReferenceListName, (long)val);
+                            var itemValue = Convert.ToInt64(val);
+                            var displayText = refListHelper.GetItemDisplayText(propConfig.ReferenceListNamespace, propConfig.ReferenceListName, itemValue);
 
                             if (!DataTableConfig.UseDtos)
                                 return displayText;
@@ -74,9 +71,6 @@ namespace Shesha.Web.DataTable.Columns
                                 ItemValue = (long)val
                             };
                             return dto;
-                            /*
-                            return ToJson(dto);
-                            */
                         }
                     case Configuration.Runtime.GeneralDataType.EntityReference:
                         {
@@ -90,7 +84,6 @@ namespace Shesha.Web.DataTable.Columns
 
                             var dto = new EntityWithDisplayNameDto<string>(val.GetId().ToString(), displayText);
                             return dto;
-                            //return ToJson(dto);
                         }
                     default:
                         return EntityExtensions.GetPrimitiveTypePropertyDisplayText(val, propInfo, defaultValue);
@@ -130,21 +123,6 @@ namespace Shesha.Web.DataTable.Columns
                 throw new Exception(
                     $"An error occured whilst trying to retrieve DisplayText of property '{propertyName}' on type of '{entity.GetType().FullName}'.", ex);
             }
-        }
-
-        private string ToJson(object value)
-        {
-            if (value == null)
-                return null;
-
-            var settings = new JsonSerializerSettings()
-            {
-                Converters = new List<JsonConverter>() { new IsoDateTimeConverter() },
-                ReferenceLoopHandling = ReferenceLoopHandling.Error,
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-            };
-
-            return JsonConvert.SerializeObject(value, settings);
         }
 
         internal DataTablesDisplayPropertyColumn(DataTableConfig dataTableConfig) : base(dataTableConfig)
