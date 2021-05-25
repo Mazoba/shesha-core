@@ -457,13 +457,19 @@ namespace Shesha.Web.DataTable
                             }
                             case GeneralDataType.DateTime:
                             {
-                                var dateValue = GetDate(filter.Filter);
+                                var dateValue = GetDate(filter.Filter, out var withTime);
                                 if (dateValue.HasValue)
                                 {
-                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} >= {{0}}",
-                                        dateValue.Value.StripSeconds());
-                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} < {{0}}",
-                                        dateValue.Value.StripSeconds().AddMinutes(1));
+                                    var dateFrom = withTime
+                                        ? dateValue.Value.Date.StripSeconds()
+                                        : dateValue.Value.StartOfTheDay();
+
+                                    var dateTo = withTime
+                                        ? dateValue.Value.Date.StripSeconds().AddMinutes(1)
+                                        : dateValue.Value.EndOfTheDay();
+
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} >= {{0}}", dateFrom);
+                                    filterCriteria.AddParameterisedCriterion($"ent.{column.PropertyName} < {{0}}", dateTo);
                                 }
 
                                 break;
@@ -871,6 +877,12 @@ namespace Shesha.Web.DataTable
 
         private DateTime? GetDate(object value)
         {
+            return GetDate(value, out _);
+        }
+
+        private DateTime? GetDate(object value, out bool containsTime)
+        {
+            containsTime = false;
             if (value is JsonElement jsonElement)
                 return jsonElement.ValueKind != JsonValueKind.Null && jsonElement.TryGetDateTime(out var dateValue)
                     ? dateValue
@@ -893,7 +905,10 @@ namespace Shesha.Web.DataTable
             {
                 if (DateTime.TryParseExact(stringValue, format, CultureInfo.InvariantCulture, DateTimeStyles.None,
                     out var date))
+                {
+                    containsTime = format.Contains("HH:mm");
                     return date;
+                }
             }
             
             return null;
