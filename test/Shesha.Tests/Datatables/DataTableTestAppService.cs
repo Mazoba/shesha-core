@@ -2,6 +2,7 @@
 using Abp.Application.Services;
 using Abp.Dependency;
 using Shesha.Domain;
+using Shesha.Scheduler.Domain;
 using Shesha.Web.DataTable;
 
 namespace Shesha.Tests.Datatables
@@ -33,6 +34,36 @@ namespace Shesha.Tests.Datatables
             {
                 criteria.FilterClauses.Add($"{nameof(Person.User)} != null");
             };
+
+            return table;
+        }
+
+        public static DataTableConfig<ScheduledJobExecution, Guid> JobExecutionsTable()
+        {
+            var table = new DataTableConfig<ScheduledJobExecution, Guid>("ScheduledJob_Executions_test");
+
+            table.UseDtos = true;
+            table.DetailsUrl = url => "/api/services/Scheduler/ScheduledJobExecution/Get";
+            table.CreateUrl = url => "/api/services/Scheduler/ScheduledJobExecution/Create";
+            table.UpdateUrl = url => "/api/services/Scheduler/ScheduledJobExecution/Update";
+            table.DeleteUrl = url => "/api/services/Scheduler/ScheduledJobExecution/Delete";
+
+            table.AddProperty(e => e.StartedOn, m => m.SortDescending());
+
+            //table.AddHtmlColumn("triggerLink",
+            //    (e, html, url) => e.Trigger != null
+            //        ? html.SPAActionLink($"{e.Trigger.Description} ({e.Trigger.CronString})", "Details", "ScheduledJobTrigger", new { id = e.Trigger.Id }).ToString()
+            //        : "-", c => c.Caption("Trigger"));
+
+            table.AddProperty(e => e.FinishedOn);
+            table.AddProperty(e => e.Status);
+            table.AddProperty(e => e.StartedBy);
+            table.AddProperty(e => e.ErrorMessage);
+            //table.AddHtmlColumn("LogFile",
+            //    (e, html, url) => !string.IsNullOrWhiteSpace(e.LogFilePath)
+            //        ? html.Shesha().AjaxDownload(url.Action("Download", "VirtualFile", new { path = e.LogFilePath }), Path.GetFileName(e.LogFilePath)).ToHtmlString()
+            //        : null,
+            //    t => t.Caption("Log File").WidthPixels(150));
 
             return table;
         }

@@ -42,7 +42,7 @@ namespace Shesha.Web.FormsDesigner.Services
             table.AddProperty(e => e.Path);
             table.AddProperty(e => e.Description);
             table.AddProperty(e => e.ModelType);
-            table.AddProperty(e => e.Markup);
+            table.AddProperty(e => e.Settings);
 
             table.AddProperty(e => e.CreationTime, c => c.Caption("Created On").HiddenByDefault());
             table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").HiddenByDefault());

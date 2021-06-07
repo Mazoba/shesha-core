@@ -1,7 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
-using Abp.Domain.Entities.Auditing;
-using Shesha.Domain.Attributes;
+﻿using Shesha.Domain.Attributes;
 
 namespace Shesha.Web.FormsDesigner.Domain
 {
@@ -9,37 +6,8 @@ namespace Shesha.Web.FormsDesigner.Domain
     /// Form
     /// </summary>
     [Entity(TypeShortAlias = "Shesha.Framework.Form")]
-    public class Form : FullAuditedEntity<Guid>
+    [DiscriminatorValue("Shesha.Framework.Form")]
+    public class Form : ConfigurableComponent
     {
-        /// <summary>
-        /// Name
-        /// </summary>
-        [StringLength(100)]
-        public virtual string Name { get; set; }
-
-        /// <summary>
-        /// Path
-        /// </summary>
-        [StringLength(300)]
-        public virtual string Path { get; set; }
-
-        /// <summary>
-        /// Description
-        /// </summary>
-        [DataType(DataType.MultilineText)]
-        [StringLength(int.MaxValue)]
-        public virtual string Description { get; set; }
-        
-        /// <summary>
-        /// Form markup
-        /// </summary>
-        [StringLength(int.MaxValue)]
-        public virtual string Markup { get; set; }
-
-        /// <summary>
-        /// ModelType
-        /// </summary>
-        [StringLength(int.MaxValue)]
-        public virtual string ModelType { get; set; }
     }
 }

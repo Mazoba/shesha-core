@@ -264,3 +264,4 @@ Logs
 /src/Shesha.Scheduler/Shesha.Scheduler.xml
 Shesha.Firebase.xml
 Upload
+**/ElmahLogs/**

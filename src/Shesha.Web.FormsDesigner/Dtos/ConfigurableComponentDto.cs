@@ -1,14 +1,12 @@
 ﻿using System;
 using Abp.Application.Services.Dto;
-using Abp.AutoMapper;
-using Shesha.Web.FormsDesigner.Domain;
 
 namespace Shesha.Web.FormsDesigner.Dtos
 {
     /// <summary>
-    /// Form DTO
+    /// Configurable Component DTO
     /// </summary>
-    public class FormDto: EntityDto<Guid>
+    public class ConfigurableComponentDto : EntityDto<Guid>
     {
         /// <summary>
         /// Form path/id is used to identify a form
@@ -26,9 +24,9 @@ namespace Shesha.Web.FormsDesigner.Dtos
         public string Description { get; set; }
 
         /// <summary>
-        /// Form markup (components) in JSON format
+        /// Settings in JSON format
         /// </summary>
-        public string Markup { get; set; }
+        public string Settings { get; set; }
 
         /// <summary>
         /// Type of the form model

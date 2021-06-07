@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Shesha.Authentication.JwtBearer;
 using Shesha.Configuration;
+using Shesha.Elmah;
 using Shesha.NHibernate;
 using Shesha.Web;
 
@@ -23,7 +24,8 @@ namespace Shesha
          typeof(AbpAspNetCoreModule),
          typeof(AbpAspNetCoreSignalRModule),
          typeof(AbpAutoMapperModule),
-         typeof(SheshaWebControlsModule)
+         typeof(SheshaWebControlsModule),
+         typeof(SheshaElmahModule)
      )]
     public class SheshaWebCoreModule : AbpModule
     {

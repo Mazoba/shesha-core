@@ -16,6 +16,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Services\Dtos\**" />
+    <EmbeddedResource Remove="Services\Dtos\**" />
+    <None Remove="Services\Dtos\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Abp" Version="5.0.0" />
     <PackageReference Include="AutoMapper" Version="9.0.0" />
   </ItemGroup>
@@ -23,10 +29,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Shesha.Application\Shesha.Application.csproj" />
     <ProjectReference Include="..\Shesha.NHibernate\Shesha.NHibernate.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Services\Dtos\" />
   </ItemGroup>
 
 </Project>

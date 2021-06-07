@@ -16,7 +16,13 @@
     <RootNamespace>Shesha</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Authentication\**" />
+    <EmbeddedResource Remove="Authentication\**" />
+    <None Remove="Authentication\**" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Shesha.Application\Shesha.Application.csproj" />
+    <ProjectReference Include="..\Shesha.Elmah\Shesha.Elmah.csproj" />
     <ProjectReference Include="..\Shesha.Framework\Shesha.Framework.csproj" />
     <ProjectReference Include="..\Shesha.NHibernate\Shesha.NHibernate.csproj" />
     <ProjectReference Include="..\Shesha.Web.Controls\Shesha.Web.Controls.csproj" />
@@ -25,11 +31,9 @@
     <PackageReference Include="Abp.AspNetCore" Version="5.0.0" />
     <PackageReference Include="Abp.AspNetCore.SignalR" Version="5.0.0" />
     <PackageReference Include="Abp.ZeroCore" Version="5.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer" Version="5.0.0" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Authentication\" />
   </ItemGroup>
 </Project>

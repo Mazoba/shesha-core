@@ -68,7 +68,7 @@ namespace Shesha.Web.DataTable.Columns
                             var dto = new ReferenceListItemValueDto
                             {
                                 Item = displayText,
-                                ItemValue = (long)val
+                                ItemValue = itemValue
                             };
                             return dto;
                         }

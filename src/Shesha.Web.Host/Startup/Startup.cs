@@ -1,13 +1,13 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using Abp.AspNetCore;
 using Abp.AspNetCore.SignalR.Hubs;
 using Abp.Castle.Logging.Log4Net;
 using Abp.Extensions;
-using Abp.PlugIns;
 using Castle.Facilities.Logging;
+using ElmahCore;
+using ElmahCore.Mvc;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -17,31 +17,32 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using NHibernate.Util;
 using Shesha.Configuration;
 using Shesha.Identity;
 using Shesha.Swagger;
-
-//using Microsoft.AspNetCore.Mvc.Cors.Internal;
 
 namespace Shesha.Web.Host.Startup
 {
     public class Startup
     {
-        private const string _defaultCorsPolicyName = "localhost";
-
-        private readonly IHostingEnvironment _hostingEnvironment;
         private readonly IConfigurationRoot _appConfiguration;
-        
-        public Startup(IHostingEnvironment env)
+        private readonly IWebHostEnvironment _hostEnvironment;
+
+        public Startup(IWebHostEnvironment hostEnvironment, IHostingEnvironment env)
         {
             _appConfiguration = env.GetAppConfiguration();
-            _hostingEnvironment = env;
+            _hostEnvironment = hostEnvironment;
         }
 
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
-            //services.AddControllersWithViews();
+            services.AddElmah<XmlFileErrorLog>(options =>
+            {
+                options.Path = @"elmah";
+                options.LogPath = Path.Combine(_hostEnvironment.ContentRootPath, "App_Data", "ElmahLogs");
+                //options.CheckPermissionAction = context => context.User.Identity.IsAuthenticated; //note: looks like we have to use cookies for it
+            });
+
             services.AddMvcCore(options =>
                 {
                     options.EnableEndpointRouting = false;
@@ -55,34 +56,17 @@ namespace Shesha.Web.Host.Startup
 
             services.AddSignalR();
 
-            // Configure CORS for angular2 UI
-            services.AddCors(
-                options => options.AddPolicy(
-                    _defaultCorsPolicyName,
-                    builder => builder
-                        .WithOrigins(
-                            // App:CorsOrigins in appsettings.json can contain more than one address separated by comma.
-                            _appConfiguration["App:CorsOrigins"]
-                                .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                                .Select(o => o.RemovePostFix("/"))
-                                .ToArray()
-                        )
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials()
-                )
-            );
+            services.AddCors();
 
             // Swagger - Enable this line and the related lines in Configure method to enable swagger UI
             services.AddSwaggerGen(options =>
             {
-                //options.SchemaGeneratorOptions.ToTypeParameters()
-                //options.CustomSchemaIds();
-                //options.SwaggerGeneratorOptions.SwaggerDocs
-                //options.SwaggerGeneratorOptions
+                options.DescribeAllParametersInCamelCase();
                 options.IgnoreObsoleteActions();
                 options.AddXmlDocuments();
-                //options.SwaggerGeneratorOptions.op
+
+                options.OperationFilter<SwaggerOperationFilter>();
+                options.OperationFilter<SwaggerDefaultValues>();
 
                 options.CustomOperationIds(desc => desc.ActionDescriptor is ControllerActionDescriptor d 
                     ? d.ControllerName.ToCamelCase() + d.ActionName.ToPascalCase()
@@ -104,13 +88,6 @@ namespace Shesha.Web.Host.Startup
 
             services.AddHttpContextAccessor();
 
-            /*
-            services.PostConfigure<MvcJsonOptions>(options =>
-            {
-                options.SerializerSettings.ContractResolver = new MyCustomContractResolver();
-            });
-            */
-
             // Add ABP and initialize 
             // Configure Abp and Dependency Injection
             return services.AddAbp<SheshaWebHostModule>(
@@ -126,6 +103,8 @@ namespace Shesha.Web.Host.Startup
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            app.UseElmah();
+
             // note: already registered in the ABP
             AppContextHelper.Configure(app.ApplicationServices.GetRequiredService<IHttpContextAccessor>());
 
@@ -134,7 +113,12 @@ namespace Shesha.Web.Host.Startup
 
             app.UseAbp(options => { options.UseAbpRequestLocalization = false; }); // Initializes ABP framework.
 
-            app.UseCors(_defaultCorsPolicyName); // Enable CORS!
+            // global cors policy
+            app.UseCors(x => x
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowed(origin => true) // allow any origin
+                .AllowCredentials()); // allow credentials
 
             app.UseStaticFiles();
 

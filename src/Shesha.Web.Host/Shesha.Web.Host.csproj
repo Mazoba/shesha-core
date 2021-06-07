@@ -32,11 +32,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Shesha.Elmah\Shesha.Elmah.csproj" />
     <ProjectReference Include="..\Shesha.Web.Core\Shesha.Web.Core.csproj" />
     <ProjectReference Include="..\Shesha.Web.FormsDesigner\Shesha.Web.FormsDesigner.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Abp.Castle.Log4Net" Version="5.0.0" />
+    <PackageReference Include="ElmahCore" Version="2.0.6" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.0.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>

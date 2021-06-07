@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Shesha.Domain;
 using Shesha.JsonLogic;
+using Shesha.Scheduler.Domain;
 using Shesha.Web.DataTable;
 using Shesha.Web.DataTable.Model;
 using Xunit;
@@ -568,5 +569,44 @@ namespace Shesha.Tests.Datatables
             public string Hql { get; set; }
             public JsonLogic2HqlConverterContext Context { get; set; }
         }
+
+        [Fact]
+        private async Task TestConvert()
+        {
+            var controller = LocalIocManager.Resolve<DataTableController>();
+
+            var input = new DataTableGetDataInput
+            {
+                Id = "Areas_Index",
+                CurrentPage = 1,
+                PageSize = int.MaxValue,
+            };
+
+            DataTableData data = null;
+            await WithUnitOfWorkAsync(async () =>
+            {
+                data = await controller.GetTableDataAsync<Area, Guid>(input, CancellationToken.None);
+            });
+        }
+
+        [Fact]
+        private async Task ScheduledJob_Executions()
+        {
+            var controller = LocalIocManager.Resolve<DataTableController>();
+
+            var input = new DataTableGetDataInput
+            {
+                Id = "ScheduledJob_Executions_test",
+                CurrentPage = 1,
+                PageSize = int.MaxValue,
+            };
+
+            DataTableData data = null;
+            await WithUnitOfWorkAsync(async () =>
+            {
+                data = await controller.GetTableDataAsync<ScheduledJobExecution, Guid>(input, CancellationToken.None);
+            });
+        }
+
     }
 }
