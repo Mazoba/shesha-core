@@ -8,6 +8,8 @@ namespace Shesha.Domain.Enums
         Region = 1,
         Depot = 2,
         Area = 3,
-        Suburb = 4
+        Suburb = 4,
+        District = 5,
+        Municipality = 6
     }
 }
