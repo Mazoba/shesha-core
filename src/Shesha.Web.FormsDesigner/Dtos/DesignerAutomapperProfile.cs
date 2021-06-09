@@ -13,6 +13,9 @@ namespace Shesha.Web.FormsDesigner.Dtos
             CreateMap<Form, FormDto>()
                 .ForMember(e => e.Markup, m => m.MapFrom(e => e.Settings));
 
+            CreateMap<FormDto, Form>()
+                .ForMember(e => e.Settings, m => m.MapFrom(e => e.Markup));
+
             CreateMap<FormUpdateMarkupInput, Form>()
                 .ForMember(e => e.Settings, m => m.MapFrom(e => e.Markup));
 
