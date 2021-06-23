@@ -144,19 +144,27 @@ namespace Shesha.FluentMigrator
             return this;
         }
 
+        private string GetAvailableColumn(string table, params string[] columns) 
+        {
+            return columns.FirstOrDefault(c => _migration.Schema.Table(table).Column(c).Exists());
+        }
+
         public void Execute()
         {
+            var expressionColumn = GetAvailableColumn("Frwk_StoredFilters", "HqlExpression", "Expression");
+            var expressionTypeColumn = GetAvailableColumn("Frwk_StoredFilters", "StoredFilterTypeLkp", "ExpressionTypeLkp");
+            
             _migration.Insert.IntoTable("Frwk_StoredFilters").InSchema("dbo")
                 .Row(new Dictionary<string, object>
                 {
                     {"Id", _id},
                     {"Name", _filterName},
                     {"Namespace", _namespace},
-                    {"HqlExpression", _hqlExpression},
+                    {expressionColumn, _hqlExpression},
                     {"IsExclusive", _isExclusive},
                     {"Description", _description},
                     {"OrderIndex", _orderIndex},
-                    {"StoredFilterTypeLkp", 1}
+                    {expressionTypeColumn, 1}
                 });
 
             // Containers: merge all into 1 list and insert
