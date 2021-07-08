@@ -42,7 +42,40 @@ namespace Shesha.Authorization
             return AbpSession.TenantId;
         }
 
+
         /// inheritedDoc
+        [UnitOfWork]
+        public override bool IsGranted(long userId, string permissionName) 
+        {
+            var granted = base.IsGranted(userId, permissionName);
+            if (granted)
+                return true;
+
+            var cacheKey = GetPermissionsCacheKey(userId, GetCurrentTenantId());
+            var customPermissionsItem = _cacheManager.GetCustomUserPermissionCache().GetOrDefault(cacheKey);
+
+            if (customPermissionsItem != null)
+            {
+                if (customPermissionsItem.GrantedPermissions.Contains(permissionName))
+                    return true;
+                if (customPermissionsItem.ProhibitedPermissions.Contains(permissionName))
+                    return false;
+            }
+
+            customPermissionsItem ??= new CustomUserPermissionCacheItem(userId);
+            var isGranted = IsGrantedCustom(userId, permissionName);
+            if (isGranted)
+                customPermissionsItem.GrantedPermissions.Add(permissionName);
+            else
+                customPermissionsItem.ProhibitedPermissions.Add(permissionName);
+
+            _cacheManager.GetCustomUserPermissionCache().Set(cacheKey, customPermissionsItem, slidingExpireTime: TimeSpan.FromMinutes(5));
+
+            return isGranted;
+        }
+
+        /// inheritedDoc
+        [UnitOfWork]
         public override async Task<bool> IsGrantedAsync(long userId, string permissionName)
         {
             var granted = await base.IsGrantedAsync(userId, permissionName);
@@ -84,6 +117,24 @@ namespace Shesha.Authorization
             foreach (var customChecker in customCheckers)
             {
                 if (await customChecker.IsGrantedAsync(userId, permissionName))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Indicates is specified <paramref name="permissionName"/> granted to the user with <paramref name="userId"/> or not
+        /// </summary>
+        /// <param name="userId">User Id</param>
+        /// <param name="permissionName">Permission name</param>
+        /// <returns></returns>
+        public bool IsGrantedCustom(long userId, string permissionName)
+        {
+            var customCheckers = IocManager.ResolveAll<ICustomPermissionChecker>();
+            foreach (var customChecker in customCheckers)
+            {
+                if (customChecker.IsGranted(userId, permissionName))
                     return true;
             }
 
