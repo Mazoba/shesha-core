@@ -15,7 +15,7 @@ namespace Shesha.Web.FormsDesigner.Services
     /// <summary>
     /// Configurable Forms application service
     /// </summary>
-    [AbpAuthorize]
+    //[AbpAuthorize]
     [Route("api/services/Forms")]
     public class FormAppService: SheshaAppServiceBase, IFormAppService
     {

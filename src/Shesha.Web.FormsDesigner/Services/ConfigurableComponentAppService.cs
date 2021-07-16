@@ -12,7 +12,7 @@ namespace Shesha.Web.FormsDesigner.Services
     /// <summary>
     /// Configurable components application service
     /// </summary>
-    [AbpAuthorize]
+    //[AbpAuthorize]
     [Route("api/services/ConfigurableComponents")]
     public class ConfigurableComponentAppService : SheshaAppServiceBase, IConfigurableComponentAppService
     {

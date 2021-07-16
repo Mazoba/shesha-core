@@ -23,7 +23,8 @@ $projects = (
 	"Shesha.Sms.SmsPortal",
 	"Shesha.Sms.Xml2Sms",
 	"Shesha.Web.Controls",
-	"Shesha.Web.FormsDesigner"
+	"Shesha.Web.FormsDesigner",
+	"Shesha.RestSharp"
 )
 
 # Rebuild solution
