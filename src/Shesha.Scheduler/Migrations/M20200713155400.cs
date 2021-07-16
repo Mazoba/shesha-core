@@ -1,7 +1,7 @@
 ﻿using System;
 using FluentMigrator;
 
-namespace Shesha.Migrations
+namespace Shesha.Scheduler.Migrations
 {
     [Migration(20200713155400)]
     public class M20200713155400: Migration
