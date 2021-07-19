@@ -25,5 +25,11 @@ namespace Shesha.Domain
         public virtual Person PrimaryContact { get; set; }
 
         public virtual Organisation OwnerOrganisation { get; set; }
+
+        public virtual Decimal Latitude { get; set; }
+
+        public virtual Decimal Longitude { get; set; }
+
+        public virtual Decimal Altitude { get; set; }
     }
 }
