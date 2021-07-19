@@ -18,6 +18,7 @@ namespace Shesha.Authorization
             context.CreatePermission(ShaPermissionNames.Pages_ShaRoles, L("ShaRoles"));
             context.CreatePermission(ShaPermissionNames.Pages_ApplicationSettings, L("ApplicationSettings"));
             context.CreatePermission(ShaPermissionNames.Pages_Maintenance, L("Maintenance"));
+            context.CreatePermission(ShaPermissionNames.Users_ResetPassword, L("Users_ResetPassword"));            
         }
 
         private static ILocalizableString L(string name)

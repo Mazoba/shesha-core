@@ -337,10 +337,10 @@ namespace Shesha.Users
             {
                 return false;
             }
-            var roles = await _userManager.GetRolesAsync(currentUser);
-            if (!roles.Contains(StaticRoleNames.Tenants.Admin))
+            
+            if (!await PermissionChecker.IsGrantedAsync(ShaPermissionNames.Users_ResetPassword))
             {
-                throw new UserFriendlyException("Only administrators may reset passwords.");
+                throw new UserFriendlyException("You are not authorized to reset passwords.");
             }
 
             var user = await _userManager.GetUserByIdAsync(input.UserId);

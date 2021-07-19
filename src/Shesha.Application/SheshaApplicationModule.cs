@@ -88,9 +88,12 @@ namespace Shesha
                     var gatewayType = !string.IsNullOrWhiteSpace(gatewayUid)
                         ? f.Resolve<ITypeFinder>().Find(t => typeof(ISmsGateway).IsAssignableFrom(t) && t.GetClassUid() == gatewayUid).FirstOrDefault()
                         : null;
-                    return gatewayType != null
+
+                    var gateway = gatewayType != null
                         ? f.Resolve(gatewayType) as ISmsGateway
                         : null;
+
+                    return gateway ?? new NullSmsGateway();
                 }, managedExternally: true).LifestyleTransient()
             );
 

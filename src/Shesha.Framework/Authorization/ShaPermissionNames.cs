@@ -14,5 +14,6 @@
         public const string Pages_ShaRoles = "pages:shaRoles";
         public const string Pages_ApplicationSettings = "pages:applicationSettings";
         public const string Pages_Maintenance = "pages:maintenance";
+        public const string Users_ResetPassword = "users:resetPassword";
     }
 }
