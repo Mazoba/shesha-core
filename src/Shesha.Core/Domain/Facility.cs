@@ -26,10 +26,10 @@ namespace Shesha.Domain
 
         public virtual Organisation OwnerOrganisation { get; set; }
 
-        public virtual Decimal Latitude { get; set; }
+        public virtual decimal Latitude { get; set; }
 
-        public virtual Decimal Longitude { get; set; }
+        public virtual decimal Longitude { get; set; }
 
-        public virtual Decimal Altitude { get; set; }
+        public virtual decimal Altitude { get; set; }
     }
 }
