@@ -6,14 +6,13 @@ using System.Text;
 
 namespace Shesha.Migrations
 {
-    [Migration(20210723023300)]
-    public class M20210723023300 : Migration
+    [Migration(20210724114400)]
+    public class M20210724114400 : Migration
     {
         public override void Up()
         {
-            Alter.Table("Core_Persons")
-                 .AddColumn("IsMobileVerified").AsBoolean().WithDefaultValue(0)
-                 .AddColumn("SecurityPin").AsString().Nullable();
+            Alter.Table("Core_Addresses")
+                 .AddColumn("BuildingNameUnitNumber").AsString().Nullable();
         }
         public override void Down()
         {
