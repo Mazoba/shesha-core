@@ -12,7 +12,7 @@ namespace Shesha.Migrations
         public override void Up()
         {
             Alter.Table("Core_Persons")
-                 .AddColumn("IsMobileVerified").AsBoolean()
+                 .AddColumn("IsMobileVerified").AsBoolean().WithDefaultValue(0)
                  .AddColumn("SecurityPin").AsString().Nullable();
         }
         public override void Down()
