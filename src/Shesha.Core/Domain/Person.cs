@@ -275,5 +275,8 @@ namespace Shesha.Domain
         {
             return FullName;
         }
+
+        public virtual bool IsMobileVerified { get; set; }
+        public virtual string SecurityPin { get; set; }
     }
 }
