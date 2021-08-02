@@ -2,7 +2,7 @@
 using Shesha.AutoMapper;
 using Shesha.Domain;
 
-namespace Shesha.DeviceRegistrations
+namespace Shesha.DeviceRegistrations.Dto
 {
     public class DeviceRegistrationProfile: ShaProfile
     {
