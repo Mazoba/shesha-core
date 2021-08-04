@@ -30,7 +30,7 @@ namespace Shesha.RestSharp
             {
                 return JsonConvert.DeserializeObject<RT>(response.Content);
             }
-            return default(RT);
+            return default;
         }
 
         public async Task<RT> GetApiMethod(string apiMethod, List<HttpHeader> headers)
@@ -49,7 +49,7 @@ namespace Shesha.RestSharp
             {
                 return JsonConvert.DeserializeObject<RT>(response.Content);
             }
-            return default(RT);
+            return default;
         }
     }
 }
