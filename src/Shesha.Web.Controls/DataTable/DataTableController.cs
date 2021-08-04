@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -14,6 +15,7 @@ using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
 using Abp.ObjectMapping;
 using Abp.Runtime.Session;
+using Abp.Runtime.Validation;
 using Castle.Core.Logging;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
@@ -49,13 +51,14 @@ namespace Shesha.Web.DataTable
         private readonly IUnitOfWorkManager _unitOfWorkManager;
         private readonly IJsonLogic2HqlConverter _jsonLogic2HqlConverter;
         private readonly IDataTableHelper _helper;
+        private readonly IEntityConfigurationStore _entityConfigStore;
 
         public ILogger Logger { get; set; } = new NullLogger();
 
         /// <summary>
         /// 
         /// </summary>
-        public DataTableController(IDataTableConfigurationStore configurationStore, IObjectMapper objectMapper, IIocResolver iocResolver, IRepository<StoredFilter, Guid> filterRepository, IRepository<ShaRole, Guid> roleRepository, IRepository<ShaRoleAppointedPerson, Guid> rolePersonRepository, IUnitOfWorkManager unitOfWorkManager, IJsonLogic2HqlConverter jsonLogic2HqlConverter, IDataTableHelper helper)
+        public DataTableController(IDataTableConfigurationStore configurationStore, IObjectMapper objectMapper, IIocResolver iocResolver, IRepository<StoredFilter, Guid> filterRepository, IRepository<ShaRole, Guid> roleRepository, IRepository<ShaRoleAppointedPerson, Guid> rolePersonRepository, IUnitOfWorkManager unitOfWorkManager, IJsonLogic2HqlConverter jsonLogic2HqlConverter, IDataTableHelper helper, IEntityConfigurationStore entityConfigStore)
         {
             _configurationStore = configurationStore;
             _objectMapper = objectMapper;
@@ -66,6 +69,7 @@ namespace Shesha.Web.DataTable
             _unitOfWorkManager = unitOfWorkManager;
             _jsonLogic2HqlConverter = jsonLogic2HqlConverter;
             _helper = helper;
+            _entityConfigStore = entityConfigStore;
         }
 
         /// <summary>
@@ -86,22 +90,78 @@ namespace Shesha.Web.DataTable
         }
 
         /// <summary>
+        /// Returns datatable columns for configurable table. Accepts type of model(entity) and list of properties.
+        /// Columns configuration is merged on the client side with configurable values
+        /// </summary>
+        [HttpPost]
+        public List<DataTableColumnDto> GetColumns(GetColumnsInput input, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(input.EntityType))
+                throw new AbpValidationException($"'{nameof(input.EntityType)}' must not be null");
+
+            var entityType = !string.IsNullOrWhiteSpace(input.EntityType)
+                ? _entityConfigStore.Get(input.EntityType)
+                : null;
+            if (entityType == null)
+                throw new AbpValidationException($"Entity of type `{input.EntityType}` not found");
+
+            var columns = GetColumnsForProperties(entityType.EntityType, input.Properties);
+            // DataTableColumnDto
+            var dtos = columns.Select(c => _objectMapper.Map<DataTableColumnDto>(c)).ToList();
+
+            return dtos;
+        }
+
+        private List<DataTableColumn> GetColumnsForProperties(Type rowType, List<string> properties) 
+        {
+            var columns = properties.Select(p => _helper.GetDisplayPropertyColumn(rowType, p, p))
+                .Cast<DataTableColumn>()
+                .ToList();
+
+            return columns;
+        }
+
+
+        /// <summary>
         /// Returns data for the DateTable control
         /// </summary>
         [HttpPost]
         public async Task<DataTableData> GetData(DataTableGetDataInput input, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(input?.Id))
-                throw new Exception("Id of the DataTableConfiguration must not be null");
 
-            var tableConfig = _configurationStore.GetTableConfiguration(input.Id);
+            if (!string.IsNullOrWhiteSpace(input.Id))
+            {
+                // support of table configurations, may be removed later
+                var tableConfig = !string.IsNullOrWhiteSpace(input.Id)
+                    ? _configurationStore.GetTableConfiguration(input.Id)
+                    : null;
+                if (!string.IsNullOrWhiteSpace(input.Id) && tableConfig == null)
+                    throw new AbpValidationException($"Table configuration with Id = '{input.Id}' not found");
 
+                return await GetDataInternal(tableConfig.RowType, tableConfig.IdType, input, cancellationToken);
+            }
+            else
+            if (!string.IsNullOrWhiteSpace(input.EntityType)) 
+            {
+                // support of configurable tables (forms designer)
+                var entityConfig = _entityConfigStore.Get(input.EntityType);
+                if (entityConfig == null)
+                    throw new AbpValidationException($"Entity of type '{input.EntityType}' not found");
+
+                return await GetDataInternal(entityConfig.EntityType, entityConfig.Properties[SheshaDatabaseConsts.IdColumn].PropertyInfo.PropertyType, input, cancellationToken);
+            }
+            else
+                throw new AbpValidationException($"'{nameof(input.Id)}' or '{nameof(input.EntityType)}' must be specified");
+        }
+
+        private async Task<DataTableData> GetDataInternal(Type rowType, Type idType, DataTableGetDataInput input, CancellationToken cancellationToken)
+        {
             var method = this.GetType().GetMethod(nameof(GetTableDataAsync));
             if (method == null)
                 throw new Exception($"{nameof(GetTableDataAsync)} not found");
 
-            var genericMethod = method.MakeGenericMethod(tableConfig.RowType, tableConfig.IdType);
-            
+            var genericMethod = method.MakeGenericMethod(rowType, idType);
+
             var task = (Task)genericMethod.Invoke(this, new object[] { input, cancellationToken });
             await task.ConfigureAwait(false);
 
@@ -156,7 +216,7 @@ namespace Shesha.Web.DataTable
         {
             if (typeof(ISoftDelete).IsAssignableFrom(typeof(TEntity)))
             {
-                var isDeletedFilter = input.Filter.FirstOrDefault(f => f.ColumnId == nameof(ISoftDelete.IsDeleted));
+                var isDeletedFilter = input.Filter.FirstOrDefault(f => f.RealPropertyName == nameof(ISoftDelete.IsDeleted));
                 if (isDeletedFilter != null)
                 {
                     if (GetBoolean(isDeletedFilter.Filter) == true)
@@ -170,72 +230,89 @@ namespace Shesha.Web.DataTable
         /// <summary>
         /// Generic version of GetTableDataAsync. Note: marked public for reflection
         /// </summary>
+        [UsedImplicitly]
         public async Task<DataTableData> GetTableDataAsync<TEntity, TPrimaryKey>(DataTableGetDataInput input, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
         {
-            var tableConfig = _configurationStore.GetTableConfiguration(input.Id);
+            var tableConfig = !string.IsNullOrWhiteSpace(input.Id) 
+                ? _configurationStore.GetTableConfiguration(input.Id)
+                : null;
 
             cancellationToken.ThrowIfCancellationRequested();
 
             using (HandleSoftDeletedFilter<TEntity>(input))
             {
-                var queryData = await QueryRepositoryAsync<TEntity, TPrimaryKey>(tableConfig, input, cancellationToken);
-
-                var authorizedColumns =
-                    tableConfig.Columns.Where(c => c.IsAuthorized == null || c.IsAuthorized.Invoke())
-                        .ToList();
-
-                var dataRows = new List<Dictionary<string, object>>();
-
-                foreach (var item in queryData.Rows)
+                QueryDataDto<TEntity, TPrimaryKey> queryData = null;
+                if (tableConfig != null)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    queryData = await QueryRepositoryAsync<TEntity, TPrimaryKey>(tableConfig, input, cancellationToken);
+                    var authorizedColumns = tableConfig.Columns.Where(c => c.IsAuthorized == null || c.IsAuthorized.Invoke()).ToList();
 
-                    var row = new Dictionary<string, object>();
+                    return GetTableDataWithPaging(queryData, authorizedColumns, input.PageSize, cancellationToken);
+                } else 
+                {
+                    if (input.Properties == null)
+                        throw new Exception("Properties not specified");
 
-                    foreach (var col in authorizedColumns)
+                    var properties = input.Properties.ToList();
+                    properties.Insert(0, SheshaDatabaseConsts.IdColumn);
+
+                    var columns = properties.Select(p => _helper.GetDisplayPropertyColumn(typeof(TEntity), p))
+                        .Cast<DataTableColumn>()
+                        .ToList();
+                    queryData = await QueryRepositoryAsync<TEntity, TPrimaryKey>(columns, input, cancellationToken);
+                    
+                    return GetTableDataWithPaging(queryData, columns, input.PageSize, cancellationToken);
+                }
+            }
+        }
+
+        private DataTableData GetTableDataWithPaging<TEntity, TPrimaryKey>(QueryDataDto<TEntity, TPrimaryKey> queryData, List<DataTableColumn> columns, int pageSize, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            var dataRows = MapDataRows(queryData.Rows, columns, cancellationToken);
+
+            var totalPages = (int)Math.Ceiling((double)queryData.TotalRows / pageSize);
+
+            var result = new DataTableData
+            {
+                TotalRowsBeforeFilter = queryData.TotalRowsBeforeFilter,
+                TotalRows = queryData.TotalRows,
+                TotalPages = totalPages,
+                Rows = dataRows
+            };
+            
+            return result;
+        }            
+
+        private List<Dictionary<string, object>> MapDataRows(IList queryDataRows, List<DataTableColumn> columns, CancellationToken cancellationToken) 
+        {
+            var dataRows = new List<Dictionary<string, object>>();
+            foreach (var item in queryDataRows)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var row = new Dictionary<string, object>();
+
+                foreach (var col in columns)
+                {
+                    try
                     {
-                        if (!(col.PropertyName ?? "").Equals("Id", StringComparison.InvariantCultureIgnoreCase) &&
-                            col.IsVisible && /* if the column is always hidden - it's handled on the client-side */
-                            !IsColumnVisibleOnClient(col.Name, input))
-                        {
-                            // column is not visible - return null
-                            row.Add(col.Name, null);
-                        }
-                        else
-                        {
-                            try
-                            {
-                                var value = item != null
-                                    ? col.CellContent(item)
-                                    : null;
+                        var value = item != null
+                            ? col.CellContent(item)
+                            : null;
 
-                                value ??= string.Empty;
+                        value ??= string.Empty;
 
-                                row.Add(col.Name, value);
-                            }
-                            catch
-                            {
-                                throw;
-                            }
-                        }
+                        row.Add(col.Name, value);
                     }
-
-                    dataRows.Add(row);
+                    catch
+                    {
+                        throw;
+                    }
                 }
 
-                var totalPages = (int)Math.Ceiling((double)queryData.TotalRows / input.PageSize);
-
-                var result = new DataTableData
-                {
-                    TotalRowsBeforeFilter = queryData.TotalRowsBeforeFilter,
-                    TotalRows = queryData.TotalRows,
-                    TotalPages = totalPages,
-                    //Echo = dataTableParam.sEcho,
-                    Rows = dataRows
-                };
-
-                return result;
+                dataRows.Add(row);
             }
+            return dataRows;
         }
 
         /// <summary>
@@ -243,6 +320,7 @@ namespace Shesha.Web.DataTable
         /// </summary>
         /// <param name="tableConfig">Configuration of the table</param>
         /// <param name="input">DataTable params (part of the request from the client-side)</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
         public async Task<QueryDataDto<TEntity, TPrimaryKey>> QueryRepositoryAsync<TEntity, TPrimaryKey>([NotNull]DataTableConfig tableConfig,
             [NotNull]DataTableGetDataInput input, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
@@ -250,13 +328,13 @@ namespace Shesha.Web.DataTable
             try
             {
                 var filterCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
-                AppendStandardFilterCriteria(tableConfig, input, filterCriteria);
+                AppendStandardFilterCriteria(tableConfig.Columns, input, filterCriteria);
 
                 // todo: Handle additional posted data (for child tables)
                 AppendChildEntityFilterParameters(tableConfig, input, filterCriteria);
 
                 AppendStoredFilters(tableConfig, input, filterCriteria);
-                AppendPredefinedFilters(tableConfig, input, filterCriteria);
+                AppendPredefinedFilters(tableConfig.Columns, input, filterCriteria);
 
                 tableConfig.OnRequestToFilterStatic?.Invoke(filterCriteria, input);
                 if (tableConfig.OnRequestToFilterStaticAsync != null)
@@ -274,7 +352,7 @@ namespace Shesha.Web.DataTable
                 if (tableConfig.OnRequestToFilterAsync != null)
                     await tableConfig.OnRequestToFilterAsync.Invoke(filterCriteria, input);
 
-                var orderBy = GetOrderByClause(tableConfig, input, filterCriteria.FilteringMethod);
+                var orderBy = GetOrderByClause(tableConfig.Columns, input, tableConfig.UserSortingDisabled);
 
                 var takeCount = input.PageSize > -1 
                     ? input.PageSize 
@@ -299,6 +377,58 @@ namespace Shesha.Web.DataTable
             }
         }
 
+        /// <summary>
+        /// Returns a list of data
+        /// </summary>
+        /// <param name="columns">Table columns</param>
+        /// <param name="input">DataTable params (part of the request from the client-side)</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns></returns>
+        public async Task<QueryDataDto<TEntity, TPrimaryKey>> QueryRepositoryAsync<TEntity, TPrimaryKey>([NotNull] List<DataTableColumn> columns, [NotNull] DataTableGetDataInput input, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            try
+            {
+                var filterCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
+                AppendStandardFilterCriteria(columns, input, filterCriteria);
+
+                // todo: implement support of child tables with configured columns
+                //AppendChildEntityFilterParameters(tableConfig, input, filterCriteria);
+
+                // todo: add support of static filters as it's done for datatable configs
+
+                AppendPredefinedFilters(columns, input, filterCriteria);
+
+                var data = new QueryDataDto<TEntity, TPrimaryKey>
+                {
+                    TotalRowsBeforeFilter = await CountAsync<TEntity, TPrimaryKey>(filterCriteria, cancellationToken)
+                };
+
+                var filterBefore = filterCriteria.Clone() as FilterCriteria;
+
+                var orderBy = GetOrderByClause(columns, input, false);
+
+                var takeCount = input.PageSize > -1
+                    ? input.PageSize
+                    : int.MaxValue;
+
+                if (!string.IsNullOrWhiteSpace(input.QuickSearch))
+                    _helper.AppendQuickSearchCriteria(typeof(TEntity), columns, QuickSearchMode.Sql, input.QuickSearch, filterCriteria, null, !string.IsNullOrWhiteSpace(input.Id) ? input.Id : input.Uid);
+
+                var skipCount = Math.Max(0, (input.CurrentPage - 1) * takeCount);
+
+                data.Entities = await FindAllAsync<TEntity, TPrimaryKey>(filterCriteria, skipCount, takeCount, orderBy, cancellationToken);
+
+                data.TotalRows = filterBefore != null && filterBefore.FilterClauses.Count == filterCriteria.FilterClauses.Count
+                    ? data.TotalRowsBeforeFilter
+                    : await CountAsync<TEntity, TPrimaryKey>(filterCriteria, cancellationToken);
+
+                return data;
+            }
+            catch
+            {
+                throw;
+            }
+        }
         private void AppendChildEntityFilterParameters([NotNull] DataTableConfig tableConfig, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria)
         {
             if (!(tableConfig is IChildDataTableConfig childConfig))
@@ -335,7 +465,7 @@ namespace Shesha.Web.DataTable
             }
         }
         
-        private void AppendStandardFilterCriteria([NotNull]DataTableConfig tableConfig,
+        private void AppendStandardFilterCriteria([NotNull] List<DataTableColumn> columns,
             [NotNull]DataTableGetDataInput input, [NotNull]FilterCriteria filterCriteria)
         {
             foreach (var filter in input.Filter)
@@ -343,7 +473,7 @@ namespace Shesha.Web.DataTable
                 if (filter.Filter == null)
                     continue;
 
-                var column = tableConfig.Columns.FirstOrDefault(c => c.Name == filter.ColumnId);
+                var column = columns.FirstOrDefault(c => c.Name == filter.RealPropertyName);
                 if (column?.GeneralDataType == null)
                     continue;
 
@@ -664,7 +794,7 @@ namespace Shesha.Web.DataTable
         /// <summary>
         /// Apply all selected stored filters
         /// </summary>
-        private void AppendPredefinedFilters([NotNull] DataTableConfig tableConfig, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria)
+        private void AppendPredefinedFilters([NotNull] List<DataTableColumn> columns, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria)
         {
             if (input.SelectedFilters == null)
                 return;
@@ -692,8 +822,8 @@ namespace Shesha.Web.DataTable
 
                             // convert json logic to HQL
                             var context = new JsonLogic2HqlConverterContext();
-                            DataTableHelper.FillVariablesResolvers(tableConfig, context);
-                            DataTableHelper.FillContextMetadata(tableConfig, context);
+                            DataTableHelper.FillVariablesResolvers(columns, context);
+                            DataTableHelper.FillContextMetadata(columns, context);
 
                             var hql = _jsonLogic2HqlConverter.Convert(jsonLogic, context);
 
@@ -785,9 +915,17 @@ namespace Shesha.Web.DataTable
                         var jsonLogic = JObject.Parse(storedFilter.Expression);
 
                         // convert json logic to HQL
-                        var hql = _jsonLogic2HqlConverter.Convert(jsonLogic, new JsonLogic2HqlConverterContext());
+                        var context = new JsonLogic2HqlConverterContext();
+                        DataTableHelper.FillVariablesResolvers(tableConfig.Columns, context);
+                        DataTableHelper.FillContextMetadata(tableConfig.Columns, context);
+
+                        var hql = _jsonLogic2HqlConverter.Convert(jsonLogic, context);
 
                         filterCriteria.FilterClauses.Add(hql);
+                        foreach (var parameter in context.FilterParameters)
+                        {
+                            filterCriteria.FilterParameters.Add(parameter.Key, parameter.Value);
+                        }
                         break;
                     }
 
@@ -1059,13 +1197,13 @@ namespace Shesha.Web.DataTable
         /// </summary>
         /// <returns>Returns the relevant Order By clause to apply when querying the Db through
         /// a <typeparamref name="Shesha.Framework.Data.NHibernate.Repository"/>.</returns>
-        private string GetOrderByClause(DataTableConfig tableConfig, DataTableGetDataInput input, FilterCriteria.FilterMethod filteringMethod)
+        private string GetOrderByClause(List<DataTableColumn> columns, DataTableGetDataInput input, bool userSortingDisabled)
         {
             var entityConfigurationStore = _iocResolver.Resolve<IEntityConfigurationStore>();
-            var columnsToSort = !tableConfig.UserSortingDisabled && input.Sorting.Any()
+            var columnsToSort = !userSortingDisabled && input.Sorting.Any()
                 ? input.Sorting.Select(sc =>
                     {
-                        var column = tableConfig.Columns.FirstOrDefault(c => c.Name == sc.Id && c.IsSortable) as DataTablesDisplayPropertyColumn;
+                        var column = columns.FirstOrDefault(c => c.Name == sc.Id && c.IsSortable) as DataTablesDisplayPropertyColumn;
                         var childEntityDisplayName = column?.GeneralDataType == GeneralDataType.EntityReference &&
                                                      !string.IsNullOrWhiteSpace(column.EntityReferenceTypeShortAlias)
                             ? entityConfigurationStore.Get(column.EntityReferenceTypeShortAlias)?.DisplayNamePropertyInfo
@@ -1080,7 +1218,7 @@ namespace Shesha.Web.DataTable
                     })
                     .Where(i => i.Column != null)
                     .ToList()
-                : tableConfig.Columns.Select(c => c.DefaultSorting != null 
+                : columns.Select(c => c.DefaultSorting != null 
                         ? new SortingInfo()
                         {
                             Column = c as DataTablesDisplayPropertyColumn,

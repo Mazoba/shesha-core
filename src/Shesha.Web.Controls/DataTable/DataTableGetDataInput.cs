@@ -10,9 +10,19 @@ namespace Shesha.Web.DataTable
     public class DataTableGetDataInput
     {
         /// <summary>
-        /// Data table ID
+        /// Data table configuration ID
         /// </summary>
         public string Id { get; set; }
+
+        /// <summary>
+        /// Table unique identifier, is used for caching and debug purposes
+        /// </summary>
+        public string Uid { get; set; }
+
+        /// <summary>
+        /// Type of entity
+        /// </summary>
+        public string EntityType { get; set; }
 
         /// <summary>
         /// Page size
@@ -54,6 +64,11 @@ namespace Shesha.Web.DataTable
         /// Selected filters
         /// </summary>
         public List<SelectedStoredFilterDto> SelectedFilters { get; set; } = new List<SelectedStoredFilterDto>();
+
+        /// <summary>
+        /// List of properties to fetch, is used in pair with <seealso cref="EntityType"/>
+        /// </summary>
+        public List<string> Properties { get; set; }
 
         /*
          1) sort order: list of columns with sort order asc/desc

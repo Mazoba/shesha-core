@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Abp.Dependency;
 using Abp.Runtime.Caching;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
+using Shesha.Domain.Attributes;
 using Shesha.Extensions;
 using Shesha.JsonLogic;
 using Shesha.Metadata;
+using Shesha.Reflection;
 using Shesha.Services;
 using Shesha.Utilities;
 using Shesha.Web.DataTable.Columns;
@@ -28,12 +31,17 @@ namespace Shesha.Web.DataTable
             _entityConfigurationStore = entityConfigurationStore;
         }
 
+        public void AppendQuickSearchCriteria(DataTableConfig tableConfig, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria) 
+        {
+            AppendQuickSearchCriteria(tableConfig.RowType, tableConfig.Columns, searchMode, sSearch, filterCriteria, tableConfig.OnRequestToQuickSearch, tableConfig.Id);
+        }
+
         /// inheritedDoc
-        public void AppendQuickSearchCriteria(DataTableConfig tableConfig, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria)
+        public void AppendQuickSearchCriteria(Type rowType, List<DataTableColumn> columns, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria, Action<FilterCriteria, string> onRequestToQuickSearch, string cacheKey)
         {
             if (string.IsNullOrWhiteSpace(sSearch))
                 return;
-            if (!tableConfig.RowType.IsEntityType())
+            if (!rowType.IsEntityType())
                 return;
 
             var subQueries = new List<string>();
@@ -41,7 +49,7 @@ namespace Shesha.Web.DataTable
             if (searchMode == QuickSearchMode.Sql || searchMode == QuickSearchMode.Combined)
             {
                 // get list of properties existing in the table configuration
-                var props = GetPropertiesForSqlQuickSearch(tableConfig);
+                var props = GetPropertiesForSqlQuickSearch(rowType, columns, cacheKey);
 
                 var addSubQuery = new Action<string, object>((q, v) =>
                 {
@@ -86,11 +94,11 @@ namespace Shesha.Web.DataTable
                 */
                 if (fullTextAvailable)
                 {
-                    var idType = tableConfig.RowType.GetProperty("Id")?.PropertyType;
+                    var idType = rowType.GetProperty("Id")?.PropertyType;
                     if (idType == null)
                         throw new Exception("Failed to retrieve a type of the Id property");
 
-                    var fullTextIds = GetFullTextIds(tableConfig.RowType, sSearch, 1000).ToList();
+                    var fullTextIds = GetFullTextIds(rowType, sSearch, 1000).ToList();
                     if (fullTextIds.Any())
                     {
                         subQueries.Add("ent.Id in (:ids)");
@@ -100,7 +108,7 @@ namespace Shesha.Web.DataTable
             }
 
             // add custom quick search logic
-            if (tableConfig.OnRequestToQuickSearch != null)
+            if (onRequestToQuickSearch != null)
             {
                 var quickSearchCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
                 
@@ -109,8 +117,8 @@ namespace Shesha.Web.DataTable
                 {
                     quickSearchCriteria.FilterParameters.Add(paramName, filterCriteria.FilterParameters[paramName]);
                 }
-                
-                tableConfig.OnRequestToQuickSearch.Invoke(quickSearchCriteria, sSearch);
+
+                onRequestToQuickSearch.Invoke(quickSearchCriteria, sSearch);
                 if (quickSearchCriteria.FilterClauses.Any())
                 {
                     subQueries.AddRange(quickSearchCriteria.FilterClauses);
@@ -130,24 +138,23 @@ namespace Shesha.Web.DataTable
         /// <summary>
         /// Returns a list of properties for the SQL quick search
         /// </summary>
-        /// <param name="tableConfig"></param>
-        /// <returns></returns>
-        public List<KeyValuePair<string, GeneralDataType>> GetPropertiesForSqlQuickSearch(DataTableConfig tableConfig)
+        public List<KeyValuePair<string, GeneralDataType>> GetPropertiesForSqlQuickSearch(Type rowType, List<DataTableColumn> columns, string cacheKey)
         {
-            var cacheManager = StaticContext.IocManager.Resolve<ICacheManager>();
+            if (string.IsNullOrWhiteSpace(cacheKey))
+                return DoGetPropertiesForSqlQuickSearch(rowType, columns);
 
-            var cacheKey = tableConfig.Id + "_sqlsearch";
+            var cacheManager = StaticContext.IocManager.Resolve<ICacheManager>();
 
             return cacheManager
                 .GetCache("MyCache")
-                .Get(cacheKey, () => DoGetPropertiesForSqlQuickSearch(tableConfig));
+                .Get(cacheKey, () => DoGetPropertiesForSqlQuickSearch(rowType, columns));
         }
 
-        private List<KeyValuePair<string, GeneralDataType>> DoGetPropertiesForSqlQuickSearch(DataTableConfig tableConfig)
+        private List<KeyValuePair<string, GeneralDataType>> DoGetPropertiesForSqlQuickSearch(Type rowType, List<DataTableColumn> columns)
         {
-            var entityConfig = _entityConfigurationStore.Get(tableConfig.RowType);
+            var entityConfig = _entityConfigurationStore.Get(rowType);
 
-            var props = tableConfig.Columns
+            var props = columns
                 .OfType<DataTablesDisplayPropertyColumn>()
                 .Select(c =>
                 {
@@ -285,11 +292,9 @@ namespace Shesha.Web.DataTable
         /// <summary>
         /// Fill metadata of the <see cref="JsonLogic2HqlConverterContext"/> with columns of the specified <paramref name="tableConfig"/>
         /// </summary>
-        /// <param name="tableConfig"></param>
-        /// <param name="context"></param>
-        public static void FillContextMetadata(DataTableConfig tableConfig, JsonLogic2HqlConverterContext context)
+        public static void FillContextMetadata(List<DataTableColumn> columns, JsonLogic2HqlConverterContext context)
         {
-            context.FieldsMetadata = tableConfig.Columns.ToDictionary(
+            context.FieldsMetadata = columns.ToDictionary(
                 c => c.Name,
                 c => new PropertyMetadata
                 {
@@ -304,12 +309,91 @@ namespace Shesha.Web.DataTable
         /// <summary>
         /// Fill variable resolvers of the <see cref="JsonLogic2HqlConverterContext"/> with columns of the specified <paramref name="tableConfig"/>
         /// </summary>
-        /// <param name="tableConfig"></param>
-        /// <param name="context"></param>
-        public static void FillVariablesResolvers(DataTableConfig tableConfig, JsonLogic2HqlConverterContext context)
+        public static void FillVariablesResolvers(List<DataTableColumn> columns, JsonLogic2HqlConverterContext context)
         {
-            context.VariablesResolvers =
-                tableConfig.Columns.ToDictionary(c => c.Name, c => c.PropertyName);
+            context.VariablesResolvers = columns.ToDictionary(c => c.Name, c => c.PropertyName);
+        }
+
+        /// inheritedDoc
+        public DataTablesDisplayPropertyColumn GetDisplayPropertyColumn(Type rowType, string propName, string name = null) 
+        {
+            var prop = propName == null
+                ? null
+                : ReflectionHelper.GetProperty(rowType, propName);
+            //, out ownerEntity
+            var displayAttribute = prop != null
+                ? prop.GetAttribute<DisplayAttribute>()
+                : null;
+
+            var caption = displayAttribute != null && !string.IsNullOrWhiteSpace(displayAttribute.Name)
+                ? displayAttribute.Name
+                : propName.ToFriendlyName();
+
+            var column = new DataTablesDisplayPropertyColumn()
+            {
+                Name = (propName ?? "").Replace('.', '_'),
+                PropertyName = propName,
+                Caption = caption,
+                Description = prop?.GetDescription(),
+                GeneralDataType = prop != null
+                    ? EntityConfigurationLoaderByReflection.GetGeneralDataType(prop)
+                    : (GeneralDataType?)null,
+                CustomDataType = prop?.GetAttribute<DataTypeAttribute>()?.CustomDataType
+            };
+            var entityConfig = prop?.DeclaringType.GetEntityConfiguration();
+            var propConfig = prop != null ? entityConfig?.Properties[prop.Name] : null;
+            if (propConfig != null)
+            {
+                column.ReferenceListName = propConfig.ReferenceListName;
+                column.ReferenceListNamespace = propConfig.ReferenceListNamespace;
+                if (propConfig.EntityReferenceType != null)
+                {
+                    column.EntityReferenceTypeShortAlias = propConfig.EntityReferenceType.GetEntityConfiguration()?.SafeTypeShortAlias;
+                    column.AllowInherited = propConfig.PropertyInfo.HasAttribute<AllowInheritedAttribute>();
+                }
+            }
+
+            // Set FilterCaption and FilterPropertyName
+            column.FilterCaption ??= column.Caption;
+            column.FilterPropertyName ??= column.PropertyName;
+
+            if (column.PropertyName == null)
+            {
+                column.PropertyName = column.FilterPropertyName;
+                column.Name = (column.PropertyName ?? "").Replace('.', '_');
+            }
+            column.Caption ??= column.FilterCaption;
+
+            // Check is the property mapped to the DB. If it's not mapped - make the column non sortable and non filterable
+            if (column.IsSortable && rowType.IsEntityType() && propName != null && propName != "Id")
+            {
+                var chain = propName.Split('.').ToList();
+
+                var container = rowType;
+                foreach (var chainPropName in chain)
+                {
+                    if (!container.IsEntityType())
+                        break;
+
+                    var containerConfig = container.GetEntityConfiguration();
+                    var propertyConfig = containerConfig.Properties.ContainsKey(chainPropName)
+                        ? containerConfig.Properties[chainPropName]
+                        : null;
+
+                    if (propertyConfig != null && !propertyConfig.IsMapped)
+                    {
+                        column.IsFilterable = false;
+                        column.IsSortable = false;
+                        break;
+                    }
+
+                    container = propertyConfig?.PropertyInfo.PropertyType;
+                    if (container == null)
+                        break;
+                }
+            }
+
+            return column;
         }
     }
 }

@@ -98,9 +98,9 @@ namespace Shesha.EntityHistory
             CurrentUnitOfWork.DisableFilter(AbpDataFilters.SoftDelete);
 
             var tableConfig = IndexTableFull();
-            var entityId = input.Filter.FirstOrDefault(f => f.ColumnId == "EntityId")?.Filter.ToString();
+            var entityId = input.Filter.FirstOrDefault(f => f.RealPropertyName == "EntityId")?.Filter.ToString();
             var entityTypeFullName =
-                input.Filter.FirstOrDefault(f => f.ColumnId == "EntityTypeFullName")?.Filter.ToString();
+                input.Filter.FirstOrDefault(f => f.RealPropertyName == "EntityTypeFullName")?.Filter.ToString();
 
             var itemType = TypeFinder.Find(t => t.FullName == entityTypeFullName)?.FirstOrDefault();
 

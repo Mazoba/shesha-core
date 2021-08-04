@@ -12,6 +12,7 @@ using Shesha.Domain;
 using Shesha.Domain.Attributes;
 using Shesha.Extensions;
 using Shesha.Reflection;
+using Shesha.Services;
 using Shesha.Utilities;
 using Shesha.Web.DataTable.Columns;
 
@@ -171,42 +172,10 @@ namespace Shesha.Web.DataTable
         /// </summary>
         public virtual DataTableColumn AddProperty(string propName, string displayName, Action<DataTableColumnFluentConfig> transform = null)
         {
-            var prop = propName == null
-                ? null
-                : ReflectionHelper.GetProperty(RowType, propName);
-            //, out ownerEntity
-            var displayAttribute = prop != null
-                ? prop.GetAttribute<DisplayAttribute>()
-                : null;
-
-            var caption = displayAttribute != null && !string.IsNullOrWhiteSpace(displayAttribute.Name)
-                ? displayAttribute.Name
-                : propName.ToFriendlyName();
-
-            var column = new DataTablesDisplayPropertyColumn(this)
-            {
-                DataTableConfig = this,
-                Name = (propName ?? "").Replace('.', '_'),
-                PropertyName = propName,
-                Caption = caption,
-                Description = prop?.GetDescription(),
-                GeneralDataType = prop != null
-                    ? EntityConfigurationLoaderByReflection.GetGeneralDataType(prop)
-                    : (GeneralDataType?)null,
-                CustomDataType = prop.GetAttribute<DataTypeAttribute>()?.CustomDataType
-            };
-            var entityConfig = prop?.DeclaringType.GetEntityConfiguration();
-            var propConfig = entityConfig?.Properties[prop.Name];
-            if (propConfig != null)
-            {
-                column.ReferenceListName = propConfig.ReferenceListName;
-                column.ReferenceListNamespace = propConfig.ReferenceListNamespace;
-                if (propConfig.EntityReferenceType != null)
-                {
-                    column.EntityReferenceTypeShortAlias = propConfig.EntityReferenceType.GetEntityConfiguration()?.SafeTypeShortAlias;
-                    column.AllowInherited = propConfig.PropertyInfo.HasAttribute<AllowInheritedAttribute>();
-                }
-            }
+            var helper = StaticContext.IocManager.Resolve<IDataTableHelper>();
+            var column = helper.GetDisplayPropertyColumn(RowType, propName);
+            column.DataTableConfig = this;
+            Columns.Add(column);
 
             if (!string.IsNullOrWhiteSpace(displayName))
                 column.Fluent.Caption(displayName);
@@ -214,45 +183,6 @@ namespace Shesha.Web.DataTable
             // Custom configuration
             transform?.Invoke(column.Fluent);
 
-            // Set FilterCaption and FilterPropertyName
-            column.FilterCaption ??= column.Caption;
-            column.FilterPropertyName ??= column.PropertyName;
-
-            if (column.PropertyName == null)
-            {
-                column.PropertyName = column.FilterPropertyName;
-                column.Name = (column.PropertyName ?? "").Replace('.', '_');
-            }
-            column.Caption ??= column.FilterCaption;
-
-            // Check is the property mapped to the DB. If it's not mapped - make the column non sortable and non filterable
-            if (column.IsSortable && RowType.IsEntityType() && propName != null && propName != "Id")
-            {
-                var chain = propName.Split('.').ToList();
-
-                var container = RowType;
-                foreach (var chainPropName in chain)
-                {
-                    if (!container.IsEntityType())
-                        break;
-
-                    var containerConfig = container.GetEntityConfiguration();
-                    var propertyConfig = containerConfig.Properties[chainPropName];
-
-                    if (propertyConfig != null && !propertyConfig.IsMapped)
-                    {
-                        column.IsFilterable = false;
-                        column.IsSortable = false;
-                        break;
-                    }
-
-                    container = propertyConfig?.PropertyInfo.PropertyType;
-                    if (container == null)
-                        break;
-                }
-            }
-
-            Columns.Add(column);
             return column;
         }
     }
@@ -304,8 +234,9 @@ namespace Shesha.Web.DataTable
             if (Columns.Any(c => c.PropertyName != null && c.PropertyName.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
                 throw new Exception("Column with this name already exists in the table configuration");
 
-            var column = new DataTablesCustomColumn<T>(this, property)
+            var column = new DataTablesCustomColumn<T>(property)
             {
+                DataTableConfig = this,
                 PropertyName = name,
                 Name = name,
                 Caption = name
@@ -384,8 +315,9 @@ namespace Shesha.Web.DataTable
             if (Columns.Any(c => c.PropertyName != null && c.PropertyName.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
                 throw new Exception("Column with this name already exists in the table configuration");
 
-            var column = new DataTablesCustomColumn<T>(this, expression)
+            var column = new DataTablesCustomColumn<T>(expression)
             {
+                DataTableConfig = this,
                 PropertyName = name,
                 Name = name,
                 Caption = name

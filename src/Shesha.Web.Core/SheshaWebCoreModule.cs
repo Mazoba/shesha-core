@@ -7,10 +7,13 @@ using Abp.AutoMapper;
 using Abp.Modules;
 using Abp.Reflection.Extensions;
 using Abp.Zero.Configuration;
+using Boxfusion.Authorization;
+using Castle.MicroKernel.Registration;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Shesha.Authentication.JwtBearer;
+using Shesha.Authorization;
 using Shesha.Configuration;
 using Shesha.Elmah;
 using Shesha.NHibernate;
@@ -79,6 +82,9 @@ namespace Shesha
         public override void Initialize()
         {
             IocManager.RegisterAssemblyByConvention(typeof(SheshaWebCoreModule).GetAssembly());
+            IocManager.IocContainer.Register(
+              Component.For<ICustomPermissionChecker>().Forward<ISheshaWebCorePermissionChecker>().Forward<SheshaWebCorePermissionChecker>().ImplementedBy<SheshaWebCorePermissionChecker>().LifestyleTransient()
+            );
         }
     }
 }

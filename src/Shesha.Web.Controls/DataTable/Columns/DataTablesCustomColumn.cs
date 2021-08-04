@@ -11,9 +11,8 @@ namespace Shesha.Web.DataTable.Columns
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="dataTableConfig"></param>
         /// <param name="contentFunc"></param>
-        public DataTablesCustomColumn(DataTableConfig dataTableConfig, Func<T, string> contentFunc) : base(dataTableConfig)
+        public DataTablesCustomColumn(Func<T, string> contentFunc) : base()
         {
             ContentFunc = contentFunc;
             IsSortable = false;

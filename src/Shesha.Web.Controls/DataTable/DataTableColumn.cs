@@ -13,10 +13,8 @@ namespace Shesha.Web.DataTable
         /// <summary>
         /// Default constructor
         /// </summary>
-        protected internal DataTableColumn(DataTableConfig dataTableConfig)
+        protected internal DataTableColumn()
         {
-            DataTableConfig = dataTableConfig;
-
             Fluent = new DataTableColumnFluentConfig(this);
             // default values
             IsVisible = true;

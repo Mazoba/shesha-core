@@ -33,7 +33,7 @@ namespace Shesha.Tests
     {
         public SheshaTestModule(SheshaNHibernateModule nhModule)
         {
-            nhModule.ConnectionString = @"Data Source=.;Initial Catalog=DsdNpo;Integrated Security=True";
+            nhModule.ConnectionString = @"Data Source=.;Initial Catalog=SheshaDemo;Integrated Security=True";
 
             /*
             nhModule.UseInMemoryDatabase = true;

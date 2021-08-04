@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.JsonLogic;
 using Shesha.Scheduler.Domain;
@@ -42,8 +43,8 @@ namespace Shesha.Tests.Datatables
                 WithUnitOfWork(() =>
                 {
                     var tableConfig = _tableConfigStore.GetTableConfiguration(tableConfigId);
-                    DataTableHelper.FillVariablesResolvers(tableConfig, context);
-                    DataTableHelper.FillContextMetadata(tableConfig, context);
+                    DataTableHelper.FillVariablesResolvers(tableConfig.Columns, context);
+                    DataTableHelper.FillContextMetadata(tableConfig.Columns, context);
                 });
             }
 
@@ -608,5 +609,53 @@ namespace Shesha.Tests.Datatables
             });
         }
 
+        [Fact]
+        private async Task Fetch_ByTableConfigId()
+        {
+            var controller = LocalIocManager.Resolve<DataTableController>();
+
+            var input = new DataTableGetDataInput
+            {
+                Id = PersonsTableId,
+                CurrentPage = 1,
+                PageSize = int.MaxValue,
+            };
+
+            DataTableData data = null;
+            await WithUnitOfWorkAsync(async () =>
+            {
+                data = await controller.GetTableDataAsync<Person, Guid>(input, CancellationToken.None);
+            });
+        }
+
+
+        [Fact]
+        private async Task Fetch_ByEntityType()
+        {
+            var controller = LocalIocManager.Resolve<DataTableController>();
+
+            var configurationStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
+            
+
+            var input = new DataTableGetDataInput
+            {
+                EntityType = configurationStore.Get(typeof(Person)).TypeShortAlias,
+                Properties = new List<string> 
+                {
+                    nameof(Person.Id),
+                    nameof(Person.FullName),
+                    nameof(Person.EmailAddress1),
+                    nameof(Person.MobileNumber1),
+                },
+                CurrentPage = 1,
+                PageSize = int.MaxValue,
+            };
+
+            DataTableData data = null;
+            await WithUnitOfWorkAsync(async () =>
+            {
+                data = await controller.GetTableDataAsync<Person, Guid>(input, CancellationToken.None);
+            });
+        }
     }
 }

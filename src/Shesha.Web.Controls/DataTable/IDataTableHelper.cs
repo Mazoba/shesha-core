@@ -1,4 +1,7 @@
 ﻿using Shesha.Domain;
+using Shesha.Web.DataTable.Columns;
+using System;
+using System.Collections.Generic;
 
 namespace Shesha.Web.DataTable
 {
@@ -15,5 +18,19 @@ namespace Shesha.Web.DataTable
         /// <param name="sSearch"></param>
         /// <param name="filterCriteria"></param>
         void AppendQuickSearchCriteria(DataTableConfig tableConfig, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria);
+
+        /// <summary>
+        /// Append quick search criteria
+        /// </summary>
+        void AppendQuickSearchCriteria(Type rowType, List<DataTableColumn> columns, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria, Action<FilterCriteria, string> onRequestToQuickSearch, string cacheKey);
+
+        /// <summary>
+        /// Get column properties by type of model and property name
+        /// </summary>
+        /// <param name="rowType">Type of model (table row)</param>
+        /// <param name="propName">Name of property. Supports nested properties with dot notation</param>
+        /// <param name="name">Name of the column, leave empty to fill with default name</param>
+        /// <returns></returns>
+        DataTablesDisplayPropertyColumn GetDisplayPropertyColumn(Type rowType, string propName, string name = null);
     }
 }

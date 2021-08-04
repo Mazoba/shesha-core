@@ -125,7 +125,7 @@ namespace Shesha.Web.DataTable.Columns
             }
         }
 
-        internal DataTablesDisplayPropertyColumn(DataTableConfig dataTableConfig) : base(dataTableConfig)
+        internal DataTablesDisplayPropertyColumn() : base()
         {
         }
     }
