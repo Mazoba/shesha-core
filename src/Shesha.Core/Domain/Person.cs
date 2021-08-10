@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Abp.Auditing;
+using Abp.Localization;
 using Abp.Timing;
 using JetBrains.Annotations;
 using Shesha.Authorization.Users;
@@ -33,11 +35,6 @@ namespace Shesha.Domain
 
         [NotMapped]
         public virtual string FirstNameInitials => !string.IsNullOrWhiteSpace(FirstName) ? $" {FirstName[0]}" : "";
-
-        /*
-        public virtual bool IsRegistered { get; set; }
-        public virtual Guid LinkId { get; set; }
-        */
 
         [StringLength(13)]
         [Display(Name = "Identity Number")]
@@ -278,5 +275,8 @@ namespace Shesha.Domain
 
         public virtual bool IsMobileVerified { get; set; }
         public virtual string SecurityPin { get; set; }
+
+        [ManyToMany("Core_Persons_Languages", "LanguageId", "PersonId")]
+        public virtual IList<ApplicationLanguage> PreferredLanguages { get; set; } = new List<ApplicationLanguage>();
     }
 }

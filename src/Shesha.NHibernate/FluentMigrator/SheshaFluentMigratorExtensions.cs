@@ -29,6 +29,14 @@ namespace Shesha.FluentMigrator
         }
 
         /// <summary>
+        /// Adds foreign key column (int) to the table
+        /// </summary>
+        public static ICreateTableColumnOptionOrWithColumnSyntax WithForeignKeyColumnInt(this ICreateTableWithColumnSyntax table, string foreignColumn, string masterTable)
+        {
+            return table.WithColumn(foreignColumn).AsInt32().Nullable().ForeignKey(masterTable, SheshaDatabaseConsts.IdColumn).Indexed();
+        }
+
+        /// <summary>
         /// Adds foreign key column (Int64) to the table
         /// </summary>
         public static ICreateTableColumnOptionOrWithColumnSyntax WithForeignKeyColumnInt64(this ICreateTableWithColumnSyntax table, string foreignColumn, string masterTable)

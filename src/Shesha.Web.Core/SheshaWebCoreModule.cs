@@ -14,8 +14,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Shesha.Authentication.JwtBearer;
 using Shesha.Authorization;
+using Shesha.Bootstrappers;
 using Shesha.Configuration;
 using Shesha.Elmah;
+using Shesha.Languages;
 using Shesha.NHibernate;
 using Shesha.Web;
 
@@ -85,6 +87,7 @@ namespace Shesha
             IocManager.IocContainer.Register(
               Component.For<ICustomPermissionChecker>().Forward<ISheshaWebCorePermissionChecker>().Forward<SheshaWebCorePermissionChecker>().ImplementedBy<SheshaWebCorePermissionChecker>().LifestyleTransient()
             );
+            IocManager.Register<IBootstrapper, SouthAfricaLanguagesCreator>();
         }
     }
 }
