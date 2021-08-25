@@ -340,7 +340,7 @@ namespace Shesha.NHibernate.Maps
                     ? foreignKeyAttribute.Name
                     : columnPrefix + propertyPath.LocalMember.Name + "Id";
 
-                map.NotFound(NotFoundMode.Ignore);
+                //map.NotFound(NotFoundMode.Ignore); disabled due to performance issues, this option breaks lazy loading
                 map.Column(foreignKeyColumn);
 
                 var directlyMappedFk = propertyPath.LocalMember.DeclaringType?.GetProperty(foreignKeyColumn);
@@ -393,7 +393,7 @@ namespace Shesha.NHibernate.Maps
             };
 
             mapper.BeforeMapManyToMany += (modelInspector, propertyPath, map) => {
-                map.NotFound(NotFoundMode.Ignore);
+                //map.NotFound(NotFoundMode.Ignore); disabled due to performance issues, this option breaks lazy loading
 
                 var manyToManyAttribute = propertyPath.LocalMember.GetAttribute<ManyToManyAttribute>(true);
                 if (manyToManyAttribute != null)
