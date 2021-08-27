@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Abp.Authorization;
+using Abp.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.Web.DataTable;
 using Shesha.Web.FormsDesigner.Domain;
@@ -50,9 +51,15 @@ namespace Shesha.Web.FormsDesigner.Services
         [HttpGet, Route("{id}")]
         public async Task<ConfigurableComponentDto> GetAsync(Guid id)
         {
-            var component = await _componentStore.GetAsync(id);
-
-            return component;
+            try
+            {
+                var component = await _componentStore.GetAsync(id);
+                return component;
+            }
+            catch (EntityNotFoundException e) 
+            {
+                throw;
+            }
         }
 
         /// inheritedDoc

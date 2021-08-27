@@ -26,6 +26,7 @@ namespace Shesha.Web.DataTable
             IsResizable = true;
             StripHtml = false;
             AllowShowHide = true;
+            IsEditable = true;
         }
 
         /// <summary>
@@ -173,6 +174,11 @@ namespace Shesha.Web.DataTable
         /// If true, indicates that column is exportable to excel
         /// </summary>
         public bool IsExportable { get; set; }
+
+        /// <summary>
+        /// If true, indicates that column is editable
+        /// </summary>
+        public bool IsEditable { get; set; }
 
         /// <summary>
         /// If true, indicates that column is filterable

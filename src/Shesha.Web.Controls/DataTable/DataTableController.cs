@@ -178,34 +178,72 @@ namespace Shesha.Web.DataTable
         [HttpPost]
         public async Task<FileStreamResult> ExportToExcel(DataTableGetDataInput input, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(input?.Id))
-                throw new Exception("Id of the DataTableConfiguration must not be null");
-
-            var tableConfig = _configurationStore.GetTableConfiguration(input.Id);
-
-            var method = this.GetType().GetMethod(nameof(QueryRepositoryAsync));
-            if (method == null)
-                throw new Exception($"{nameof(QueryRepositoryAsync)} not found");
-
-            var genericMethod = method.MakeGenericMethod(tableConfig.RowType, tableConfig.IdType);
-
             input.CurrentPage = 1;
             input.PageSize = int.MaxValue;
-            var task = (Task)genericMethod.Invoke(this, new object[] { tableConfig, input, cancellationToken });
-            await task.ConfigureAwait(false);
 
-            var resultProperty = task.GetType().GetProperty("Result");
-            if (resultProperty == null)
-                throw new Exception("Result property not found");
+            var method = this.GetType().GetMethod(nameof(GetTableQueryDataAsync));
+            if (method == null)
+                throw new Exception($"{nameof(GetTableQueryDataAsync)} not found");
 
-            var data = resultProperty.GetValue(task) as IQueryDataDto;
-            if (data == null)
-                throw new Exception("Failed to export to Excel");
+            if (!string.IsNullOrWhiteSpace(input.Id))
+            {
+                // support of table configurations, may be removed later
+                var tableConfig = !string.IsNullOrWhiteSpace(input.Id)
+                    ? _configurationStore.GetTableConfiguration(input.Id)
+                    : null;
+                if (!string.IsNullOrWhiteSpace(input.Id) && tableConfig == null)
+                    throw new AbpValidationException($"Table configuration with Id = '{input.Id}' not found");
 
+                var genericMethod = method.MakeGenericMethod(tableConfig.RowType, tableConfig.IdType);
+
+                var task = (Task)genericMethod.Invoke(this, new object[] { input, cancellationToken });
+                await task.ConfigureAwait(false);
+
+                var resultProperty = task.GetType().GetProperty("Result");
+                if (resultProperty == null)
+                    throw new Exception("Result property not found");
+
+                var data = resultProperty.GetValue(task) as IQueryDataDto;
+                if (data == null)
+                    throw new Exception("Failed to export to Excel");
+
+                return GetExcelResult(data.Rows, tableConfig.Columns);
+            }
+            else
+            if (!string.IsNullOrWhiteSpace(input.EntityType))
+            {
+                // support of configurable tables (forms designer)
+                var entityConfig = _entityConfigStore.Get(input.EntityType);
+                if (entityConfig == null)
+                    throw new AbpValidationException($"Entity of type '{input.EntityType}' not found");
+
+                var idType = entityConfig.Properties[SheshaDatabaseConsts.IdColumn].PropertyInfo.PropertyType;
+                var genericMethod = method.MakeGenericMethod(entityConfig.EntityType, idType);
+
+                var task = (Task)genericMethod.Invoke(this, new object[] { input, cancellationToken });
+                await task.ConfigureAwait(false);
+
+                var resultProperty = task.GetType().GetProperty("Result");
+                if (resultProperty == null)
+                    throw new Exception("Result property not found");
+
+                var data = resultProperty.GetValue(task) as IQueryDataDto;
+                if (data == null)
+                    throw new Exception("Failed to export to Excel");
+
+                var columns = GetColumnsFromInput(input);
+                return GetExcelResult(data.Rows, columns);
+            }
+            else
+                throw new AbpValidationException($"'{nameof(input.Id)}' or '{nameof(input.EntityType)}' must be specified");
+        }
+
+        private FileStreamResult GetExcelResult(IList rows, IList<DataTableColumn> columns) 
+        {
             var excelFileName = "Export.xlsx";
             HttpContext.Response.Headers.Add("content-disposition", $"attachment;filename={excelFileName}");
 
-            var stream = ExcelUtility.ReadToExcelStream(data.Rows, tableConfig.Columns);
+            var stream = ExcelUtility.ReadToExcelStream(rows, columns);
 
             stream.Seek(0, SeekOrigin.Begin);
 
@@ -233,7 +271,15 @@ namespace Shesha.Web.DataTable
         [UsedImplicitly]
         public async Task<DataTableData> GetTableDataAsync<TEntity, TPrimaryKey>(DataTableGetDataInput input, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
         {
-            var tableConfig = !string.IsNullOrWhiteSpace(input.Id) 
+            var queryData = await GetTableQueryDataAsync<TEntity, TPrimaryKey>(input, cancellationToken);
+
+            var columns = GetColumnsFromInput(input);
+            return GetTableDataWithPaging(queryData, columns, input.PageSize, cancellationToken);
+        }
+
+        public async Task<QueryDataDto<TEntity, TPrimaryKey>> GetTableQueryDataAsync<TEntity, TPrimaryKey>(DataTableGetDataInput input, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            var tableConfig = !string.IsNullOrWhiteSpace(input.Id)
                 ? _configurationStore.GetTableConfiguration(input.Id)
                 : null;
 
@@ -245,24 +291,43 @@ namespace Shesha.Web.DataTable
                 if (tableConfig != null)
                 {
                     queryData = await QueryRepositoryAsync<TEntity, TPrimaryKey>(tableConfig, input, cancellationToken);
-                    var authorizedColumns = tableConfig.Columns.Where(c => c.IsAuthorized == null || c.IsAuthorized.Invoke()).ToList();
-
-                    return GetTableDataWithPaging(queryData, authorizedColumns, input.PageSize, cancellationToken);
-                } else 
-                {
-                    if (input.Properties == null)
-                        throw new Exception("Properties not specified");
-
-                    var properties = input.Properties.ToList();
-                    properties.Insert(0, SheshaDatabaseConsts.IdColumn);
-
-                    var columns = properties.Select(p => _helper.GetDisplayPropertyColumn(typeof(TEntity), p))
-                        .Cast<DataTableColumn>()
-                        .ToList();
-                    queryData = await QueryRepositoryAsync<TEntity, TPrimaryKey>(columns, input, cancellationToken);
-                    
-                    return GetTableDataWithPaging(queryData, columns, input.PageSize, cancellationToken);
+                    return queryData;
                 }
+                else
+                {
+                    var columns = GetColumnsFromInput(input);
+                    queryData = await QueryRepositoryAsync<TEntity, TPrimaryKey>(columns, input, cancellationToken);
+                    return queryData;
+                }
+            }
+        }
+
+        private List<DataTableColumn> GetColumnsFromInput(DataTableGetDataInput input) 
+        {
+            var tableConfig = !string.IsNullOrWhiteSpace(input.Id)
+                ? _configurationStore.GetTableConfiguration(input.Id)
+                : null;
+            if (tableConfig != null)
+            {
+                var authorizedColumns = tableConfig.Columns.Where(c => c.IsAuthorized == null || c.IsAuthorized.Invoke()).ToList();
+                return authorizedColumns;
+            }
+            else
+            {
+                var entityConfig = _entityConfigStore.Get(input.EntityType);
+                if (entityConfig == null)
+                    throw new AbpValidationException($"Entity of type '{input.EntityType}' not found");
+
+                if (input.Properties == null)
+                    throw new Exception("Properties not specified");
+
+                var properties = input.Properties.ToList();
+                properties.Insert(0, SheshaDatabaseConsts.IdColumn);
+
+                var columns = properties.Select(p => _helper.GetDisplayPropertyColumn(entityConfig.EntityType, p))
+                    .Cast<DataTableColumn>()
+                    .ToList();
+                return columns;
             }
         }
 

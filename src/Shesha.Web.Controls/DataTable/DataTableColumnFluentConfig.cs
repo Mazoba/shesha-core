@@ -33,6 +33,15 @@ namespace Shesha.Web.DataTable
         }
 
         /// <summary>
+        /// Set column editability
+        /// </summary>
+        public DataTableColumnFluentConfig Editable(bool editable)
+        {
+            Column.IsEditable = editable;
+            return this;
+        }
+
+        /// <summary>
         /// Enable/disable filtration
         /// </summary>
         public DataTableColumnFluentConfig IsFilterable(bool isFilterable)

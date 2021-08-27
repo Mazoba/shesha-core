@@ -91,6 +91,11 @@ namespace Shesha.Web.DataTable.Model
         public bool IsSortable { get; set; }
 
         /// <summary>
+        /// If true, indicates that column is editable
+        /// </summary>
+        public bool IsEditable { get; set; }
+
+        /// <summary>
         /// Column width
         /// </summary>
         public string Width { get; set; }
