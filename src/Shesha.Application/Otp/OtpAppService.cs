@@ -107,27 +107,37 @@ namespace Shesha.Otp
                 throw new UserFriendlyException("OTP has expired, try to request a new one");
 
             // note: we ignore _otpSettings.IgnoreOtpValidation here, the user pressed `resend` manually
-            // send otp
 
+            // send otp
+            var sendTime = DateTime.Now;
             try
             {
-                otp.SentOn = DateTime.Now;
-
                 await SendInternal(otp);
-
-                otp.SendStatus = OtpSendStatus.Sent;
             }
             catch (Exception e)
             {
-                otp.SendStatus = OtpSendStatus.Failed;
-                otp.ErrorMessage = e.FullMessage();
+                await _otpStorage.UpdateAsync(input.OperationId, newOtp =>
+                {
+                    newOtp.SentOn = sendTime;
+                    newOtp.SendStatus = OtpSendStatus.Failed;
+                    newOtp.ErrorMessage = e.FullMessage();
+                    
+                    return Task.CompletedTask;
+                });
             }
             
             // extend lifetime
             var lifeTime = input.Lifetime ?? _otpSettings.DefaultLifetime;
-            otp.ExpiresOn = DateTime.Now.AddSeconds(lifeTime);
+            var newExpiresOn = DateTime.Now.AddSeconds(lifeTime);
 
-            await _otpStorage.SaveAsync(otp);
+            await _otpStorage.UpdateAsync(input.OperationId, newOtp =>
+            {
+                newOtp.SentOn = sendTime;
+                newOtp.SendStatus = OtpSendStatus.Sent;
+                newOtp.ExpiresOn = newExpiresOn;
+
+                return Task.CompletedTask;
+            });
 
             // return response
             var response = new SendPinDto
