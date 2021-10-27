@@ -92,6 +92,7 @@ namespace Shesha.Services.StoredFiles
             var blob = GetBlobClient(GetAzureFileName(fileVersion));
             var stream = new MemoryStream();
             var downloadResult = blob.DownloadTo(stream);
+            stream.Seek(0, SeekOrigin.Begin);
             
             // todo: check status
             
