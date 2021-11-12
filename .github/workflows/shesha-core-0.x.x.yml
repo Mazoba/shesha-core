@@ -55,4 +55,4 @@ jobs:
           
       # push nuget packages
       - name: Dotnet Nuget Push
-        run: dotnet nuget push "../dist/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push "../dist/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
