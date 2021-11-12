@@ -18,6 +18,8 @@ jobs:
       # checkout latest code
       - name: Get Sources
         uses: actions/checkout@v1
+        with:
+          clean: true
       # setup .net core
       - name: Use .NET Core SDK ${{ env.DOTNET_VERSION }}
         uses: actions/setup-dotnet@v1
