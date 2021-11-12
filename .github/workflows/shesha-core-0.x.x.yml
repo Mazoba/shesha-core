@@ -6,26 +6,49 @@ on:
 
 jobs:
 
-  # create a version and tag the branch
-  version:
+  # build the project
+  build:
     runs-on: ubuntu-latest
     steps:
-    - name: Bump Version and Push Tag
-      id: tag_version
-      uses: mathieudutour/github-tag-action@v5.6
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        tag_prefix: ""
+      # checkout latest code
+      - name: Get Sources
+        uses: actions/checkout@v1
+      # setup .net core
+      - name: Use .NET Core SDK 3.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.x
+      # dotnet restore
+      - name: Dotnet Restore
+        run: dotnet restore --configfile .nuget/NuGet.Config --verbosity detailed
+      # dotnet build
+      - name: Dotnet Build
+        run: dotnet build --configuration Release
+      # dotnet publish
+      # - name: Dotnet Publish
+      #   run: 
+
+  # create a version and tag the branch
+  # version:
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   steps:
+  #   - name: Bump Version and Push Tag
+  #     id: tag_version
+  #     uses: mathieudutour/github-tag-action@v5.6
+  #     with:
+  #       github_token: ${{ secrets.GITHUB_TOKEN }}
+  #       tag_prefix: ""
       
 
   # package:
   #   runs-on: ubuntu-latest
-  #   needs: version
+  #   needs: [build, version]
   #   steps:
 
     
   # publish:
   #   runs-on: ubuntu-latest
-  #   needs: [version, package]
+  #   needs: [build, version, package]
   #   steps:
 
