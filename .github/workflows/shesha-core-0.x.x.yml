@@ -17,7 +17,7 @@ jobs:
     steps:
       # checkout latest code
       - name: Get Sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
         with:
           clean: true
       # setup .net core
