@@ -22,7 +22,7 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
       
-    - name: Bump Version and push tag
+    - name: Bump Version and Push Tag
       id: tag_version
       uses: mathieudutour/github-tag-action@v5.6
       with:
