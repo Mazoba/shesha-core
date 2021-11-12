@@ -1,4 +1,4 @@
-name: Build, Tag & Package Nuget
+name: shesha-core-0.0.1
 
 on:
   push:
