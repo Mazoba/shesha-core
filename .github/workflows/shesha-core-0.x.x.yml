@@ -49,8 +49,8 @@ jobs:
         with:
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: ${{ steps.tag_version.outputs.new_tag }}
-          body: ${{ steps.tag_version.outputs.changelog
+          body: ${{ steps.tag_version.outputs.changelog }}
           
       # push nuget packages
       - name: Dotnet Nuget Push
-        run: dotnet nuget push "*.nupkg"
+        run: dotnet nuget push "*.nupkg" --source https://api.nuget.org/v3/index.json
