@@ -41,7 +41,7 @@ jobs:
       
       ### pack Shesha.Application (Project)
       - name: Dotnet Pack Shesha.Application
-        run: dotnet pack src/Shesha.Application/Shesha.Application.csproj -o ../Shesha.Application --version-suffix ${{ steps.tag_branch.outputs.new_tag }} --include-symbols --include-source
+        run: dotnet pack src/Shesha.Application/Shesha.Application.csproj -o ../Shesha.Application -p:PackageVersion=${{ steps.tag_branch.outputs.new_tag }} --include-symbols --include-source
       
       ### Shesha.AzureAD
       ### Shesha.Core
