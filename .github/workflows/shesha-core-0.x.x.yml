@@ -29,7 +29,7 @@ jobs:
 
       ### build Shesha (Solution)
       - name: Dotnet Build
-        run: dotnet build --configuration Release --runtime linux-x64
+        run: dotnet build --configuration Release
 
       # tag branch
       - name: Tag Branch
@@ -41,7 +41,7 @@ jobs:
       
       ### pack Shesha.Application (Project)
       - name: Dotnet Pack Shesha.Application
-        run: dotnet pack -o ../Shesha.Application --version-suffix ${{ steps.tag_branch.outputs.new_tag }} --runtime linux-x64 --include-symbols --include-source --no-restore --no-build
+        run: dotnet pack -o ../Shesha.Application --version-suffix ${{ steps.tag_branch.outputs.new_tag }} --include-symbols --include-source --no-restore --no-build
       
       ### Shesha.AzureAD
       ### Shesha.Core
