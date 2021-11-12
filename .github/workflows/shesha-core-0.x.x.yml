@@ -27,7 +27,7 @@ jobs:
       - name: Dotnet Restore
         run: dotnet restore --configfile .nuget/NuGet.Config --verbosity detailed
 
-      ### build Shesha (Solution)
+      # build Shesha (Solution)
       - name: Dotnet Build
         run: dotnet build --configuration Release
 
@@ -39,9 +39,13 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag_prefix: ""
       
-      ### pack Shesha (Solution)
+      # pack Shesha (Solution)
       - name: Dotnet Pack Shesha
-        run: dotnet pack -o ../Shesha.Application -p:PackageVersion=${{ steps.tag_branch.outputs.new_tag }} --include-symbols --include-source
+        run: dotnet pack -o ../dist -p:PackageVersion=${{ steps.tag_branch.outputs.new_tag }} --include-symbols --include-source
+      
+      # push nuget packages
+      - name: Dotnet Nuget Push
+        run: dotnet nuget push "*.nupkg"
       
       ### Shesha.AzureAD
       ### Shesha.Core
