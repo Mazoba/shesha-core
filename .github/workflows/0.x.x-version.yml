@@ -1,5 +1,0 @@
-name: version shesha-core-0.x.x
-
-on:
-  push:
-    branches: [ main ]
