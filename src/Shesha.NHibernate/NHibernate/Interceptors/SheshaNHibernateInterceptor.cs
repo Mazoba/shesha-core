@@ -389,5 +389,32 @@ namespace Shesha.NHibernate.Interceptors
                 subProp.SetValue(componentObject, Clock.Normalize(dateTime.Value));
             }
         }
+
+        #region post transaction actions
+
+        private Stack<Action> AfterTransactionActions { get; set; } = new Stack<Action>();
+
+        /// <summary>
+        /// Add action that should be executed after completion of the current transaction
+        /// </summary>
+        /// <param name="action"></param>
+        public void AddAfterTransactionAction(Action action)
+        {
+            AfterTransactionActions.Push(action);
+        }
+
+        /// inheritedDoc
+        public override void AfterTransactionCompletion(ITransaction tx)
+        {
+            while (AfterTransactionActions.Any())
+            {
+                var action = AfterTransactionActions.Pop();
+                action.Invoke();
+            }
+
+            base.AfterTransactionCompletion(tx);
+        }
+
+        #endregion
     }
 }

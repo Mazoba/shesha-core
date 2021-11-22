@@ -12,6 +12,7 @@ using Abp.Domain.Entities;
 using Abp.Extensions;
 using Shesha.Domain;
 using Shesha.NHibernate;
+using Shesha.NHibernate.Interceptors;
 
 namespace Shesha.NHibernate.Session
 {
@@ -218,6 +219,30 @@ namespace Shesha.NHibernate.Session
             public string Name { get; set; }
             public object OldValue { get; set; }
             public object NewValue { get; set; }
+        }
+
+        /// <summary>
+        /// Get NH session interceptor
+        /// </summary>
+        /// <param name="session"></param>
+        /// <returns></returns>
+        public static SheshaNHibernateInterceptor LocalInterceptor(this ISession session)
+        {
+            return session.GetSessionImplementation().Interceptor as SheshaNHibernateInterceptor;
+        }
+
+        /// <summary>
+        /// Add an action that should be executed after successful completion of the current transaction
+        /// </summary>
+        /// <param name="session"></param>
+        /// <param name="action"></param>
+        public static void DoAfterTransaction(this ISession session, Action action)
+        {
+            var interceptor = session.LocalInterceptor();
+            if (interceptor == null)
+                throw new Exception("Session's interceptor should be specified");
+
+            interceptor.AddAfterTransactionAction(action);
         }
     }
 }

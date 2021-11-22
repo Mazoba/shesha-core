@@ -13,6 +13,7 @@ using Shesha.Authorization.Users;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.Exceptions;
+using Shesha.NHibernate;
 using Shesha.NotificationMessages.Dto;
 using Shesha.Notifications.Dto;
 using Shesha.Utilities;
@@ -458,7 +459,6 @@ namespace Shesha.Notifications
                         NotificationMessageRepository.Update(message);
 
                         // schedule sending
-                        //BackgroundJob.Enqueue(() => SendNotification(messageId));
                         SendNotificationInternal(message);
                     }
                 }
@@ -522,10 +522,13 @@ namespace Shesha.Notifications
             }
 
             // send all prepared messages in background
-            foreach (var messageId in messagesToSend)
+            UowManager.Current.DoAfterTransaction(() =>
             {
-                BackgroundJob.Enqueue(() => SendNotification(messageId));
-            }
+                foreach (var messageId in messagesToSend)
+                {
+                    BackgroundJob.Enqueue(() => SendNotification(messageId));
+                }
+            });
         }
 
         /// <summary>

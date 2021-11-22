@@ -15,6 +15,7 @@ using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.Email;
 using Shesha.Email.Dtos;
+using Shesha.NHibernate;
 using Shesha.NotificationMessages.Dto;
 using Shesha.Services;
 
@@ -79,7 +80,7 @@ namespace Shesha.Notifications
 
 
                     // schedule sending
-                    BackgroundJob.Enqueue(() => SendNotification(messageId));
+                    UowManager.Current.DoAfterTransaction(() => BackgroundJob.Enqueue(() => SendNotification(messageId)));
                 }
             }
             catch (Exception e)
@@ -152,7 +153,7 @@ namespace Shesha.Notifications
                 });
 
                 // schedule sending
-                BackgroundJob.Enqueue(() => SendNotification(messageId));
+                UowManager.Current.DoAfterTransaction(() => BackgroundJob.Enqueue(() => SendNotification(messageId)));
             }
         }
 
