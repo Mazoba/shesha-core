@@ -2,6 +2,7 @@
 using Abp;
 using Abp.Domain.Uow;
 using Abp.Extensions;
+using NHibernate;
 using Shesha.NHibernate.UoW;
 
 namespace Shesha.NHibernate.Uow
@@ -14,7 +15,9 @@ namespace Shesha.NHibernate.Uow
         /// inheritedDoc
         public void ApplyDisableFilter(IUnitOfWork unitOfWork, string filterName)
         {
-            var session = unitOfWork.As<NhUnitOfWork>().Session;
+            if (SkipProcessing(unitOfWork, out var session))
+                return;
+
             if (session.GetEnabledFilter(filterName) != null)
             {
                 session.DisableFilter(filterName);
@@ -24,7 +27,9 @@ namespace Shesha.NHibernate.Uow
         /// inheritedDoc
         public void ApplyEnableFilter(IUnitOfWork unitOfWork, string filterName)
         {
-            var session = unitOfWork.As<NhUnitOfWork>().Session;
+            if (SkipProcessing(unitOfWork, out var session))
+                return;
+
             if (session.GetEnabledFilter(filterName) == null)
             {
                 session.EnableFilter(filterName);
@@ -45,11 +50,28 @@ namespace Shesha.NHibernate.Uow
         /// inheritedDoc
         public void ApplyFilterParameterValue(IUnitOfWork unitOfWork, string filterName, string parameterName, object value)
         {
-            var session = unitOfWork.As<NhUnitOfWork>().Session;
+            if (SkipProcessing(unitOfWork, out var session))
+                return;
 
-            var filter = session?.GetEnabledFilter(filterName);
+            var filter = session.GetEnabledFilter(filterName);
 
             filter?.SetParameter(parameterName, value);
+        }
+
+        /// <summary>
+        /// Returns true if the processing should be skipped. Session may be null if session factory uses lazy sessions
+        /// Note: we can safely skip enable/disable and parameters actions, state of the filters are stored as part of the <see cref="UnitOfWorkBase"/> and can be reapplied at any moment
+        /// </summary>
+        /// <param name="unitOfWork"></param>
+        /// <param name="session"></param>
+        /// <returns></returns>
+        private bool SkipProcessing(IUnitOfWork unitOfWork, out ISession session)
+        {
+            session = unitOfWork is NhUnitOfWork nhUnitOwWork
+                ? nhUnitOwWork.GetSession(false)
+                : null;
+
+            return session == null;
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Abp.Dependency;
 using Abp.Domain.Uow;
 using NHibernate;
+using NHibernate.Context;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain.Attributes;
 using Shesha.NHibernate.UoW;
@@ -14,22 +15,21 @@ namespace Shesha.Services
     /// <summary>
     /// Dynamic repository
     /// </summary>
-    public class DynamicRepository: IDynamicRepository, ITransientDependency
+    public class DynamicRepository : IDynamicRepository, ITransientDependency
     {
         private readonly IEntityConfigurationStore _entityConfigurationStore;
-        private readonly ICurrentUnitOfWorkProvider _currentUoqProvider;
+        private readonly ICurrentSessionContext _currentSessionContext;
+
 
         // note: current session doesn't work in unit tests because of static context usage
-        private ISession CurrentSession => _currentUoqProvider.Current is NhUnitOfWork nhUow
-            ? nhUow.Session
-            : null;
+        private ISession CurrentSession => _currentSessionContext.CurrentSession();
 
-        public DynamicRepository(IEntityConfigurationStore entityConfigurationStore, ICurrentUnitOfWorkProvider currentUoqProvider)
+        public DynamicRepository(IEntityConfigurationStore entityConfigurationStore, ICurrentSessionContext currentSessionContext)
         {
             _entityConfigurationStore = entityConfigurationStore;
-            _currentUoqProvider = currentUoqProvider;
+            _currentSessionContext = currentSessionContext;
         }
-        
+
         /// <inheritdoc/>
         public async Task<object> GetAsync(string entityTypeShortAlias, string id)
         {

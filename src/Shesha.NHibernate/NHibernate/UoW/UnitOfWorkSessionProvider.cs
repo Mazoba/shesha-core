@@ -1,18 +1,21 @@
 using Abp.Dependency;
 using Abp.Domain.Uow;
 using NHibernate;
+using NHibernate.Context;
+using System;
 
 namespace Shesha.NHibernate.Uow
 {
+    [Obsolete("Use `ICurrentSessionContext` instead")]
     public class UnitOfWorkSessionProvider : ISessionProvider, ITransientDependency
     {
-        public ISession Session => _unitOfWorkProvider.Current?.GetSession();
+        public ISession Session => _sessionContext.CurrentSession();
 
-        private readonly ICurrentUnitOfWorkProvider _unitOfWorkProvider;
+        private ICurrentSessionContext _sessionContext;
 
-        public UnitOfWorkSessionProvider(ICurrentUnitOfWorkProvider unitOfWorkProvider)
+        public UnitOfWorkSessionProvider(ICurrentSessionContext sessionContext)
         {
-            _unitOfWorkProvider = unitOfWorkProvider;
+            _sessionContext = sessionContext;
         }
     }
 }

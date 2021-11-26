@@ -18,9 +18,25 @@ namespace Shesha.NHibernate.UoW
     public class NhUnitOfWork : UnitOfWorkBase, ITransientDependency
     {
         /// <summary>
-        /// Gets NHibernate session object to perform queries.
+        /// NH session
         /// </summary>
-        public ISession Session { get; private set; }
+        private ISession _session;
+
+        /// <summary>
+        /// Returns current session or starts a new one is missing and <paramref name="startNewIfMissing"/> is true
+        /// </summary>
+        /// <param name="startNewIfMissing"></param>
+        /// <returns></returns>
+        public ISession GetSession(bool startNewIfMissing = true)
+        {
+            if (_session == null && startNewIfMissing)
+            {
+                _session = BeginSession();
+            }
+
+            return _session;
+        }
+
 
         /// <summary>
         /// <see cref="NhUnitOfWork"/> uses this DbConnection if it's set.
@@ -55,47 +71,57 @@ namespace Shesha.NHibernate.UoW
                   filterExecuter)
         {
             _sessionFactory = sessionFactory;
-            
+
             _nhModule = nhModule;
         }
 
-        protected override void BeginUow()
+        /// <summary>
+        /// Begin NH session
+        /// </summary>
+        protected ISession BeginSession()
         {
-            //EntityHistoryHelper = StaticContext.IocManager.Resolve<EntityHistoryHelperBase>();
-
-            Session = DbConnection != null
+            var session = DbConnection != null
                 ? _sessionFactory.WithOptions().Connection(DbConnection).OpenSession()
                 : _sessionFactory.OpenSession();
 
-            #region temporary stuff for unit testing
-
-            //var nhModule = StaticContext.IocManager.Resolve<AbpNHibernateModule>();
-            var nhModule = _nhModule;
-            /*
-            if (nhModule.UseInMemoryDatabase)
-            {
-                var export = new SchemaExport(nhModule.NhConfiguration);
-                try
-                {
-                    export.Execute(true, true, false, Session.Connection, null);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-            }
-            */
-            #endregion
-
-            Session.FlushMode = FlushMode.Commit;
+            session.FlushMode = FlushMode.Commit;
 
             if (Options.IsTransactional == true)
             {
                 _transaction = Options.IsolationLevel.HasValue
-                    ? Session.BeginTransaction(Options.IsolationLevel.Value.ToSystemDataIsolationLevel())
-                    : Session.BeginTransaction();
+                    ? session.BeginTransaction(Options.IsolationLevel.Value.ToSystemDataIsolationLevel())
+                    : session.BeginTransaction();
             }
+
+            // apply all filter settings
+            ApplySessionOptions(session);
+
+            return session;
+        }
+
+        private void ApplySessionOptions(ISession session)
+        {
+            foreach (var filter in Filters)
+            {
+                if (filter.IsEnabled)
+                {
+                    foreach (var filterParam in filter.FilterParameters)
+                    {
+                        ApplyFilterParameterValue(filter.FilterName, filterParam.Key, filterParam.Value);
+                    }
+                    ApplyEnableFilter(filter.FilterName);
+                }
+                else
+                {
+                    ApplyDisableFilter(filter.FilterName);
+                }
+            }
+        }
+
+        /// inheritedDoc
+        protected override void BeginUow()
+        {
+            // Note: configuration of filters is still required irrespectively of the laziness of the session
 
             // set default value for IsDeleted parameter
             SetFilterParameter(AbpDataFilters.SoftDelete, AbpDataFilters.Parameters.IsDeleted, false);
@@ -105,6 +131,9 @@ namespace Shesha.NHibernate.UoW
             CheckAndSetMustHaveTenant();
         }
 
+        /// <summary>
+        /// Check and set `SoftDelete` filter
+        /// </summary>
         protected virtual void CheckAndSetSoftDelete()
         {
             if (IsFilterEnabled(AbpDataFilters.SoftDelete))
@@ -118,6 +147,9 @@ namespace Shesha.NHibernate.UoW
             }
         }
 
+        /// <summary>
+        /// Check and set `MustHaveTenant` filter
+        /// </summary>
         protected virtual void CheckAndSetMustHaveTenant()
         {
             if (IsFilterEnabled(AbpDataFilters.MustHaveTenant))
@@ -131,6 +163,9 @@ namespace Shesha.NHibernate.UoW
             }
         }
 
+        /// <summary>
+        /// Check and set `MayHaveTenant` filter
+        /// </summary>
         protected virtual void CheckAndSetMayHaveTenant()
         {
             if (IsFilterEnabled(AbpDataFilters.MayHaveTenant))
@@ -145,14 +180,16 @@ namespace Shesha.NHibernate.UoW
 
         }
 
+        /// inheritedDoc
         public override void SaveChanges()
         {
-            Session.Flush();
+            _session?.Flush();
         }
 
+        /// inheritedDoc
         public override Task SaveChangesAsync()
         {
-            return Session.FlushAsync();
+            return _session?.FlushAsync() ?? Task.CompletedTask;
         }
 
         /// <summary>
@@ -167,6 +204,7 @@ namespace Shesha.NHibernate.UoW
             }
         }
 
+        /// inheritedDoc
         protected override async Task CompleteUowAsync()
         {
             await SaveChangesAsync();
@@ -195,7 +233,7 @@ namespace Shesha.NHibernate.UoW
                 _transaction = null;
             }
 
-            Session.Dispose();
+            _session?.Dispose();
         }
     }
 }

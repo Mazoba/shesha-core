@@ -7,19 +7,29 @@ using Shesha.Services;
 
 namespace Shesha.NHibernate.Session
 {
-    public class UnitOfWorkSessionContext: ICurrentSessionContext
+    /// <summary>
+    /// Unit of work session context
+    /// </summary>
+    public class UnitOfWorkSessionContext : ICurrentSessionContext
     {
+        /// <summary>
+        /// default constructor
+        /// </summary>
         public UnitOfWorkSessionContext()
         {
-            
+
         }
 
+        /// <summary>
+        /// Returns current session
+        /// </summary>
+        /// <returns></returns>
         public ISession CurrentSession()
         {
             var uowProvider = StaticContext.IocManager.Resolve<ICurrentUnitOfWorkProvider>();
 
             return uowProvider.Current is NhUnitOfWork nhUow
-                ? nhUow.Session
+                ? nhUow.GetSession()
                 : null;
         }
     }

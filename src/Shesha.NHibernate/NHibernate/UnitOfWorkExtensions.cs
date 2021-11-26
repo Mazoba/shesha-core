@@ -16,20 +16,17 @@ namespace Shesha.NHibernate
             if (!(uow is NhUnitOfWork nhUow))
                 return;
 
-            var previousFlushMode = nhUow.Session.FlushMode;
+            var session = nhUow.GetSession();
+
+            var previousFlushMode = session.FlushMode;
 
             // We do NOT want this to flush pending changes as checking for a duplicate should 
             // only compare the object against data that's already in the database
-            nhUow.Session.FlushMode = FlushMode.Manual;
+            session.FlushMode = FlushMode.Manual;
 
             action.Invoke();
 
-            nhUow.Session.FlushMode = previousFlushMode;
-        }
-
-        public static ISession GetSession(this IActiveUnitOfWork unitOfWork)
-        {
-            return GetNhUnitOfWork(unitOfWork).Session;
+            session.FlushMode = previousFlushMode;
         }
 
         /// <summary>
@@ -39,7 +36,7 @@ namespace Shesha.NHibernate
         {
             var nhUow = GetNhUnitOfWork(unitOfWork);
 
-            nhUow.Session.DoAfterTransaction(action);
+            nhUow.GetSession().DoAfterTransaction(action);
         }
 
         private static NhUnitOfWork GetNhUnitOfWork(IActiveUnitOfWork unitOfWork)
