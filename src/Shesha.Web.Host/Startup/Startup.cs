@@ -8,6 +8,8 @@ using Abp.Extensions;
 using Castle.Facilities.Logging;
 using ElmahCore;
 using ElmahCore.Mvc;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -19,6 +21,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Shesha.Configuration;
 using Shesha.Identity;
+using Shesha.Scheduler.Extensions;
 using Shesha.Swagger;
 
 namespace Shesha.Web.Host.Startup
@@ -87,6 +90,10 @@ namespace Shesha.Web.Host.Startup
             });
 
             services.AddHttpContextAccessor();
+            services.AddHangfire(config =>
+            {
+                config.UseSqlServerStorage(_appConfiguration.GetConnectionString("Default"));
+            });
 
             // Add ABP and initialize 
             // Configure Abp and Dependency Injection
@@ -111,6 +118,8 @@ namespace Shesha.Web.Host.Startup
             // use NHibernate session per request
             //app.UseNHibernateSessionPerRequest();
 
+            app.UseHangfireServer();
+
             app.UseAbp(options => { options.UseAbpRequestLocalization = false; }); // Initializes ABP framework.
 
             // global cors policy
@@ -127,6 +136,8 @@ namespace Shesha.Web.Host.Startup
             app.UseAbpRequestLocalization();
 
             app.UseRouting();
+            app.UseAuthorization();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
@@ -137,6 +148,7 @@ namespace Shesha.Web.Host.Startup
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapHub<AbpCommonHub>("/signalr");
                 endpoints.MapControllers();
+                endpoints.MapSignalRHubs();
             });
 
             // Enable middleware to serve generated Swagger as a JSON endpoint
@@ -149,6 +161,8 @@ namespace Shesha.Web.Host.Startup
                 options.IndexStream = () => Assembly.GetExecutingAssembly()
                     .GetManifestResourceStream("Shesha.Web.Host.wwwroot.swagger.ui.index.html");
             }); // URL: /swagger
+
+            app.UseHangfireDashboard();
         }
     }
 }

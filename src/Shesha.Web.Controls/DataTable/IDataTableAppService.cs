@@ -14,6 +14,6 @@ namespace Shesha.Web.DataTable
         /// </summary>
         /// <param name="term"></param>
         /// <returns></returns>
-        List<AutocompleteItemDto> TableIdAutocomplete(string term);
+        List<AutocompleteItemDto> TableIdAutocomplete(string term, string selectedValue);
     }
 }

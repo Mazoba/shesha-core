@@ -32,8 +32,19 @@ namespace Shesha.Web.DataTable
 
         /// inhertiedDoc
         [HttpGet]
-        public List<AutocompleteItemDto> TableIdAutocomplete(string term)
+        public List<AutocompleteItemDto> TableIdAutocomplete(string term, string selectedValue)
         {
+            var isPreselection = string.IsNullOrWhiteSpace(term) && !string.IsNullOrWhiteSpace(selectedValue);
+            if (isPreselection)
+            {
+                return new List<AutocompleteItemDto> {
+                    new AutocompleteItemDto {
+                        Value = selectedValue,
+                        DisplayText = selectedValue
+                    }
+                };
+            }
+
             return _configurationStore.GetTableIds()
                 .Where(i => string.IsNullOrWhiteSpace(term) || i.ToLower().Contains(term.ToLower()))
                 .OrderBy(i => i)

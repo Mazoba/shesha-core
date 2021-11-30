@@ -1,4 +1,6 @@
-﻿using Abp.Modules;
+﻿using Abp.Hangfire;
+using Abp.Hangfire.Configuration;
+using Abp.Modules;
 using Abp.Reflection.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -7,7 +9,9 @@ using Shesha.Web.FormsDesigner;
 
 namespace Shesha.Web.Host.Startup
 {
-    [DependsOn(typeof(SheshaWebCoreModule), typeof(SheshaFormsDesignerModule))]
+    [DependsOn(typeof(SheshaWebCoreModule), 
+        typeof(SheshaFormsDesignerModule),
+        typeof(AbpHangfireAspNetCoreModule))]
     public class SheshaWebHostModule: AbpModule
     {
         private readonly IHostingEnvironment _env;
@@ -26,6 +30,7 @@ namespace Shesha.Web.Host.Startup
             Configuration.BackgroundJobs.IsJobExecutionEnabled = false;
             Configuration.Auditing.IsEnabled = false;
             */
+            Configuration.BackgroundJobs.UseHangfire();
         }
 
         public override void Initialize()
