@@ -140,6 +140,7 @@ namespace Shesha.Web.DataTable
         /// <summary>
         /// Data type of the column
         /// </summary>
+        [Obsolete]
         public string DataType =>
             GeneralDataType != null
                 ? DataTableHelper.GeneralDataType2ColumnDataType(GeneralDataType.Value)
@@ -148,12 +149,16 @@ namespace Shesha.Web.DataTable
         /// <summary>
         /// General data type
         /// </summary>
+        [Obsolete]
         public GeneralDataType? GeneralDataType { get; set; }
 
         /// <summary>
         /// Custom data type
         /// </summary>
+        [Obsolete("Will be replaced with StandardDataType")]
         public string CustomDataType { get; set; }
+
+        public string StandardDataType { get; set; }
 
         /// <summary>
         /// Fluent configuration

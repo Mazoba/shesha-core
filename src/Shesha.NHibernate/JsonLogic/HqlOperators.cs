@@ -6,6 +6,7 @@ using JsonLogic.Net;
 using Newtonsoft.Json.Linq;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain.Attributes;
+using Shesha.Metadata;
 using Shesha.Utilities;
 
 namespace Shesha.JsonLogic
@@ -97,7 +98,7 @@ namespace Shesha.JsonLogic
                 // handle entity references
                 // todo: implement support of nested entities
                 var dataType = data.FieldsMetadata.TryGetValue(name, out var meta) ? meta.DataType : null;
-                if (dataType == GeneralDataType.EntityReference)
+                if (dataType == DataTypes.EntityReference)                
                 {
                     name = $"{name}.Id";
                 }

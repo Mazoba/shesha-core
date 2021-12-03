@@ -25,6 +25,6 @@ namespace Shesha.Metadata
         /// <summary>
         /// Data type
         /// </summary>
-        public GeneralDataType? DataType { get; set; }
+        public string DataType { get; set; }
     }
 }

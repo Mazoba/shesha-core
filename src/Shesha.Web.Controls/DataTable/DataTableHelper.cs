@@ -10,6 +10,7 @@ using Shesha.Domain.Attributes;
 using Shesha.Extensions;
 using Shesha.JsonLogic;
 using Shesha.Metadata;
+using Shesha.Metadata.Dtos;
 using Shesha.Reflection;
 using Shesha.Services;
 using Shesha.Utilities;
@@ -21,14 +22,17 @@ namespace Shesha.Web.DataTable
     public class DataTableHelper: IDataTableHelper, ITransientDependency
     {
         private readonly IEntityConfigurationStore _entityConfigurationStore;
+        private readonly IMetadataProvider _metadataProvider;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="entityConfigurationStore"></param>
-        public DataTableHelper(IEntityConfigurationStore entityConfigurationStore)
+        /// <param name="metadataProvider"></param>
+        public DataTableHelper(IEntityConfigurationStore entityConfigurationStore, IMetadataProvider metadataProvider)
         {
             _entityConfigurationStore = entityConfigurationStore;
+            _metadataProvider = metadataProvider;
         }
 
         public void AppendQuickSearchCriteria(DataTableConfig tableConfig, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria) 
@@ -290,18 +294,37 @@ namespace Shesha.Web.DataTable
         }
 
         /// <summary>
-        /// Fill metadata of the <see cref="JsonLogic2HqlConverterContext"/> with columns of the specified <paramref name="tableConfig"/>
+        /// Fill metadata of the <see cref="JsonLogic2HqlConverterContext"/> with specified columns
         /// </summary>
         public static void FillContextMetadata(List<DataTableColumn> columns, JsonLogic2HqlConverterContext context)
         {
             context.FieldsMetadata = columns.ToDictionary(
                 c => c.Name,
+                c => {
+                    return new PropertyMetadata
+                    {
+                        Name = c.Name,
+                        Label = c.Caption,
+                        Description = c.Description,
+                        DataType = c.StandardDataType,
+                    } as IPropertyMetadata;
+                }
+            );
+        }
+
+        /// <summary>
+        /// Fill metadata of the <see cref="JsonLogic2HqlConverterContext"/> with columns of the specified <paramref name="tableConfig"/>
+        /// </summary>
+        public static void FillContextMetadata(List<PropertyMetadataDto> properties, JsonLogic2HqlConverterContext context)
+        {
+            context.FieldsMetadata = properties.ToDictionary(
+                c => c.Path,
                 c => new PropertyMetadata
                 {
-                    Name = c.Name,
-                    Label = c.Caption,
+                    Name = c.Path,
+                    Label = c.Label,
                     Description = c.Description,
-                    DataType = c.GeneralDataType
+                    DataType = c.DataType
                 } as IPropertyMetadata
             );
         }
@@ -312,6 +335,14 @@ namespace Shesha.Web.DataTable
         public static void FillVariablesResolvers(List<DataTableColumn> columns, JsonLogic2HqlConverterContext context)
         {
             context.VariablesResolvers = columns.ToDictionary(c => c.Name, c => c.PropertyName);
+        }
+
+        /// <summary>
+        /// Fill variable resolvers of the <see cref="JsonLogic2HqlConverterContext"/> with columns of the specified <paramref name="tableConfig"/>
+        /// </summary>
+        public static void FillVariablesResolvers(List<PropertyMetadataDto> properties, JsonLogic2HqlConverterContext context)
+        {
+            context.VariablesResolvers = properties.ToDictionary(c => c.Path, c => c.Path);
         }
 
         /// inheritedDoc
@@ -335,10 +366,14 @@ namespace Shesha.Web.DataTable
                 PropertyName = propName,
                 Caption = caption,
                 Description = prop?.GetDescription(),
+                StandardDataType = _metadataProvider.GetDataType(prop),
+
+                #region backward compatibility, to be removed
                 GeneralDataType = prop != null
                     ? EntityConfigurationLoaderByReflection.GetGeneralDataType(prop)
                     : (GeneralDataType?)null,
-                CustomDataType = prop?.GetAttribute<DataTypeAttribute>()?.CustomDataType
+                CustomDataType = prop?.GetAttribute<DataTypeAttribute>()?.CustomDataType,
+                #endregion
             };
             var entityConfig = prop?.DeclaringType.GetEntityConfiguration();
             var propConfig = prop != null ? entityConfig?.Properties[prop.Name] : null;

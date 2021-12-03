@@ -19,6 +19,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
 using Shesha.Configuration;
 using Shesha.Identity;
 using Shesha.Scheduler.Extensions;
@@ -52,6 +53,10 @@ namespace Shesha.Web.Host.Startup
                     options.Conventions.Add(new ApiExplorerGroupPerVersionConvention());
                 })
                 .AddApiExplorer()
+                .AddNewtonsoftJson(options =>
+                {
+                    options.SerializerSettings.DateParseHandling = DateParseHandling.DateTimeOffset;
+                })
                 .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
 
             IdentityRegistrar.Register(services);

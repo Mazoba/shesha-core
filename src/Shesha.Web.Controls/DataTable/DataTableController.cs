@@ -25,6 +25,7 @@ using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.JsonLogic;
+using Shesha.Metadata;
 using Shesha.NHibernate.Session;
 using Shesha.Services;
 using Shesha.Utilities;
@@ -52,13 +53,14 @@ namespace Shesha.Web.DataTable
         private readonly IJsonLogic2HqlConverter _jsonLogic2HqlConverter;
         private readonly IDataTableHelper _helper;
         private readonly IEntityConfigurationStore _entityConfigStore;
+        private readonly IMetadataProvider _metadataProvider;
 
         public ILogger Logger { get; set; } = new NullLogger();
 
         /// <summary>
         /// 
         /// </summary>
-        public DataTableController(IDataTableConfigurationStore configurationStore, IObjectMapper objectMapper, IIocResolver iocResolver, IRepository<StoredFilter, Guid> filterRepository, IRepository<ShaRole, Guid> roleRepository, IRepository<ShaRoleAppointedPerson, Guid> rolePersonRepository, IUnitOfWorkManager unitOfWorkManager, IJsonLogic2HqlConverter jsonLogic2HqlConverter, IDataTableHelper helper, IEntityConfigurationStore entityConfigStore)
+        public DataTableController(IDataTableConfigurationStore configurationStore, IObjectMapper objectMapper, IIocResolver iocResolver, IRepository<StoredFilter, Guid> filterRepository, IRepository<ShaRole, Guid> roleRepository, IRepository<ShaRoleAppointedPerson, Guid> rolePersonRepository, IUnitOfWorkManager unitOfWorkManager, IJsonLogic2HqlConverter jsonLogic2HqlConverter, IDataTableHelper helper, IEntityConfigurationStore entityConfigStore, IMetadataProvider metadataProvider)
         {
             _configurationStore = configurationStore;
             _objectMapper = objectMapper;
@@ -70,6 +72,7 @@ namespace Shesha.Web.DataTable
             _jsonLogic2HqlConverter = jsonLogic2HqlConverter;
             _helper = helper;
             _entityConfigStore = entityConfigStore;
+            _metadataProvider = metadataProvider;
         }
 
         /// <summary>
@@ -887,8 +890,20 @@ namespace Shesha.Web.DataTable
 
                             // convert json logic to HQL
                             var context = new JsonLogic2HqlConverterContext();
-                            DataTableHelper.FillVariablesResolvers(columns, context);
-                            DataTableHelper.FillContextMetadata(columns, context);
+                            
+                            if (!string.IsNullOrWhiteSpace(input.EntityType))
+                            {
+                                var entityConfig = _entityConfigStore.Get(input.EntityType);
+                                var properties = _metadataProvider.GetProperties(entityConfig.EntityType);
+
+                                DataTableHelper.FillVariablesResolvers(properties, context);
+                                DataTableHelper.FillContextMetadata(properties, context);
+                            }
+                            else 
+                            {
+                                DataTableHelper.FillVariablesResolvers(columns, context);
+                                DataTableHelper.FillContextMetadata(columns, context);
+                            }
 
                             var hql = _jsonLogic2HqlConverter.Convert(jsonLogic, context);
 

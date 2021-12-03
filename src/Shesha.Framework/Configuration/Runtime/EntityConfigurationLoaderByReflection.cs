@@ -242,13 +242,7 @@ namespace Shesha.Configuration.Runtime
             if (propInfo.HasAttribute<MultiValueReferenceListAttribute>())
                 return GeneralDataType.MultiValueReferenceList;
 
-            // reference list with non-empty name
-            var refListAttribute = propInfo.GetAttribute<ReferenceListAttribute>();
-            if (!string.IsNullOrEmpty(refListAttribute?.ReferenceListName))
-                return GeneralDataType.ReferenceList;
-
-            if (propInfo.PropertyType.IsEnum && propInfo.PropertyType.HasAttribute<ReferenceListAttribute>() ||
-                Nullable.GetUnderlyingType(propInfo.PropertyType) != null && Nullable.GetUnderlyingType(propInfo.PropertyType).IsEnum && Nullable.GetUnderlyingType(propInfo.PropertyType).HasAttribute<ReferenceListAttribute>())
+            if (propInfo.IsReferenceListProperty())
                 return GeneralDataType.ReferenceList;
 
             if (propInfo.PropertyType.IsEnum)
