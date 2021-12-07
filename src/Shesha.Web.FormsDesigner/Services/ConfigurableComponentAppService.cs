@@ -1,5 +1,6 @@
 ﻿using Abp.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using Shesha.Elmah;
 using Shesha.Web.DataTable;
 using Shesha.Web.FormsDesigner.Domain;
 using Shesha.Web.FormsDesigner.Dtos;
@@ -57,6 +58,8 @@ namespace Shesha.Web.FormsDesigner.Services
             }
             catch (EntityNotFoundException e) 
             {
+                // prevent exception logging, 
+                e.MarkExceptionAsLogged();
                 throw;
             }
         }

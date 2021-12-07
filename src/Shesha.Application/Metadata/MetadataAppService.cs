@@ -23,6 +23,13 @@ namespace Shesha.Metadata
             _metadataProvider = metadataProvider;
         }
 
+        [HttpGet]
+        public Task<List<AutocompleteItemDto>> TypeAutocompleteAsync(string term, string selectedValue) 
+        {
+            // note: temporary return only entities
+            return EntityTypeAutocompleteAsync(term, selectedValue);
+        }
+
         /// inheritedDoc
         [HttpGet]
         public async Task<List<AutocompleteItemDto>> EntityTypeAutocompleteAsync(string term, string selectedValue)
