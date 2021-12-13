@@ -1,8 +1,10 @@
 using System;
+using System.Reflection;
 using Abp;
 using Abp.AutoMapper;
 using Abp.Configuration.Startup;
 using Abp.Dependency;
+using Abp.Domain.Uow;
 using Abp.Modules;
 using Abp.MultiTenancy;
 using Abp.Net.Mail;
@@ -79,11 +81,16 @@ namespace Shesha.Tests
             // replace connection string resolver
             Configuration.ReplaceService<IDbPerTenantConnectionStringResolver, TestConnectionStringResolver>(DependencyLifeStyle.Transient);
 
-            //Configuration.ReplaceService<ICurrentUnitOfWorkProvider, AsyncLocalCurrentUnitOfWorkProvider>(DependencyLifeStyle.Singleton);
+            Configuration.ReplaceService<ICurrentUnitOfWorkProvider, AsyncLocalCurrentUnitOfWorkProvider>(DependencyLifeStyle.Singleton);
         }
 
         public override void Initialize()
         {
+            var thisAssembly = Assembly.GetExecutingAssembly();
+            IocManager.RegisterAssemblyByConvention(thisAssembly);
+
+            StaticContext.SetIocManager(IocManager);
+
             ServiceCollectionRegistrar.Register(IocManager);
         }
 

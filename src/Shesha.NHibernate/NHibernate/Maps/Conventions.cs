@@ -34,15 +34,12 @@ namespace Shesha.NHibernate.Maps
     /// </summary>
     public class Conventions
     {
-        static Conventions()
-        {
-            _entitiesToMap = new List<Type>();
-        }
-
         private LazyRelation _defaultLazyRelation;
 
         public Conventions(Func<Type, Action<IIdMapper>> idMapper = null)
         {
+            _entitiesToMap = new List<Type>();
+
             var lazyRelation = Enum.TryParse(ConfigurationManager.AppSettings["NhConventions:DefaultLazyRelation"],
                 out HbmLaziness parsed)
                 ? parsed
@@ -96,7 +93,7 @@ namespace Shesha.NHibernate.Maps
 
         public static IModelInspector DefaultModelInspector { get; set; }
         private static ModelMapperWithNamingConventions _defaultMapper;
-        private static List<Type> _entitiesToMap;
+        private List<Type> _entitiesToMap;
 
         public void Compile(NHcfg.Configuration configuration)
         {
@@ -405,7 +402,10 @@ namespace Shesha.NHibernate.Maps
 
             foreach (var assembly in _assemblies)
             {
-                var allEntities = assembly.GetExportedTypes().Where(t => MappingHelper.IsEntity(t)).ToList();
+                var allTypes = !assembly.IsDynamic
+                    ? assembly.GetExportedTypes()
+                    : assembly.GetTypes();
+                var allEntities = allTypes.Where(t => MappingHelper.IsEntity(t)).ToList();
                 foreach (var entityType in allEntities)
                 {
                     var classMapping = configuration.GetClassMapping(entityType);
@@ -415,7 +415,7 @@ namespace Shesha.NHibernate.Maps
                     }
                 }
 
-                var mappingOverride = assembly.GetExportedTypes().Where(t => IsClassMapping(t) && !t.IsAbstract).ToList();
+                var mappingOverride = allTypes.Where(t => IsClassMapping(t) && !t.IsAbstract).ToList();
                 foreach (var @override in mappingOverride)
                 {
                     try

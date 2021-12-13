@@ -32,6 +32,7 @@ using Shesha.NHibernate.Session;
 using Shesha.NHibernate.Uow;
 using Shesha.NHibernate.Utilites;
 using Shesha.Reflection;
+using Shesha.Services;
 
 namespace Shesha.NHibernate
 {
@@ -175,8 +176,10 @@ namespace Shesha.NHibernate
         /// </summary>
         private void SeedDatabase()
         {
-            var lockFactory = IocManager.IocContainer.Resolve<ILockFactory>();
-            var cacheManager = IocManager.IocContainer.Resolve<ICacheManager>();
+            var ioc = StaticContext.IocManager;
+
+            var lockFactory = ioc.Resolve<ILockFactory>();
+            var cacheManager = ioc.Resolve<ICacheManager>();
 
             // Note: the application may work in the multiple instance environment (e.g. on Azure)
             // We are trying to acquire a lock and initialize the application, possible cases:
@@ -213,7 +216,7 @@ namespace Shesha.NHibernate
                 Logger.Warn("Database initialization started");
 
                 Logger.Warn("Apply migrations...");
-                var dbMigrator = IocManager.IocContainer.Resolve<IAbpZeroDbMigrator>();
+                var dbMigrator = ioc.Resolve<IAbpZeroDbMigrator>();
                 dbMigrator?.CreateOrMigrateForHost();
                 Logger.Warn("Apply migrations - finished");
 
@@ -225,11 +228,11 @@ namespace Shesha.NHibernate
                 {
                     AsyncHelper.RunSync(async () =>
                     {
-                        if (IocManager.Resolve(bootstrapperType) is IBootstrapper bootstrapper)
+                        if (ioc.Resolve(bootstrapperType) is IBootstrapper bootstrapper)
                         {
                             Logger.Warn($"Run bootstrapper: {bootstrapperType.Name}...");
 
-                            var uowManager = IocManager.Resolve<IUnitOfWorkManager>();
+                            var uowManager = ioc.Resolve<IUnitOfWorkManager>();
                             using (var unitOfWork = uowManager.Begin())
                             {
                                 await bootstrapper.Process();
