@@ -5,6 +5,9 @@ using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain
 {
+    /// <summary>
+    /// Entity configuration
+    /// </summary>
     [Entity(TypeShortAlias = "Shesha.Framework.EntityConfig")]
     public class EntityConfig : FullAuditedEntity<Guid>
     {

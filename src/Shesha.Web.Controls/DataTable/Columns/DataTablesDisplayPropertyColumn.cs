@@ -79,9 +79,6 @@ namespace Shesha.Web.DataTable.Columns
                                 ? displayProperty.GetValue(val)?.ToString()
                                 : val.ToString();
 
-                            if (!DataTableConfig.UseDtos)
-                                return displayText;
-
                             var dto = new EntityWithDisplayNameDto<string>(val.GetId().ToString(), displayText);
                             return dto;
                         }
