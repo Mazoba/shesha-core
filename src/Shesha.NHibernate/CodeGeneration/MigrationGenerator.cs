@@ -11,6 +11,7 @@ using FluentMigrator.Builders;
 using FluentMigrator.Builders.Alter.Table;
 using FluentMigrator.Builders.Create.Table;
 using FluentMigrator.Infrastructure;
+using Shesha.Domain;
 using Shesha.Domain.Attributes;
 using Shesha.Extensions;
 using Shesha.FluentMigrator;
@@ -171,7 +172,7 @@ namespace Shesha.CodeGeneration
                 flags = flags | BindingFlags.DeclaredOnly;
 
             var properties = entityType.GetProperties(flags)
-                .Where(p => MappingHelper.IsPersistentProperty(p) &&
+                .Where(p => NhMappingHelper.IsPersistentProperty(p) &&
                             (!typeof(System.Collections.IEnumerable)
                                  .IsAssignableFrom(p.PropertyType) /*skip enumerables except strings*/ ||
                              p.PropertyType == typeof(string)))

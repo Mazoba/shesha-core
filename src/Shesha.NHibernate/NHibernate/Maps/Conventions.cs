@@ -21,6 +21,7 @@ using Shesha.Reflection;
 using NHcfg = NHibernate.Cfg;
 using NMIMPL = NHibernate.Mapping.ByCode.Impl;
 using NHGens = NHibernate.Mapping.ByCode.Generators;
+using Shesha.Domain;
 
 namespace Shesha.NHibernate.Maps
 {
@@ -135,7 +136,7 @@ namespace Shesha.NHibernate.Maps
 
             mapper.IsPersistentProperty((mi, declared) =>
             {
-                if (!MappingHelper.IsPersistentProperty(mi))
+                if (!NhMappingHelper.IsPersistentProperty(mi))
                     return false;
 
                 return _defaultMapper.ModelInspector.IsPersistentProperty(mi);

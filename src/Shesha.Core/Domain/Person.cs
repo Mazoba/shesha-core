@@ -105,6 +105,7 @@ namespace Shesha.Domain
         [Past]
         [Audited]
         [DisableDateTimeNormalization]
+        [DataType(DataType.Date)]
         public virtual DateTime? DateOfBirth { get; set; }
 
         [Audited]

@@ -11,7 +11,12 @@ namespace Shesha.Metadata
     {
         public const string String = "string";
         public const string Number = "number";
-        public const string Integer = "integer";
+        public const string Date = "date";
+        public const string Time = "time";
+        public const string DateTime = "date-time";
+        public const string Entity = "entity";
+        public const string File = "file";
+        public const string ReferenceListItem = "reference-list-item";
         public const string Boolean = "boolean";
         public const string Array = "array";
         public const string Object = "object";

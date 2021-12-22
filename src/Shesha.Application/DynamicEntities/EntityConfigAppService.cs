@@ -29,6 +29,7 @@ namespace Shesha.DynamicEntities
             table.AddProperty(e => e.Namespace);
             table.AddProperty(e => e.ClassName);
             table.AddProperty(e => e.DiscriminatorValue);
+            table.AddProperty(e => e.Source);
 
             table.AddProperty(e => e.CreationTime, c => c.Caption("Created On")/*.Visible(false)*/);
             table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").Visible(false));

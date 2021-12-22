@@ -1,4 +1,4 @@
-﻿namespace Shesha.NHibernate.Interfaces
+﻿namespace Shesha.Domain.Interfaces
 {
     public interface IEntityWithoutId
     {
