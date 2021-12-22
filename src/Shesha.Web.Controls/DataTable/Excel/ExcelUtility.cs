@@ -296,7 +296,7 @@ namespace Shesha.Web.DataTable.Excel
                         if (column.IsExportable
                             /*&& (columns[colNum].AuthorizationRules == null || columns[colNum].AuthorizationRules.IsAuthorized())*/)
                         {
-                            var strValue = column.CellContent(row)?.ToString() ?? "";
+                            var strValue = column.CellContent(row, true)?.ToString() ?? "";
 
                             if (column.StripHtml && !string.IsNullOrWhiteSpace(strValue))
                                 strValue = strValue.StripHtml();

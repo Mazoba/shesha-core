@@ -26,7 +26,7 @@ namespace Shesha.Web.DataTable.Columns
         protected Func<T, string> ContentFunc;
 
         /// inheritedDoc
-        public override object CellContent(object entity)
+        public override object CellContent(object entity, bool isExport)
         {
             return ContentFunc?.Invoke(entity as T);
         }
