@@ -327,5 +327,13 @@ namespace Shesha.Domain
 
             return attribute?.FilterUnknownDiscriminators == true;
         }
+
+        /// <summary>
+        /// Returns true if the property is persisted to the DB. Note: this method performs only base check, it may be overrided on the ORM mapping level
+        /// </summary>
+        public static bool IsPersistentProperty(MemberInfo prop)
+        {
+            return !prop.HasAttribute<NotMappedAttribute>();
+        }
     }
 }

@@ -33,6 +33,7 @@ namespace Shesha.Domain
         /// <summary>
         /// Description
         /// </summary>
+        [DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
         public virtual string Description { get; set; }
 
         /// <summary>

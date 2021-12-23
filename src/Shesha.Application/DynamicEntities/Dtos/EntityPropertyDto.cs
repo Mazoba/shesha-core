@@ -1,4 +1,5 @@
 ﻿using Abp.Application.Services.Dto;
+using Shesha.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -36,6 +37,11 @@ namespace Shesha.DynamicEntities.Dtos
         public string DataType { get; set; }
 
         /// <summary>
+        /// Data format
+        /// </summary>
+        public string DataFormat { get; set; }
+
+        /// <summary>
         /// Entity type. Aplicable for entity references
         /// </summary>
         public string EntityType { get; set; }
@@ -49,5 +55,10 @@ namespace Shesha.DynamicEntities.Dtos
         /// Reference list namespace
         /// </summary>
         public string ReferenceListNamespace { get; set; }
+
+        /// <summary>
+        /// Source type (ApplicationCode = 1, UserDefined = 2)
+        /// </summary>
+        public MetadataSourceType? Source { get; set; }
     }
 }

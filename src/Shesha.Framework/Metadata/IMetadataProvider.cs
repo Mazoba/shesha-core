@@ -30,6 +30,6 @@ namespace Shesha.Metadata
         /// Get data type of the specified property
         /// </summary>
         /// <returns></returns>
-        string GetDataType(PropertyInfo propInfo);
+        DataTypeInfo GetDataType(PropertyInfo propInfo);
     }
 }

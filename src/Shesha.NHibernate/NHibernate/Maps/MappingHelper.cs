@@ -24,7 +24,7 @@ namespace Shesha.NHibernate.Maps
         /// <returns></returns>
         public static bool IsPersistentProperty(MemberInfo prop)
         {
-            if (prop.HasAttribute<NotMappedAttribute>())
+            if (!MappingHelper.IsPersistentProperty(prop))
                 return false;
 
             if (!MappingHelper.IsRootEntity(prop.DeclaringType) && prop.DeclaringType.BaseType != null)

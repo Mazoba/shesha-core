@@ -159,6 +159,7 @@ namespace Shesha.Web.DataTable
         public string CustomDataType { get; set; }
 
         public string StandardDataType { get; set; }
+        public string DataFormat { get; set; }
 
         /// <summary>
         /// Fluent configuration

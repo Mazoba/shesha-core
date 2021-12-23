@@ -117,6 +117,9 @@ namespace Shesha.DynamicEntities
                 { 
                 }
 
+                var nextSortOrder = dbProperties.Any()
+                    ? dbProperties.Max(p => p.SortOrder) + 1
+                    : 0;
                 foreach (var cp in codeProperties)
                 {
                     var dbp = dbProperties.FirstOrDefault(p => p.Name == cp.Path);
@@ -129,11 +132,13 @@ namespace Shesha.DynamicEntities
                             Label = cp.Label,
                             Description = cp.Description,
                             DataType = cp.DataType,
+                            DataFormat = cp.DataFormat,
                             EntityType = cp.EntityTypeShortAlias,
                             ReferenceListName = cp.ReferenceListName,
                             ReferenceListNamespace = cp.ReferenceListNamespace,
 
                             Source = Domain.Enums.MetadataSourceType.ApplicationCode,
+                            SortOrder = nextSortOrder++,
                         };
                         await _entityPropertyRepository.InsertAsync(dbp);
                     }
