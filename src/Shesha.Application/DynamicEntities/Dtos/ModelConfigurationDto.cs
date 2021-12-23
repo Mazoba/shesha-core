@@ -12,6 +12,6 @@ namespace Shesha.DynamicEntities.Dtos
     {
         public string ClassName { get; set; }
         public string Namespace { get; set; }
-        public List<EntityPropertyDto> Properties { get; set; }
+        public List<ModelPropertyDto> Properties { get; set; }
     }
 }

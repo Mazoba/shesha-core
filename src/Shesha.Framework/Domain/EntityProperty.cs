@@ -4,6 +4,7 @@ using Shesha.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 
 namespace Shesha.Domain
@@ -75,6 +76,17 @@ namespace Shesha.Domain
         /// Default sort order
         /// </summary>
         public virtual int? SortOrder { get; set; }
+
+        /// <summary>
+        /// Parent property
+        /// </summary>
+        public virtual EntityProperty ParentProperty { get; set; }
+
+        /// <summary>
+        /// Child properties
+        /// </summary>
+        [InverseProperty("ParentPropertyId")]
+        public virtual IList<EntityProperty> Properties { get; set; }
 
         public EntityProperty()
         {

@@ -7,9 +7,9 @@ using System.Text;
 namespace Shesha.DynamicEntities.Dtos
 {
     /// <summary>
-    /// Entity property DTO
+    /// Model property DTO
     /// </summary>
-    public class EntityPropertyDto : EntityDto<Guid>
+    public class ModelPropertyDto : EntityDto<string>
     {
         /// <summary>
         /// Property Name
@@ -59,6 +59,6 @@ namespace Shesha.DynamicEntities.Dtos
         /// <summary>
         /// Child properties, applicable for complex data types (e.g. object, array)
         /// </summary>
-        public List<EntityPropertyDto> Properties { get; set; } = new List<EntityPropertyDto>();
+        public List<ModelPropertyDto> Properties { get; set; } = new List<ModelPropertyDto>();
     }
 }

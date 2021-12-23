@@ -16,6 +16,7 @@ namespace Shesha.DynamicEntities.Dtos
             CreateMap<EntityPropertyDto, EntityProperty>();
             CreateMap<EntityProperty, EntityPropertyDto>();
 
+            CreateMap<EntityProperty, ModelPropertyDto>();
 
             CreateMap<EntityConfig, ModelConfigurationDto>()
                 .ForMember(e => e.Properties, c => c.Ignore());
