@@ -171,8 +171,9 @@ namespace Shesha.Web.DataTable
         /// Returns cell content
         /// </summary>
         /// <param name="entity"></param>
+        /// <param name="isExport"></param>
         /// <returns></returns>
-        public abstract object CellContent(object entity);
+        public abstract object CellContent(object entity, bool isExport);
 
         #region to be implemented
 

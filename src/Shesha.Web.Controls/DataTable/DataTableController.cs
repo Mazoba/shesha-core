@@ -365,7 +365,7 @@ namespace Shesha.Web.DataTable
                     try
                     {
                         var value = item != null
-                            ? col.CellContent(item)
+                            ? col.CellContent(item, false)
                             : null;
 
                         value ??= string.Empty;

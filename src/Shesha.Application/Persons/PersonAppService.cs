@@ -52,6 +52,7 @@ namespace Shesha.Persons
         public static DataTableConfig IndexTable()
         {
             var table = new DataTableConfig<Person, Guid>("Persons_Index");
+            table.UseDtos = true;
 
             table.AddProperty(e => e.User.UserName, c => c.Caption("Username").SortAscending());
             table.AddProperty(e => e.FirstName);

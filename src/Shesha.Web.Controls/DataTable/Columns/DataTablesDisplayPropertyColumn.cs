@@ -13,7 +13,7 @@ namespace Shesha.Web.DataTable.Columns
     public class DataTablesDisplayPropertyColumn: DataTableColumn
     {
         /// inheritedDoc
-        public override object CellContent(object entity)
+        public override object CellContent(object entity, bool isExport)
         {
             
             switch (DataType)
@@ -31,11 +31,11 @@ namespace Shesha.Web.DataTable.Columns
                 default: 
                     return string.IsNullOrEmpty(PropertyName)
                         ? ""
-                        : GetPropertyValue(entity, PropertyName);
+                        : GetPropertyValue(entity, PropertyName, isExport);
             }
         }
 
-        private object GetPropertyValue(object entity, string propertyName, string defaultValue = "")
+        private object GetPropertyValue(object entity, string propertyName, bool isExport, string defaultValue = "")
         {
             try
             {
@@ -62,7 +62,7 @@ namespace Shesha.Web.DataTable.Columns
                             var itemValue = Convert.ToInt64(val);
                             var displayText = refListHelper.GetItemDisplayText(propConfig.ReferenceListNamespace, propConfig.ReferenceListName, itemValue);
 
-                            if (!DataTableConfig.UseDtos)
+                            if (!DataTableConfig.UseDtos || isExport)
                                 return displayText;
 
                             var dto = new ReferenceListItemValueDto
@@ -78,6 +78,9 @@ namespace Shesha.Web.DataTable.Columns
                             var displayText = displayProperty != null
                                 ? displayProperty.GetValue(val)?.ToString()
                                 : val.ToString();
+
+                            if (!DataTableConfig.UseDtos || isExport)
+                                return displayText;
 
                             var dto = new EntityWithDisplayNameDto<string>(val.GetId().ToString(), displayText);
                             return dto;

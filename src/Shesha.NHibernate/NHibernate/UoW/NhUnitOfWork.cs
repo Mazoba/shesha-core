@@ -32,6 +32,9 @@ namespace Shesha.NHibernate.UoW
             if (_session == null && startNewIfMissing)
             {
                 _session = BeginSession();
+
+                // apply all filter settings
+                ApplySessionOptions(_session);
             }
 
             return _session;
@@ -92,9 +95,6 @@ namespace Shesha.NHibernate.UoW
                     ? session.BeginTransaction(Options.IsolationLevel.Value.ToSystemDataIsolationLevel())
                     : session.BeginTransaction();
             }
-
-            // apply all filter settings
-            ApplySessionOptions(session);
 
             return session;
         }
