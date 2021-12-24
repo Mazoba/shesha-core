@@ -16,8 +16,8 @@ namespace Shesha.Migrations.Framework
             Create.UniqueConstraint("uq_Frwk_EntityConfigs_Namespace_ClassName")
                 .OnTable("Frwk_EntityConfigs").Columns("ClassName", "Namespace", "DeletionTime");
 
-            Create.UniqueConstraint("uq_Frwk_EntityProperties_EntityConfigId_Name")
-                .OnTable("Frwk_EntityProperties").Columns("EntityConfigId", "Name", "DeletionTime");
+            //Create.UniqueConstraint("uq_Frwk_EntityProperties_EntityConfigId_Name")
+            //    .OnTable("Frwk_EntityProperties").Columns("EntityConfigId", "Name", "DeletionTime");
         }
 
         public override void Down()
