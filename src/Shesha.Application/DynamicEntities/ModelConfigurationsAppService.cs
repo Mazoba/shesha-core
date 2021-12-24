@@ -92,46 +92,37 @@ namespace Shesha.DynamicEntities
 
             var properties = await _entityPropertyRepository.GetAll().Where(p => p.EntityConfig == modelConfig).OrderBy(p => p.SortOrder).ToListAsync();
 
-            var toDelete = properties.Where(p => !input.Properties.Any(ip => ip.Id.ToGuid() == p.Id)).ToList();
-            foreach (var prop in toDelete)
-            {
-                await _entityPropertyRepository.DeleteAsync(prop);
-            }
-
             var mappers = new Dictionary<MetadataSourceType, IMapper> {
                 { MetadataSourceType.ApplicationCode, GetPropertyMapper(MetadataSourceType.ApplicationCode) },
                 { MetadataSourceType.UserDefined, GetPropertyMapper(MetadataSourceType.UserDefined) },
             };
 
             await BindProperties(mappers, properties, input.Properties, modelConfig, null);
-            /*
-            var sortOrder = 0;
-            foreach (var inputProp in input.Properties)
+
+            // delete missing properties
+            var allPropertiesId = new List<Guid>();
+            ActionPropertiesRecursive(input.Properties, prop => {
+                var id = prop.Id.ToGuidOrNull();
+                if (id != null)
+                    allPropertiesId.Add(id.Value);
+            });
+            var toDelete = properties.Where(p => !allPropertiesId.Contains(p.Id)).ToList();
+            foreach (var prop in toDelete)
             {
-                var propId = inputProp.Id.ToGuid();
-                var dbProp = propId != Guid.Empty
-                    ? properties.FirstOrDefault(p => p.Id == propId)
-                    : null;
-                var isNew = dbProp == null;
-                if (dbProp == null)
-                    dbProp = new EntityProperty
-                    {
-                        EntityConfig = modelConfig
-                    };
-                dbProp.ParentProperty = null;
-
-                var propertyMapper = mappers[dbProp.Source ?? MetadataSourceType.UserDefined];
-                propertyMapper.Map(inputProp, dbProp);
-
-                // bind child properties
-
-                dbProp.SortOrder = sortOrder++;
-
-                await _entityPropertyRepository.InsertOrUpdateAsync(dbProp);
+                await _entityPropertyRepository.DeleteAsync(prop);
             }
-            */
 
             return await GetAsync(modelConfig);
+        }
+
+        private void ActionPropertiesRecursive(List<ModelPropertyDto> properties, Action<ModelPropertyDto> action)
+        {
+            foreach (var property in properties) 
+            {
+                action.Invoke(property);
+                if (property.Properties != null)
+                    ActionPropertiesRecursive(property.Properties, action);
+            }
         }
 
         private async Task BindProperties(Dictionary<MetadataSourceType, IMapper>  mappers, List<EntityProperty> allProperties, List<ModelPropertyDto> inputProperties, EntityConfig modelConfig, EntityProperty parentProperty)
@@ -186,7 +177,8 @@ namespace Shesha.DynamicEntities
                 var mapExpression = cfg.CreateMap<ModelPropertyDto, EntityProperty>()
                     .ForMember(d => d.Id, o => o.Ignore())
                     .ForMember(d => d.EntityConfig, o => o.Ignore())
-                    .ForMember(d => d.SortOrder, o => o.Ignore());
+                    .ForMember(d => d.SortOrder, o => o.Ignore())
+                    .ForMember(d => d.Properties, o => o.Ignore());
 
                 if (sourceType == MetadataSourceType.ApplicationCode)
                 {
@@ -203,7 +195,10 @@ namespace Shesha.DynamicEntities
         {
             var dto = ObjectMapper.Map<ModelConfigurationDto>(modelConfig);
 
-            var properties = await _entityPropertyRepository.GetAll().Where(p => p.EntityConfig == modelConfig).OrderBy(p => p.SortOrder).ToListAsync();
+            var properties = await _entityPropertyRepository.GetAll().Where(p => p.EntityConfig == modelConfig && p.ParentProperty == null)
+                .OrderBy(p => p.SortOrder)
+                .ToListAsync();
+
             dto.Properties = properties.Select(p => ObjectMapper.Map<ModelPropertyDto>(p)).ToList();
 
             return dto;
