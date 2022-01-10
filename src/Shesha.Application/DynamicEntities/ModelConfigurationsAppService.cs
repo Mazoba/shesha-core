@@ -27,25 +27,27 @@ namespace Shesha.DynamicEntities
     {
         private readonly IRepository<EntityConfig, Guid> _entityConfigRepository;
         private readonly IRepository<EntityProperty, Guid> _entityPropertyRepository;
+        private readonly IModelConfigurationProvider _modelConfigurationProvider;
 
-        public ModelConfigurationsAppService(IRepository<EntityConfig, Guid> entityConfigRepository, IRepository<EntityProperty, Guid> entityPropertyRepository)
+        public ModelConfigurationsAppService(IRepository<EntityConfig, Guid> entityConfigRepository, IRepository<EntityProperty, Guid> entityPropertyRepository, IModelConfigurationProvider modelConfigurationProvider)
         {
             _entityConfigRepository = entityConfigRepository;
             _entityPropertyRepository = entityPropertyRepository;
+            _modelConfigurationProvider = modelConfigurationProvider;
         }
 
         [HttpGet, Route("")]
         public async Task<ModelConfigurationDto> GetByNameAsync(string name, string @namespace)
         {
-            var modelConfig = await _entityConfigRepository.GetAll().Where(m => m.ClassName == name && m.Namespace == @namespace).FirstOrDefaultAsync();
-            if (modelConfig == null) 
+            var dto = await _modelConfigurationProvider.GetModelConfigurationOrNullAsync(@namespace, name);
+            if (dto == null) 
             {
                 var exception = new EntityNotFoundException("Model configuration not found");
                 exception.MarkExceptionAsLogged();
                 throw exception;
             }
 
-            return await GetAsync(modelConfig);
+            return dto;
         }
 
         [HttpGet, Route("{id}")]
@@ -59,7 +61,7 @@ namespace Shesha.DynamicEntities
                 throw exception;
             }
 
-            return await GetAsync(modelConfig);
+            return await _modelConfigurationProvider.GetModelConfigurationAsync(modelConfig);
         }
 
         [HttpPut, Route("")]
@@ -112,7 +114,7 @@ namespace Shesha.DynamicEntities
                 await _entityPropertyRepository.DeleteAsync(prop);
             }
 
-            return await GetAsync(modelConfig);
+            return await _modelConfigurationProvider.GetModelConfigurationAsync(modelConfig);
         }
 
         private void ActionPropertiesRecursive(List<ModelPropertyDto> properties, Action<ModelPropertyDto> action)
