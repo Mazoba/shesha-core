@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Shesha.Tests.DynamicEntity
 {
-    public class DynamicEntity_Tests: AbpIntegratedTestBase<SheshaTestModule>//SheshaNhTestBase
+    public class DynamicEntity_Tests : AbpIntegratedTestBase<SheshaTestModule>//SheshaNhTestBase
     {
         [Fact]
         public async Task ConstructDynamicEntity_Test()

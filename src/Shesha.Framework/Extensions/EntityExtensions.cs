@@ -355,6 +355,18 @@ namespace Shesha.Extensions
             return service.Get(entity.Id);
         }
 
+        /// <summary>
+        /// Returns a string that represents a fully qualified entity Identifier.
+        /// The identifier is in the following format: '[The entity's Type Assembly qualitfied name]|[entity Id]'
+        /// </summary>
+        /// <param name="entity">Entity for which a fully qualified identifier is required.</param>
+        /// <returns>Returns a string that represents a fully qualified entity Identifier.</returns>
+        public static string FullyQualifiedEntityId<TEntity, TId>(this TEntity entity) where TEntity: Entity<TId>
+        {
+            var entityType = entity.GetType().StripCastleProxyType();
+            return entityType.AssemblyQualifiedName + "|" + entity.GetId().ToString();
+        }
+
         #region Multivalue reference list todo: review
 
         /// <summary>

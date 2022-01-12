@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
+using Shesha.Application.Persons;
 using Shesha.Configuration;
 using Shesha.Identity;
 using Shesha.Scheduler.Extensions;
@@ -51,6 +52,7 @@ namespace Shesha.Web.Host.Startup
                 {
                     options.EnableEndpointRouting = false;
                     options.Conventions.Add(new ApiExplorerGroupPerVersionConvention());
+                    options.ModelBinderProviders.Insert(0, new EntityBinderProvider());
                 })
                 .AddApiExplorer()
                 .AddNewtonsoftJson(options =>

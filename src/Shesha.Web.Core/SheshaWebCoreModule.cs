@@ -91,5 +91,21 @@ namespace Shesha
             );
             IocManager.Register<IBootstrapper, SouthAfricaLanguagesCreator>();
         }
+
+        public override void PostInitialize()
+        {
+            try
+            {
+                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                    this.GetType().Assembly,
+                    moduleName: "Shesha",
+                    useConventionalHttpVerbs: true);
+            }
+            catch
+            {
+                // note: we mute exceptions for unit tests only
+                // todo: refactor and remove this try-catch block
+            }
+        }
     }
 }

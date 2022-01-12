@@ -16,12 +16,23 @@
     <None Remove="StoredFiles\**" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="log4net.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="log4net.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Shesha.Application\Shesha.Application.csproj" />
     <ProjectReference Include="..\..\src\Shesha.AzureAD\Shesha.AzureAD.csproj" />
     <ProjectReference Include="..\..\src\Shesha.NHibernate\Shesha.NHibernate.csproj" />
     <ProjectReference Include="..\..\src\Shesha.Scheduler\Shesha.Scheduler.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Abp.Castle.Log4Net" Version="5.0.0" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.9.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Include="Moq" Version="4.14.1" />
