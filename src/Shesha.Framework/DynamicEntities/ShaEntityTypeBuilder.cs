@@ -3,9 +3,9 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Shesha.Tests.DynamicEntity
+namespace Shesha.DynamicEntities
 {
-    public static class ShaTypeBuilder
+    public static class ShaEntityTypeBuilder
     {
         public static object CreateNewObject(DynamicEntity entityMetadata)
         {

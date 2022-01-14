@@ -3,6 +3,7 @@ using Abp.TestBase;
 using NHibernate.Cfg;
 using NHibernate.Dialect;
 using NHibernate.Driver;
+using Shesha.DynamicEntities;
 using Shesha.Migrations;
 using Shesha.NHibernate.Filters;
 using Shesha.NHibernate.Maps;
@@ -13,7 +14,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Shesha.Tests.DynamicEntity
+namespace Shesha.Tests.DynamicEntities
 {
     public class DynamicEntity_Tests : AbpIntegratedTestBase<SheshaTestModule>//SheshaNhTestBase
     {
@@ -37,7 +38,7 @@ namespace Shesha.Tests.DynamicEntity
                 }
                 };
 
-                var dynamicPersonType = ShaTypeBuilder.CompileResultType(dynamicEntityMeta);
+                var dynamicPersonType = ShaEntityTypeBuilder.CompileResultType(dynamicEntityMeta);
                 var dynamicPerson = Activator.CreateInstance(dynamicPersonType);
 
                 dynamicPerson.ShouldNotBeNull();

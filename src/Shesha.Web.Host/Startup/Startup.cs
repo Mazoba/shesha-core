@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using Abp.AspNetCore;
+﻿using Abp.AspNetCore;
 using Abp.AspNetCore.SignalR.Hubs;
 using Abp.Castle.Logging.Log4Net;
 using Abp.Extensions;
@@ -9,7 +6,6 @@ using Castle.Facilities.Logging;
 using ElmahCore;
 using ElmahCore.Mvc;
 using Hangfire;
-using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -20,11 +16,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
-using Shesha.Application.Persons;
 using Shesha.Configuration;
+using Shesha.DynamicEntities;
 using Shesha.Identity;
 using Shesha.Scheduler.Extensions;
 using Shesha.Swagger;
+using System;
+using System.IO;
+using System.Reflection;
 
 namespace Shesha.Web.Host.Startup
 {
@@ -50,9 +49,12 @@ namespace Shesha.Web.Host.Startup
 
             services.AddMvcCore(options =>
                 {
+                    options.SuppressInputFormatterBuffering = true;
+
                     options.EnableEndpointRouting = false;
                     options.Conventions.Add(new ApiExplorerGroupPerVersionConvention());
-                    options.ModelBinderProviders.Insert(0, new EntityBinderProvider());
+
+                    options.EnableDynamicDtoBinding();
                 })
                 .AddApiExplorer()
                 .AddNewtonsoftJson(options =>

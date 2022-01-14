@@ -32,11 +32,26 @@ namespace Shesha.Application.Persons
                 x => x.FirstName, 
                 x => x.LastName!))
             {
-                //_instructorStore.Add(newInstructor);
-                //return RedirectToPage("./Index");
             }
 
             return MapToEntityDto(entity);
+        }
+
+        [HttpPost]
+        public async Task<PersonDto> UpdateDtoAtRuntimeAsync(PersonDynamicDto input/*EntityDto<Guid> input*/)
+        {
+            var dto = new PersonDynamicDto();
+
+            // bind manually
+            if (await TryUpdateModelAsync(
+                dto,
+                string.Empty,//"Instructor",
+                x => x.FirstName))
+            {
+                
+            }
+
+            return null;
         }
 
         private PersonDto MapToEntityDto(Person person)

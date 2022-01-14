@@ -165,5 +165,55 @@ namespace Shesha.Metadata
 
             throw new NotSupportedException($"Data type not supported: {propType.FullName}");
         }
+
+        /*
+        /// <summary>
+        /// Returns .Net type that is used to store data for the specified <paramref name="dataType"/> and <paramref name="dataFormat"/>
+        /// </summary>
+        /// <param name="dataType"></param>
+        /// <param name="dataFormat"></param>
+        /// <returns></returns>
+        public static Type GetType(string dataType, string dataFormat)
+        {
+            switch (dataType) 
+            {
+                case DataTypes.Guid:
+                    return typeof(Guid);
+                case DataTypes.String:
+                    return typeof(string);
+                case DataTypes.Date:
+                case DataTypes.DateTime:
+                    return typeof(DateTime);
+                case DataTypes.Time:
+                    return typeof(TimeSpan);
+                case DataTypes.Boolean:
+                    return typeof(bool);
+                case DataTypes.ReferenceListItem:
+                    return typeof(Int64);
+
+                case DataTypes.Number:
+                {
+                    switch (dataFormat) 
+                    {
+                        case NumberFormats.Int32:
+                            return typeof(int);
+                        case NumberFormats.Int64:
+                            return typeof(Int64);
+                        case NumberFormats.Float:
+                            return typeof(float);
+                        case NumberFormats.Double:
+                            return typeof(decimal);
+                        default: 
+                            return typeof(decimal);
+                    }
+                }
+
+                case DataTypes.EntityReference:
+                case DataTypes.Array:
+                default:
+                    throw new NotSupportedException($"Data type not supported: {dataType}");
+            }
+        }
+        */
     }
 }

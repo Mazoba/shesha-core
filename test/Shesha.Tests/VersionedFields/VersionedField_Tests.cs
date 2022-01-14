@@ -6,7 +6,7 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Shesha.Tests.DynamicEntity
+namespace Shesha.Tests.VersionedFields
 {
     public class VersionedField_Tests: SheshaNhTestBase
     {

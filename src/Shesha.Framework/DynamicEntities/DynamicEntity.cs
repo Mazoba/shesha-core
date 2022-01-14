@@ -1,4 +1,4 @@
-﻿namespace Shesha.Tests.DynamicEntity
+﻿namespace Shesha.DynamicEntities
 {
     /// <summary>
     /// Dynamic entity
