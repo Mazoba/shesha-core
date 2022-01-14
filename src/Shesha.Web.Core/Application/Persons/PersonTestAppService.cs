@@ -1,6 +1,7 @@
 ﻿using Abp.Application.Services.Dto;
 using Abp.Dependency;
 using Abp.Domain.Repositories;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.Application.Persons.Dtos;
 using Shesha.Domain;
@@ -24,6 +25,28 @@ namespace Shesha.Application.Persons
             var entity = await _repository.GetAsync(input.Id);
             
             return MapToEntityDto(entity);
+        }
+
+        private PersonDto MapToEntityDto(Person person) 
+        {
+            var dto = new PersonDto();
+
+            var mapper = GetMapper<Person, PersonDto>();
+            mapper.Map(person, dto);
+
+            // map hardcoded fields
+            // add dynamic fields
+
+            return dto;
+        }
+
+        private IMapper GetMapper<TSource, TDestination>()
+        {
+            var modelConfigMapperConfig = new MapperConfiguration(cfg => {
+                var mapExpression = cfg.CreateMap<TSource, TDestination>();
+            });
+
+            return modelConfigMapperConfig.CreateMapper();
         }
 
         [HttpPost]
