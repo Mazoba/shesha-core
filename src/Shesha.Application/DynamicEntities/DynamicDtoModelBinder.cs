@@ -228,19 +228,9 @@ namespace Shesha.DynamicEntities
         {
             var modelConfigMapperConfig = new MapperConfiguration(cfg => {
                 var mapExpression = cfg.CreateMap(sourceType, destinationType);
-                //.ForMember(d => d.Id, o => o.Ignore());
             });
 
             return modelConfigMapperConfig.CreateMapper();
-        }
-
-        private List<string> GetFormFields(ModelBindingContext bindingContext) 
-        {
-            var formFieldsStr = bindingContext.HttpContext.Request.Headers["_formFields"];
-
-            return !string.IsNullOrWhiteSpace(formFieldsStr)
-                ? JsonConvert.DeserializeObject<List<string>>(formFieldsStr)
-                : new List<string>();
         }
 
         private bool ShouldHandleException(IInputFormatter formatter)
