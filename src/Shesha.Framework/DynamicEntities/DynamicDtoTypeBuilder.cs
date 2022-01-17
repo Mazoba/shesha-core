@@ -4,6 +4,7 @@ using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
 using NHibernate.Linq;
 using Shesha.Domain;
+using Shesha.DynamicEntities.Dtos;
 using Shesha.Metadata;
 using System;
 using System.Collections.Generic;
@@ -25,6 +26,11 @@ namespace Shesha.DynamicEntities
             _propertyRepository = propertyRepository;
         }
 
+        public async Task<Type> BuildDtoProxyTypeAsync(Type baseType) 
+        { 
+            return await CompileResultTypeAsync(baseType);
+        }
+
         public async Task<object> CreateDtoInstanceAsync(Type baseType)
         {
             var dynamicType = await CompileResultTypeAsync(baseType);
@@ -40,7 +46,7 @@ namespace Shesha.DynamicEntities
 
             var properties = new DynamicPropertyList();
 
-            var hardCodedDtoProperties = type.GetProperties().Select(p => p.Name).ToList();
+            var hardCodedDtoProperties = type.GetProperties().Select(p => p.Name.ToLower()).ToList();
 
             using (var uow = _unitOfWorkManager.Begin()) 
             {
@@ -49,7 +55,7 @@ namespace Shesha.DynamicEntities
                 foreach (var property in configredProperties) 
                 {
                     // skip property if already included into the DTO (hardcoded)
-                    if (hardCodedDtoProperties.Contains(property.Name))
+                    if (hardCodedDtoProperties.Contains(property.Name.ToLower()))
                         continue;
 
                     properties.Add(property.Name, GetDtoPropertyType(property.DataType, property.DataFormat));
@@ -57,7 +63,10 @@ namespace Shesha.DynamicEntities
 
                 await uow.CompleteAsync();
             }
-            
+
+            // internal fields
+            properties.Add("_formFields", typeof(List<string>));
+
             return properties;
         }
 
@@ -81,7 +90,7 @@ namespace Shesha.DynamicEntities
                 case DataTypes.Time:
                     return typeof(TimeSpan?);
                 case DataTypes.Boolean:
-                    return typeof(bool);
+                    return typeof(bool?);
                 case DataTypes.ReferenceListItem:
                     return typeof(Int64?);
 
@@ -141,7 +150,7 @@ namespace Shesha.DynamicEntities
                     TypeAttributes.BeforeFieldInit |
                     TypeAttributes.AutoLayout,
                     baseType,
-                    new Type[] { } /*{ typeof(IEntity<Guid>) }*/);
+                    new Type[] { typeof(IDynamicDtoProxy) });
             return tb;
         }
 

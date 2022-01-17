@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Shesha.DynamicEntities.Dtos;
+using Shesha.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,19 +26,7 @@ namespace Shesha.DynamicEntities
         private readonly Func<Stream, Encoding, TextReader> _readerFactory;
         private readonly ILogger _logger;
         private readonly MvcOptions? _options;
-
-        /// <summary>
-        /// Creates a new <see cref="DynamicDtoModelBinder"/>.
-        /// </summary>
-        /// <param name="formatters">The list of <see cref="IInputFormatter"/>.</param>
-        /// <param name="readerFactory">
-        /// The <see cref="IHttpRequestStreamReaderFactory"/>, used to create <see cref="System.IO.TextReader"/>
-        /// instances for reading the request body.
-        /// </param>
-        public DynamicDtoModelBinder(IList<IInputFormatter> formatters, IHttpRequestStreamReaderFactory readerFactory)
-            : this(formatters, readerFactory, loggerFactory: null)
-        {
-        }
+        private readonly IDynamicDtoTypeBuilder _dtoBuilder;
 
         /// <summary>
         /// Creates a new <see cref="DynamicDtoModelBinder"/>.
@@ -87,6 +77,7 @@ namespace Shesha.DynamicEntities
             _logger = loggerFactory?.CreateLogger<DynamicDtoModelBinder>() ?? NullLogger<DynamicDtoModelBinder>.Instance;
 
             _options = options;
+            _dtoBuilder = StaticContext.IocManager.Resolve<IDynamicDtoTypeBuilder>();
         }
 
         internal bool AllowEmptyBody { get; set; }
@@ -116,11 +107,25 @@ namespace Shesha.DynamicEntities
 
             var httpContext = bindingContext.HttpContext;
 
+            #region 
+
+            // check if type is already proxied
+            var modelType = bindingContext.ModelType;
+            var metadata = bindingContext.ModelMetadata;
+
+            if (!(modelType is IDynamicDtoProxy))
+            {
+                modelType = await _dtoBuilder.BuildDtoProxyTypeAsync(bindingContext.ModelType);
+                metadata = bindingContext.ModelMetadata.GetMetadataForType(modelType);
+            }
+            
+            #endregion
+
             var formatterContext = new InputFormatterContext(
                 httpContext,
                 modelBindingKey,
                 bindingContext.ModelState,
-                bindingContext.ModelMetadata,
+                metadata,
                 _readerFactory,
                 AllowEmptyBody);
 

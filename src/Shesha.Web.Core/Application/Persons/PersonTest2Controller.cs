@@ -4,6 +4,7 @@ using Abp.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.Application.Persons.Dtos;
 using Shesha.Domain;
+using Shesha.DynamicEntities.Dtos;
 using System;
 using System.Threading.Tasks;
 
@@ -38,7 +39,10 @@ namespace Shesha.Application.Persons
         }
 
         [HttpPost]
-        public async Task<PersonDto> UpdateDtoAtRuntimeAsync(PersonDynamicDto input/*EntityDto<Guid> input*/)
+        public async Task<PersonDto> UpdateDtoAtRuntimeAsync(
+            //DynamicDto<Person, Guid> input
+            PersonDynamicDto input
+            /*EntityDto<Guid> input*/)
         {
             var dto = new PersonDynamicDto();
 

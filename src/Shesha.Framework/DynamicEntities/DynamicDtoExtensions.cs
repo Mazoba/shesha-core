@@ -16,7 +16,12 @@ namespace Shesha.DynamicEntities
         /// <returns></returns>
         public static bool IsDynamicDto(this Type type) 
         {
-            return type.GetInterfaces().Any(x =>
+            return GetGenericDtoInterface(type) != null;
+        }
+
+        private static Type GetGenericDtoInterface(Type type)
+        {
+            return type.GetInterfaces().FirstOrDefault(x =>
                 x.IsGenericType &&
                 x.GetGenericTypeDefinition() == typeof(IDynamicDto<,>));
         }
@@ -31,7 +36,9 @@ namespace Shesha.DynamicEntities
             if (!type.IsDynamicDto())
                 return null;
 
-            var arguments = type.GetGenericArguments();
+            var interfaceType = GetGenericDtoInterface(type);
+
+            var arguments = interfaceType.GetGenericArguments();
             return arguments.FirstOrDefault();
         }
     }

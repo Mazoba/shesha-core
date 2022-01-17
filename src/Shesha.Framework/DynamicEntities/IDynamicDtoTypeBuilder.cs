@@ -18,5 +18,12 @@ namespace Shesha.DynamicEntities
         /// <param name="dtoType">Type of the DTO</param>
         /// <returns></returns>
         Task<object> CreateDtoInstanceAsync(Type dtoType);
+
+        /// <summary>
+        /// Build proxy type for the DTO
+        /// </summary>
+        /// <param name="baseType">DTO type</param>
+        /// <returns></returns>
+        Task<Type> BuildDtoProxyTypeAsync(Type baseType);
     }
 }
