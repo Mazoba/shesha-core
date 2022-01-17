@@ -40,8 +40,8 @@ namespace Shesha.Application.Persons
 
         [HttpPost]
         public async Task<PersonDto> UpdateDtoAtRuntimeAsync(
-            //DynamicDto<Person, Guid> input
-            PersonDynamicDto input
+            DynamicDto<Person, Guid> input
+            /*PersonDynamicDto input*/
             /*EntityDto<Guid> input*/)
         {
             var dto = new PersonDynamicDto();

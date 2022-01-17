@@ -26,9 +26,9 @@ namespace Shesha.DynamicEntities
             _propertyRepository = propertyRepository;
         }
 
-        public async Task<Type> BuildDtoProxyTypeAsync(Type baseType) 
+        public async Task<Type> BuildDtoProxyTypeAsync(Type baseType, Func<string, bool> propertyFilter)
         { 
-            return await CompileResultTypeAsync(baseType);
+            return await CompileResultTypeAsync(baseType, propertyFilter);
         }
 
         public async Task<object> CreateDtoInstanceAsync(Type baseType)
@@ -120,23 +120,26 @@ namespace Shesha.DynamicEntities
             }
         }
 
-        private async Task<Type> CompileResultTypeAsync(Type baseType)
+        private async Task<Type> CompileResultTypeAsync(Type baseType, Func<string, bool> propertyFilter = null)
         {
-            var proxyClassName = $"{baseType.Name}Proxy";
+            var proxyClassName = GetProxyTypeName(baseType, "Proxy");
 
-            var tb = GetTypeBuilder(baseType, "DynamicModule", proxyClassName);
+            var tb = GetTypeBuilder(baseType, "DynamicModule", proxyClassName, new List<Type> { typeof(IDynamicDtoProxy) });
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
             var properties = await GetDynamicPropertiesAsync(baseType);
 
-            foreach (var property in properties)
-                CreateProperty(tb, property.PropertyName, property.PropertyType);
+            foreach (var property in properties) 
+            {
+                if (propertyFilter == null || propertyFilter.Invoke(property.PropertyName))
+                    CreateProperty(tb, property.PropertyName, property.PropertyType);
+            }
 
             var objectType = tb.CreateType();
             return objectType;
         }
 
-        private static TypeBuilder GetTypeBuilder(Type baseType, string moduleName, string typeName)
+        private static TypeBuilder GetTypeBuilder(Type baseType, string moduleName, string typeName, IEnumerable<Type> interfaces)
         {
             var an = new AssemblyName(moduleName);
             
@@ -150,7 +153,7 @@ namespace Shesha.DynamicEntities
                     TypeAttributes.BeforeFieldInit |
                     TypeAttributes.AutoLayout,
                     baseType,
-                    new Type[] { typeof(IDynamicDtoProxy) });
+                    interfaces.ToArray());
             return tb;
         }
 
@@ -210,6 +213,40 @@ namespace Shesha.DynamicEntities
                 tb.DefineMethodOverride(setPropMthdBldr, setMethod);
             }            
             */
+        }
+
+        private string GetProxyTypeName(Type type, string suffix) 
+        {
+            return $"{type.Name}{suffix}";
+        }
+
+        public async Task<Type> BuildDtoFullProxyTypeAsync(Type baseType)
+        {
+            var proxyClassName = GetProxyTypeName(baseType, "FullProxy");
+            var properties = await GetDynamicPropertiesAsync(baseType);
+            
+            if (!properties.Any(p => p.PropertyName == nameof(IHasFormFieldsList._formFields)))
+                properties.Add(new DynamicProperty { PropertyName = nameof(IHasFormFieldsList._formFields), PropertyType = typeof(List<string>) });
+
+            var type = await CompileResultTypeAsync(baseType, proxyClassName, new List<Type> { typeof(IHasFormFieldsList) }, properties);
+            return type;
+        }
+
+        private async Task<Type> CompileResultTypeAsync(Type baseType,
+            string proxyClassName,
+            List<Type> interfaces,
+            List<DynamicProperty> properties)
+        {
+            var tb = GetTypeBuilder(baseType, "DynamicModule", proxyClassName, interfaces.Union(new List<Type> { typeof(IDynamicDtoProxy) }));
+            var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
+
+            foreach (var property in properties)
+            {
+                CreateProperty(tb, property.PropertyName, property.PropertyType);
+            }
+
+            var objectType = tb.CreateType();
+            return objectType;
         }
     }
 }

@@ -23,7 +23,15 @@ namespace Shesha.DynamicEntities
         /// Build proxy type for the DTO
         /// </summary>
         /// <param name="baseType">DTO type</param>
+        /// <param name="propertyFilter">Property filter. Return true if the field should be included into the result type</param>
         /// <returns></returns>
-        Task<Type> BuildDtoProxyTypeAsync(Type baseType);
+        Task<Type> BuildDtoProxyTypeAsync(Type baseType, Func<string, bool> propertyFilter);
+
+        /// <summary>
+        /// Build full proxy type for the specified DTO. Full proxy contains all configurable fields and service fields (e.g. <see cref="IHasFormFieldsList._formFields"/> property)
+        /// </summary>
+        /// <param name="baseType">DTO type</param>
+        /// <returns></returns>
+        Task<Type> BuildDtoFullProxyTypeAsync(Type baseType);
     }
 }
