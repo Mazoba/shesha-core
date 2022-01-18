@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Newtonsoft.Json;
 using Shesha.DynamicEntities.Dtos;
 using Shesha.Services;
 using System;
@@ -115,7 +116,8 @@ namespace Shesha.DynamicEntities
 
             if (!(modelType is IDynamicDtoProxy))
             {
-                modelType = await _dtoBuilder.BuildDtoProxyTypeAsync(bindingContext.ModelType);
+                modelType = await _dtoBuilder.BuildDtoFullProxyTypeAsync(bindingContext.ModelType);
+
                 metadata = bindingContext.ModelMetadata.GetMetadataForType(modelType);
             }
             
@@ -179,15 +181,26 @@ namespace Shesha.DynamicEntities
 
                 if (result.IsModelSet)
                 {
-                    var model = result.Model;
-                    bindingContext.Result = ModelBindingResult.Success(model);
+                    if (result.Model is IHasFormFieldsList modelWithFormFields) 
+                    {
+                        var formFields = modelWithFormFields._formFields.Select(f => f.ToLower()).ToList();
 
-                    // map results
+                        var effectiveModelType = await _dtoBuilder.BuildDtoProxyTypeAsync(bindingContext.ModelType, propName => formFields.Contains(propName.ToLower()));
+                        var mapper = GetMapper(result.Model.GetType(), effectiveModelType);
+                        var effectiveModel = mapper.Map(result.Model, result.Model.GetType(), effectiveModelType);
+                        
+                        bindingContext.Result = ModelBindingResult.Success(effectiveModel);
+                    } else
+                        bindingContext.Result = ModelBindingResult.Success(result.Model);
+
+                    // map results (form manual bindings only)
+                    /*
                     if (bindingContext.Model != null && result.Model != null) 
                     {
                         var mapper = GetMapper(result.Model.GetType(), bindingContext.Model.GetType());
                         mapper.Map(result.Model, bindingContext.Model);
                     }
+                    */
                 }
                 else
                 {
@@ -215,12 +228,10 @@ namespace Shesha.DynamicEntities
         {
             var modelConfigMapperConfig = new MapperConfiguration(cfg => {
                 var mapExpression = cfg.CreateMap(sourceType, destinationType);
-                //.ForMember(d => d.Id, o => o.Ignore());
             });
 
             return modelConfigMapperConfig.CreateMapper();
         }
-
 
         private bool ShouldHandleException(IInputFormatter formatter)
         {
