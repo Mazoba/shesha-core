@@ -2,6 +2,8 @@
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
+using Abp.ObjectMapping;
+using Abp.Runtime.Caching;
 using NHibernate.Linq;
 using Shesha.Domain;
 using Shesha.DynamicEntities.Dtos;
@@ -15,19 +17,23 @@ using System.Threading.Tasks;
 
 namespace Shesha.DynamicEntities
 {
-    public class DynamicDtoTypeBuilder: IDynamicDtoTypeBuilder, ITransientDependency
+    public class DynamicDtoTypeBuilder : IDynamicDtoTypeBuilder, ITransientDependency
     {
         private readonly IUnitOfWorkManager _unitOfWorkManager;
         private readonly IRepository<EntityProperty, Guid> _propertyRepository;
+        private readonly ICacheManager _cacheManager;
+        private readonly IObjectMapper _mapper;
 
-        public DynamicDtoTypeBuilder(IUnitOfWorkManager unitOfWorkManager, IRepository<EntityProperty, Guid> propertyRepository)
+        public DynamicDtoTypeBuilder(IUnitOfWorkManager unitOfWorkManager, IRepository<EntityProperty, Guid> propertyRepository, ICacheManager cacheManager, IObjectMapper mapper)
         {
             _unitOfWorkManager = unitOfWorkManager;
             _propertyRepository = propertyRepository;
+            _cacheManager = cacheManager;
+            _mapper = mapper;
         }
 
         public async Task<Type> BuildDtoProxyTypeAsync(Type baseType, Func<string, bool> propertyFilter)
-        { 
+        {
             return await CompileResultTypeAsync(baseType, propertyFilter);
         }
 
@@ -38,7 +44,38 @@ namespace Shesha.DynamicEntities
             return dynamicObject;
         }
 
-        private async Task<List<DynamicProperty>> GetDynamicPropertiesAsync(Type type)
+        // _cacheManager
+        private string GetPropertiesCacheKey(Type entityType)
+        {
+            return $"{entityType.FullName}:properties";
+        }
+
+        private ITypedCache<string, List<EntityPropertyDto>> GetPropertiesCache()
+        {
+            return _cacheManager.GetCache<string, List<EntityPropertyDto>>("DynamicEntityProperties");
+        }
+
+        public async Task<List<EntityPropertyDto>> FetchPropertiesAsync(Type entityType) 
+        {
+            using (var uow = _unitOfWorkManager.Begin())
+            {
+                var properties = await _propertyRepository.GetAll().Where(p => p.EntityConfig.ClassName == entityType.Name && p.EntityConfig.Namespace == entityType.Namespace).ToListAsync();
+
+                var propertyDtos = properties.Select(p => _mapper.Map<EntityPropertyDto>(p)).ToList();
+
+                await uow.CompleteAsync();
+
+                return propertyDtos;
+            }
+        }
+
+        public async Task<List<EntityPropertyDto>> GetEntityPropertiesAsync(Type entityType)
+        {
+            var key = GetPropertiesCacheKey(entityType);
+            return await GetPropertiesCache().GetAsync(key, async (key) => await FetchPropertiesAsync(entityType));
+        }
+
+        public async Task<List<DynamicProperty>> GetDynamicPropertiesAsync(Type type)
         {
             var entityType = DynamicDtoExtensions.GetDynamicDtoEntityType(type);
             if (entityType == null)
@@ -48,26 +85,30 @@ namespace Shesha.DynamicEntities
 
             var hardCodedDtoProperties = type.GetProperties().Select(p => p.Name.ToLower()).ToList();
 
-            using (var uow = _unitOfWorkManager.Begin()) 
+            var configredProperties = await GetEntityPropertiesAsync(entityType);
+            foreach (var property in configredProperties)
             {
-                var configredProperties = await _propertyRepository.GetAll().Where(p => p.EntityConfig.ClassName == entityType.Name && p.EntityConfig.Namespace == entityType.Namespace).ToListAsync();
+                // skip property if already included into the DTO (hardcoded)
+                if (hardCodedDtoProperties.Contains(property.Name.ToLower()))
+                    continue;
 
-                foreach (var property in configredProperties) 
-                {
-                    // skip property if already included into the DTO (hardcoded)
-                    if (hardCodedDtoProperties.Contains(property.Name.ToLower()))
-                        continue;
-
-                    properties.Add(property.Name, GetDtoPropertyType(property.DataType, property.DataFormat));
-                }
-
-                await uow.CompleteAsync();
+                var propertyType = GetDtoPropertyType(property.DataType, property.DataFormat);
+                if (propertyType != null)
+                    properties.Add(property.Name, propertyType);
             }
 
             // internal fields
             properties.Add("_formFields", typeof(List<string>));
 
             return properties;
+        }
+
+        /// <summary>
+        /// Returns .Net type that is used to store data for the specified DTO property (according to the property settings)
+        /// </summary>
+        public Type GetDtoPropertyType(EntityPropertyDto propertyDto) 
+        {
+            return GetDtoPropertyType(propertyDto.DataType, propertyDto.DataFormat);
         }
 
         /// <summary>
@@ -92,6 +133,9 @@ namespace Shesha.DynamicEntities
                 case DataTypes.Boolean:
                     return typeof(bool?);
                 case DataTypes.ReferenceListItem:
+                    // todo: find a way to check an entity property
+                    // if it's declared as an enum - get base type of this enum
+                    // if it's declared as int/Int64 - use this type
                     return typeof(Int64?);
 
                 case DataTypes.Number:
@@ -112,9 +156,11 @@ namespace Shesha.DynamicEntities
                     }
 
                 case DataTypes.EntityReference:
-                    return typeof(object); // todo: review
+                    return null;
+                    //return typeof(object); // todo: review
                 case DataTypes.Array:
-                    return typeof(object); // todo: review
+                    return null;
+                    //return typeof(object); // todo: review
                 default:
                     throw new NotSupportedException($"Data type not supported: {dataType}");
             }

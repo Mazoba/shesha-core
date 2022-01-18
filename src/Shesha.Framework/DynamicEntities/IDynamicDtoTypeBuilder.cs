@@ -33,5 +33,17 @@ namespace Shesha.DynamicEntities
         /// <param name="baseType">DTO type</param>
         /// <returns></returns>
         Task<Type> BuildDtoFullProxyTypeAsync(Type baseType);
+
+        /// <summary>
+        /// Get properties of the specified dynamic entity
+        /// </summary>
+        /// <param name="entityType">Type of entity</param>
+        /// <returns></returns>
+        Task<List<EntityPropertyDto>> GetEntityPropertiesAsync(Type entityType);
+
+        /// <summary>
+        /// Returns .Net type that is used to store data for the specified DTO property (according to the property settings)
+        /// </summary>
+        Type GetDtoPropertyType(EntityPropertyDto propertyDto);
     }
 }

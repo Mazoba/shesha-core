@@ -140,7 +140,7 @@ namespace Shesha.DynamicEntities
                 if (dbProp == null)
                     dbProp = new EntityProperty
                     {
-                        EntityConfig = modelConfig
+                        EntityConfig = modelConfig,
                     };
                 dbProp.ParentProperty = parentProperty;
 
@@ -180,7 +180,8 @@ namespace Shesha.DynamicEntities
                     .ForMember(d => d.Id, o => o.Ignore())
                     .ForMember(d => d.EntityConfig, o => o.Ignore())
                     .ForMember(d => d.SortOrder, o => o.Ignore())
-                    .ForMember(d => d.Properties, o => o.Ignore());
+                    .ForMember(d => d.Properties, o => o.Ignore())
+                    .ForMember(d => d.Source, o => o.Ignore());
 
                 if (sourceType == MetadataSourceType.ApplicationCode)
                 {

@@ -35,6 +35,7 @@ namespace Shesha.NHibernate.Session
                 ? persister.FindDirty(currentState, oldState, entity, sessionImpl)
                 : null;
 
+            /*
             if (dirtyProps == null)
             {
                 dirtyProps = new int[currentState.Length];
@@ -43,7 +44,7 @@ namespace Shesha.NHibernate.Session
                     dirtyProps[i] = i;
                 }
             }
-
+            */
             return dirtyProps != null
                 ? dirtyProps.Select(i => new DirtyPropertyInfo()
                 {
