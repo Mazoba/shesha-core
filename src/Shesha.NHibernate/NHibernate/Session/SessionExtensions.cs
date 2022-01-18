@@ -29,37 +29,25 @@ namespace Shesha.NHibernate.Session
             var persister = sessionImpl.Factory.GetEntityPersister(className);
 
             var oldEntry = session.GetEntry(entity);
-            Object[] oldState = oldEntry?.LoadedState;
+            Object[] oldState = oldEntry.LoadedState;
             Object[] currentState = persister.GetPropertyValues(entity);
-            Int32[] dirtyProps = oldState != null
-                ? persister.FindDirty(currentState, oldState, entity, sessionImpl)
-                : null;
-
-            if (dirtyProps == null)
-            {
-                dirtyProps = new int[currentState.Length];
-                for (int i = 0; i < currentState.Length - 1; i++)
-                {
-                    dirtyProps[i] = i;
-                }
-            }
+            Int32[] dirtyProps = persister.FindDirty(currentState, oldState, entity, sessionImpl);
 
             return dirtyProps != null
                 ? dirtyProps.Select(i => new DirtyPropertyInfo()
-                {
-                    Name = persister.PropertyNames[i],
-                    OldValue = oldState?[i],
-                    NewValue = currentState[i]
-                }).ToList()
+                    {
+                        Name = persister.PropertyNames[i],
+                        OldValue = oldState[i],
+                        NewValue = currentState[i]
+                    })
+                    .ToList()
                 : new List<DirtyPropertyInfo>();
         }
 
-        public static EntityEntry GetEntry(this ISession session, Object entity)
+        public static EntityEntry GetEntry(this ISession session, Object entity, bool assert = true)
         {
-            var className = NHibernateProxyHelper.GuessClass(entity).FullName;
             var sessionImpl = session.GetSessionImplementation();
             var oldEntry = sessionImpl.PersistenceContext.GetEntry(entity);
-
             if (oldEntry == null)
             {
                 if (entity is INHibernateProxy proxy)
@@ -69,11 +57,11 @@ namespace Shesha.NHibernate.Session
                 }
                 else
                 {
-                    //System.Diagnostics.Debug.Assert(false, "Entity was likely retrieved using an NHibernate session which is no longer available.");
-                    return null;
+                    if (assert)
+                        System.Diagnostics.Debug.Assert(false, "Entity was likely retrieved using an NHibernate session which is no longer available.");
+                    else return null;
                 }
             }
-
             return oldEntry;
         }
 

@@ -109,7 +109,7 @@ namespace Shesha.NHibernate.EntityHistory
             var entityTypeFullName = typeOfEntity.FullName;
             EntityEntry entityEntry;
 
-            if ((entityEntry = Session?.GetEntry(entity)) == null) return null;
+            if ((entityEntry = Session?.GetEntry(entity, false)) == null) return null;
             var id = entityEntry.Id;
 
             EntityChangeType changeType;
@@ -123,7 +123,18 @@ namespace Shesha.NHibernate.EntityHistory
                 return null;
             }
 
-            var dirtyProps = Session.GetDirtyProperties(entity);
+            var className = NHibernateProxyHelper.GuessClass(entity).FullName;
+            var sessionImpl = Session.GetSessionImplementation();
+            var persister = sessionImpl.Factory.GetEntityPersister(className);
+
+            Object[] currentState = persister.GetPropertyValues(entity);
+            Int32[] dirtyP = changeType != EntityChangeType.Created
+                ? persister.FindDirty(currentState, entityEntry.LoadedState, entity, sessionImpl) // changed properties
+                : Enumerable.Range(0, currentState.Length - 1).ToArray(); // all properties for new entity
+
+            var dirtyProps = dirtyP.Select(i => new SessionExtensions.DirtyPropertyInfo
+                    { Name = persister.PropertyNames[i], OldValue = entityEntry.LoadedState?[i], NewValue = currentState[i] })
+                .ToList();
 
             var entityChange = new EntityChange
             {
