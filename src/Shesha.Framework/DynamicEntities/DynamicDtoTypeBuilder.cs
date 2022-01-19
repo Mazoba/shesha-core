@@ -8,12 +8,14 @@ using NHibernate.Linq;
 using Shesha.Domain;
 using Shesha.DynamicEntities.Cache;
 using Shesha.DynamicEntities.Dtos;
+using Shesha.DynamicEntities.Json;
 using Shesha.Metadata;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Shesha.DynamicEntities
@@ -220,6 +222,9 @@ namespace Shesha.DynamicEntities
             propertyBuilder.SetGetMethod(getPropMthdBldr);
             propertyBuilder.SetSetMethod(setPropMthdBldr);
 
+            AddPropertyAttributes(propertyBuilder, propertyType);
+            //propertyBuilder
+
             // https://stackoverflow.com/questions/1822047/how-to-emit-explicit-interface-implementation-using-reflection-emit
             // DefineMethodOverride is used to associate the method 
             // body with the interface method that is being implemented.
@@ -234,6 +239,17 @@ namespace Shesha.DynamicEntities
                 tb.DefineMethodOverride(setPropMthdBldr, setMethod);
             }            
             */
+        }
+
+        private static void AddPropertyAttributes(PropertyBuilder propertyBuilder, Type propertyType)
+        {
+            if (propertyType == typeof(DateTime) || propertyType == typeof(DateTime?))
+            {
+                var attrCtorParams = new Type[] { typeof(Type) };
+                var attrCtorInfo = typeof(JsonConverterAttribute).GetConstructor(attrCtorParams);
+                var attrBuilder = new CustomAttributeBuilder(attrCtorInfo, new object[] { typeof(DateConverter) });
+                propertyBuilder.SetCustomAttribute(attrBuilder);
+            }
         }
 
         private string GetProxyTypeName(Type type, string suffix) 
