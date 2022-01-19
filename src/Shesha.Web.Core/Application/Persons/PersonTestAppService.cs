@@ -1,9 +1,9 @@
 ﻿using Abp.Application.Services.Dto;
+using Abp.Authorization;
 using Abp.Dependency;
 using Abp.Domain.Repositories;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Shesha.Application.Persons.Dtos;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
@@ -18,19 +18,22 @@ using System.Threading.Tasks;
 
 namespace Shesha.Application.Persons
 {
+    [AbpAuthorize]
     public class PersonTestAppService: SheshaAppServiceBase, ITransientDependency
     {
         private readonly IRepository<Person, Guid> _repository;
         private readonly ISessionProvider _sessionProvider;
         private readonly IDynamicDtoTypeBuilder _dtoBuilder;
         private readonly IVersionedFieldManager _versionedFieldManager;
+        private readonly ISerializationManager _serializationManager;        
 
-        public PersonTestAppService(IRepository<Person, Guid> repository, ISessionProvider sessionProvider, IDynamicDtoTypeBuilder dtoBuilder, IVersionedFieldManager versionedFieldManager)
+        public PersonTestAppService(IRepository<Person, Guid> repository, ISessionProvider sessionProvider, IDynamicDtoTypeBuilder dtoBuilder, IVersionedFieldManager versionedFieldManager, ISerializationManager serializationManager)
         {
             _repository = repository;
             _sessionProvider = sessionProvider;
             _dtoBuilder = dtoBuilder;
             _versionedFieldManager = versionedFieldManager;
+            _serializationManager = serializationManager;
         }
 
         public async Task<DynamicDto<Person, Guid>> GetAsync(EntityDto<Guid> input) 
@@ -65,7 +68,7 @@ namespace Shesha.Application.Persons
                 {
                     var serializedValue = await _versionedFieldManager.GetVersionedFieldValueAsync<Person, Guid>(person, property.Name);
                     var rawValue = serializedValue != null
-                        ? DeserializeProperty(dtoProp.PropertyType, serializedValue)
+                        ? _serializationManager.DeserializeProperty(dtoProp.PropertyType, serializedValue)
                         : null;
                     dtoProp.SetValue(dto, rawValue);
                 }
@@ -93,21 +96,10 @@ namespace Shesha.Application.Persons
                 if (dtoProp != null) 
                 {
                     var rawValue = dtoProp.GetValue(dto);
-                    var convertedValue = SerializeProperty(property, rawValue);
+                    var convertedValue = _serializationManager.SerializeProperty(property, rawValue);
                     await _versionedFieldManager.SetVersionedFieldValueAsync<Person, Guid>(person, property.Name, convertedValue, false);
                 }
             }
-        }
-
-        private string SerializeProperty(EntityPropertyDto propertyDto, object value)
-        {
-            // todo: extract interface from EntityPropertyDto that describes data type only
-            return JsonConvert.SerializeObject(value);
-        }
-
-        private object DeserializeProperty(Type propertyType, string value)
-        {
-            return JsonConvert.DeserializeObject(value, propertyType);
         }
 
         private IMapper GetMapper(Type sourceType, Type destinationType)
