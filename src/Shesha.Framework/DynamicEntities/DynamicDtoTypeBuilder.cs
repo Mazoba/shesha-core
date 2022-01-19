@@ -6,6 +6,7 @@ using Abp.ObjectMapping;
 using Abp.Runtime.Caching;
 using NHibernate.Linq;
 using Shesha.Domain;
+using Shesha.DynamicEntities.Cache;
 using Shesha.DynamicEntities.Dtos;
 using Shesha.Metadata;
 using System;
@@ -21,15 +22,15 @@ namespace Shesha.DynamicEntities
     {
         private readonly IUnitOfWorkManager _unitOfWorkManager;
         private readonly IRepository<EntityProperty, Guid> _propertyRepository;
-        private readonly ICacheManager _cacheManager;
         private readonly IObjectMapper _mapper;
-
-        public DynamicDtoTypeBuilder(IUnitOfWorkManager unitOfWorkManager, IRepository<EntityProperty, Guid> propertyRepository, ICacheManager cacheManager, IObjectMapper mapper)
+        private readonly IEntityConfigCache _entityConfigCache;
+        
+        public DynamicDtoTypeBuilder(IUnitOfWorkManager unitOfWorkManager, IRepository<EntityProperty, Guid> propertyRepository, IObjectMapper mapper, IEntityConfigCache entityConfigCache)
         {
             _unitOfWorkManager = unitOfWorkManager;
             _propertyRepository = propertyRepository;
-            _cacheManager = cacheManager;
             _mapper = mapper;
+            _entityConfigCache = entityConfigCache;
         }
 
         public async Task<Type> BuildDtoProxyTypeAsync(Type baseType, Func<string, bool> propertyFilter)
@@ -44,35 +45,9 @@ namespace Shesha.DynamicEntities
             return dynamicObject;
         }
 
-        // _cacheManager
-        private string GetPropertiesCacheKey(Type entityType)
-        {
-            return $"{entityType.FullName}:properties";
-        }
-
-        private ITypedCache<string, List<EntityPropertyDto>> GetPropertiesCache()
-        {
-            return _cacheManager.GetCache<string, List<EntityPropertyDto>>("DynamicEntityProperties");
-        }
-
-        public async Task<List<EntityPropertyDto>> FetchPropertiesAsync(Type entityType) 
-        {
-            using (var uow = _unitOfWorkManager.Begin())
-            {
-                var properties = await _propertyRepository.GetAll().Where(p => p.EntityConfig.ClassName == entityType.Name && p.EntityConfig.Namespace == entityType.Namespace).ToListAsync();
-
-                var propertyDtos = properties.Select(p => _mapper.Map<EntityPropertyDto>(p)).ToList();
-
-                await uow.CompleteAsync();
-
-                return propertyDtos;
-            }
-        }
-
         public async Task<List<EntityPropertyDto>> GetEntityPropertiesAsync(Type entityType)
         {
-            var key = GetPropertiesCacheKey(entityType);
-            return await GetPropertiesCache().GetAsync(key, async (key) => await FetchPropertiesAsync(entityType));
+            return await _entityConfigCache.GetEntityPropertiesAsync(entityType);
         }
 
         public async Task<List<DynamicProperty>> GetDynamicPropertiesAsync(Type type)
