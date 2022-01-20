@@ -29,7 +29,8 @@ namespace Shesha.DynamicEntities
                 : options.ModelBinderProviders.Count - 1;
 
             var readerFactory = StaticContext.IocManager.Resolve<IHttpRequestStreamReaderFactory>();
-            var dynamicDtoBinderProvider = new DynamicDtoBinderProvider(options.InputFormatters, readerFactory, NullLoggerFactory.Instance, options);
+            var dynamicDtoTypeBuilder = StaticContext.IocManager.Resolve<IDynamicDtoTypeBuilder>();
+            var dynamicDtoBinderProvider = new DynamicDtoBinderProvider(options.InputFormatters, readerFactory, NullLoggerFactory.Instance, options, dynamicDtoTypeBuilder);
 
             options.ModelBinderProviders.Insert(idx, dynamicDtoBinderProvider);
         }

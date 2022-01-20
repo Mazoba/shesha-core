@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Shesha.DynamicEntities.Dtos;
 using Shesha.Services;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -41,8 +42,9 @@ namespace Shesha.DynamicEntities
         public DynamicDtoModelBinder(
             IList<IInputFormatter> formatters,
             IHttpRequestStreamReaderFactory readerFactory,
-            ILoggerFactory? loggerFactory)
-            : this(formatters, readerFactory, loggerFactory, options: null)
+            ILoggerFactory? loggerFactory,
+            IDynamicDtoTypeBuilder dynamicDtoTypeBuilder)
+            : this(formatters, readerFactory, loggerFactory, options: null, dynamicDtoTypeBuilder)
         {
         }
 
@@ -60,7 +62,8 @@ namespace Shesha.DynamicEntities
             IList<IInputFormatter> formatters,
             IHttpRequestStreamReaderFactory readerFactory,
             ILoggerFactory? loggerFactory,
-            MvcOptions? options)
+            MvcOptions? options,
+            IDynamicDtoTypeBuilder dynamicDtoTypeBuilder)
         {
             if (formatters == null)
             {
@@ -78,7 +81,7 @@ namespace Shesha.DynamicEntities
             _logger = loggerFactory?.CreateLogger<DynamicDtoModelBinder>() ?? NullLogger<DynamicDtoModelBinder>.Instance;
 
             _options = options;
-            _dtoBuilder = StaticContext.IocManager.Resolve<IDynamicDtoTypeBuilder>();
+            _dtoBuilder = dynamicDtoTypeBuilder;
         }
 
         internal bool AllowEmptyBody { get; set; }
@@ -183,9 +186,14 @@ namespace Shesha.DynamicEntities
                 {
                     if (result.Model is IHasFormFieldsList modelWithFormFields) 
                     {
-                        var formFields = modelWithFormFields._formFields.Select(f => f.ToLower()).ToList();
+                        //var formFields = modelWithFormFields._formFields.Select(f => f.ToLower()).ToList();
+                        var bindKeys = GetAllPropertyKeys(modelWithFormFields._formFields);
 
-                        var effectiveModelType = await _dtoBuilder.BuildDtoProxyTypeAsync(bindingContext.ModelType, propName => formFields.Contains(propName.ToLower()));
+                        var effectiveModelType = await _dtoBuilder.BuildDtoProxyTypeAsync(bindingContext.ModelType, 
+                            propName => {
+                                return bindKeys.Contains(propName.ToLower());
+                            }
+                        );
                         var mapper = GetMapper(result.Model.GetType(), effectiveModelType);
                         var effectiveModel = mapper.Map(result.Model, result.Model.GetType(), effectiveModelType);
                         
@@ -224,10 +232,58 @@ namespace Shesha.DynamicEntities
             _logger.DoneAttemptingToBindModel(bindingContext);
         }
 
+        private List<string> GetAllPropertyKeys(List<string> fieldsList) 
+        {
+            var result = new List<string>();
+
+            foreach (var field in fieldsList) 
+            {
+                var parts = field.ToLower().Split('.');
+                var path = "";
+                foreach (var part in parts) 
+                {
+                    path = string.IsNullOrWhiteSpace(path)
+                        ? part
+                        : path + "." + part;
+
+                    if (!result.Contains(path))
+                        result.Add(path);
+                }
+            }
+
+            return result;
+        }
+
         private IMapper GetMapper(Type sourceType, Type destinationType)
         {
+            // todo: collect types during the building of the proxy type
+            /*
+            var dynamicTypes = sourceType.GetProperties()
+                .Select(p => p.PropertyType).Where(t => typeof(IDynamicNestedObject).IsAssignableFrom(t))
+                .ToList();
+            */
+            // note: types with the same name may be different (partial type and full type)
+            // todo: create a test for this case
+            var nestedTypes = new Dictionary<Type, Type>();
+            var dstProps = destinationType.GetProperties().ToList();
+            foreach (var dstProp in dstProps)
+            {
+                if (typeof(IDynamicNestedObject).IsAssignableFrom(dstProp.PropertyType)) 
+                {
+                    var srcProp = sourceType.GetProperty(dstProp.Name);
+                    if (srcProp != null) 
+                    {
+                        nestedTypes.Add(srcProp.PropertyType, dstProp.PropertyType);
+                    }
+                }
+            }
+
+
             var modelConfigMapperConfig = new MapperConfiguration(cfg => {
                 var mapExpression = cfg.CreateMap(sourceType, destinationType);
+
+                foreach (var srcType in nestedTypes.Keys)
+                    cfg.CreateMap(srcType, nestedTypes[srcType]);
             });
 
             return modelConfigMapperConfig.CreateMapper();
@@ -243,3 +299,4 @@ namespace Shesha.DynamicEntities
         }
     }
 }
+;

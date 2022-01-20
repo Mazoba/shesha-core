@@ -16,6 +16,10 @@
     <None Remove="StoredFiles\**" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="DynamicEntities\Resources\nested2Levels.json" />
+    <None Remove="DynamicEntities\Resources\nested2Levels.metadata.json" />
+    <None Remove="DynamicEntities\Resources\nested3Levels.json" />
+    <None Remove="DynamicEntities\Resources\nested3Levels.metadata.json" />
     <None Remove="log4net.config" />
   </ItemGroup>
   <ItemGroup>
@@ -24,6 +28,12 @@
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="DynamicEntities\Resources\nested3Levels.metadata.json" />
+    <EmbeddedResource Include="DynamicEntities\Resources\nested2Levels.metadata.json" />
+    <EmbeddedResource Include="DynamicEntities\Resources\nested3Levels.json" />
+    <EmbeddedResource Include="DynamicEntities\Resources\nested2Levels.json" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Shesha.Application\Shesha.Application.csproj" />

@@ -106,5 +106,10 @@ namespace Shesha.DynamicEntities.Cache
             
             return item.Properties;
         }
+
+        public Task<List<EntityPropertyDto>> Test1(string testvals)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

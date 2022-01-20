@@ -18,5 +18,7 @@ namespace Shesha.DynamicEntities.Cache
         /// <param name="entityType"></param>
         /// <returns></returns>
         Task<List<EntityPropertyDto>> GetEntityPropertiesAsync(Type entityType);
+
+        Task<List<EntityPropertyDto>> Test1(string testvals);
     }
 }

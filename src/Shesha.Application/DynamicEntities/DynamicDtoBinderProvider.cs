@@ -14,27 +14,7 @@ namespace Shesha.DynamicEntities
         private readonly IHttpRequestStreamReaderFactory _readerFactory;
         private readonly ILoggerFactory _loggerFactory;
         private readonly MvcOptions? _options;
-
-        /// <summary>
-        /// Creates a new <see cref="DynamicDtoBinderProvider"/>.
-        /// </summary>
-        /// <param name="formatters">The list of <see cref="IInputFormatter"/>.</param>
-        /// <param name="readerFactory">The <see cref="IHttpRequestStreamReaderFactory"/>.</param>
-        public DynamicDtoBinderProvider(IList<IInputFormatter> formatters, IHttpRequestStreamReaderFactory readerFactory)
-            : this(formatters, readerFactory, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
-        {
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="DynamicDtoBinderProvider"/>.
-        /// </summary>
-        /// <param name="formatters">The list of <see cref="IInputFormatter"/>.</param>
-        /// <param name="readerFactory">The <see cref="IHttpRequestStreamReaderFactory"/>.</param>
-        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
-        public DynamicDtoBinderProvider(IList<IInputFormatter> formatters, IHttpRequestStreamReaderFactory readerFactory, ILoggerFactory loggerFactory)
-            : this(formatters, readerFactory, loggerFactory, options: null)
-        {
-        }
+        private readonly IDynamicDtoTypeBuilder _dtoBuilder;
 
         /// <summary>
         /// Creates a new <see cref="DynamicDtoBinderProvider"/>.
@@ -47,7 +27,8 @@ namespace Shesha.DynamicEntities
             IList<IInputFormatter> formatters,
             IHttpRequestStreamReaderFactory readerFactory,
             ILoggerFactory loggerFactory,
-            MvcOptions? options)
+            MvcOptions? options,
+            IDynamicDtoTypeBuilder dtoBuilder)
         {
             if (formatters == null)
             {
@@ -63,6 +44,7 @@ namespace Shesha.DynamicEntities
             _readerFactory = readerFactory;
             _loggerFactory = loggerFactory;
             _options = options;
+            _dtoBuilder = dtoBuilder;
         }
 
         /// <inheritdoc />
@@ -84,7 +66,7 @@ namespace Shesha.DynamicEntities
 
                 var treatEmptyInputAsDefaultValue = CalculateAllowEmptyBody(context.BindingInfo.EmptyBodyBehavior, _options);
 
-                return new DynamicDtoModelBinder(_formatters, _readerFactory, _loggerFactory, _options)
+                return new DynamicDtoModelBinder(_formatters, _readerFactory, _loggerFactory, _options, _dtoBuilder)
                 {
                     AllowEmptyBody = treatEmptyInputAsDefaultValue,
                 };

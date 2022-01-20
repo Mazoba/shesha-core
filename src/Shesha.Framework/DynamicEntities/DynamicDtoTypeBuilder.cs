@@ -22,16 +22,10 @@ namespace Shesha.DynamicEntities
 {
     public class DynamicDtoTypeBuilder : IDynamicDtoTypeBuilder, ITransientDependency
     {
-        private readonly IUnitOfWorkManager _unitOfWorkManager;
-        private readonly IRepository<EntityProperty, Guid> _propertyRepository;
-        private readonly IObjectMapper _mapper;
         private readonly IEntityConfigCache _entityConfigCache;
         
-        public DynamicDtoTypeBuilder(IUnitOfWorkManager unitOfWorkManager, IRepository<EntityProperty, Guid> propertyRepository, IObjectMapper mapper, IEntityConfigCache entityConfigCache)
+        public DynamicDtoTypeBuilder(IEntityConfigCache entityConfigCache)
         {
-            _unitOfWorkManager = unitOfWorkManager;
-            _propertyRepository = propertyRepository;
-            _mapper = mapper;
             _entityConfigCache = entityConfigCache;
         }
 
@@ -52,7 +46,7 @@ namespace Shesha.DynamicEntities
             return await _entityConfigCache.GetEntityPropertiesAsync(entityType);
         }
 
-        public async Task<List<DynamicProperty>> GetDynamicPropertiesAsync(Type type)
+        public async Task<List<DynamicProperty>> GetDynamicPropertiesAsync(Type type, string prefix = "")
         {
             var entityType = DynamicDtoExtensions.GetDynamicDtoEntityType(type);
             if (entityType == null)
@@ -69,7 +63,7 @@ namespace Shesha.DynamicEntities
                 if (hardCodedDtoProperties.Contains(property.Name.ToLower()))
                     continue;
 
-                var propertyType = GetDtoPropertyType(property.DataType, property.DataFormat);
+                var propertyType = await GetDtoPropertyTypeAsync(property, prefix);
                 if (propertyType != null)
                     properties.Add(property.Name, propertyType);
             }
@@ -80,22 +74,27 @@ namespace Shesha.DynamicEntities
             return properties;
         }
 
-        /// <summary>
-        /// Returns .Net type that is used to store data for the specified DTO property (according to the property settings)
-        /// </summary>
-        public Type GetDtoPropertyType(EntityPropertyDto propertyDto) 
-        {
-            return GetDtoPropertyType(propertyDto.DataType, propertyDto.DataFormat);
-        }
-
+        /*
         /// <summary>
         /// Returns .Net type that is used to store data for the specified DTO property (according to the <paramref name="dataType"/> and <paramref name="dataFormat"/>)
         /// </summary>
         /// <param name="dataType"></param>
         /// <param name="dataFormat"></param>
         /// <returns></returns>
-        private static Type GetDtoPropertyType(string dataType, string dataFormat)
+        public async Task<Type> GetDtoPropertyTypeAsync(EntityPropertyDto propertyDto) 
         {
+            return await GetDtoPropertyTypeAsync(propertyDto.DataType, propertyDto.DataFormat);
+        }
+        */
+
+        /// <summary>
+        /// Returns .Net type that is used to store data for the specified DTO property (according to the property settings)
+        /// </summary>
+        public async Task<Type> GetDtoPropertyTypeAsync(EntityPropertyDto propertyDto, string prefix = "")
+        {
+            var dataType = propertyDto.DataType;
+            var dataFormat = propertyDto.DataFormat;
+
             switch (dataType)
             {
                 case DataTypes.Guid:
@@ -134,13 +133,33 @@ namespace Shesha.DynamicEntities
 
                 case DataTypes.EntityReference:
                     return null;
-                    //return typeof(object); // todo: review
                 case DataTypes.Array:
                     return null;
-                    //return typeof(object); // todo: review
+                case DataTypes.Object:
+                    return await BuildNestedTypeAsync(propertyDto, prefix); // JSON content
                 default:
                     throw new NotSupportedException($"Data type not supported: {dataType}");
             }
+        }
+
+        private async Task<Type> BuildNestedTypeAsync(EntityPropertyDto propertyDto, string prefix = "") 
+        {
+            if (propertyDto.DataType != DataTypes.Object)
+                throw new NotSupportedException($"{nameof(BuildNestedTypeAsync)}: unsupported type of property (expected '{DataTypes.Object}', actual: '{propertyDto.DataType}')");
+
+            // todo: build name of the class according ot the level of the property
+            var tb = GetTypeBuilder(typeof(object), "DynamicModule", $"{prefix}_{propertyDto.Name}", new List<Type> { typeof(IDynamicNestedObject) });
+            var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
+
+            foreach (var property in propertyDto.Properties)
+            {
+                //if (propertyFilter == null || propertyFilter.Invoke(property.PropertyName))
+                var propertyType = await GetDtoPropertyTypeAsync(property, prefix + propertyDto.Name);
+                CreateProperty(tb, property.Name, propertyType);
+            }
+
+            var objectType = tb.CreateType();
+            return objectType;
         }
 
         private async Task<Type> CompileResultTypeAsync(Type baseType, Func<string, bool> propertyFilter = null)
@@ -150,7 +169,7 @@ namespace Shesha.DynamicEntities
             var tb = GetTypeBuilder(baseType, "DynamicModule", proxyClassName, new List<Type> { typeof(IDynamicDtoProxy) });
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
-            var properties = await GetDynamicPropertiesAsync(baseType);
+            var properties = await GetDynamicPropertiesAsync(baseType, proxyClassName);
 
             foreach (var property in properties) 
             {
