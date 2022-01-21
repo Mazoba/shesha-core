@@ -44,18 +44,6 @@ namespace Shesha.DynamicEntities.Cache
             _mapper = mapper;
         }
         
-        /*
-        public override TCacheItem Get(TPrimaryKey id)
-        {
-            return InternalCache.Get(id, () => GetCacheItemFromDataSource(id));
-        }
-
-        public override Task<TCacheItem> GetAsync(TPrimaryKey id)
-        {
-            return InternalCache.GetAsync(id, () => GetCacheItemFromDataSourceAsync(id));
-        }
-        */
-
         private string GetPropertiesCacheKey(Type entityType)
         {
             return GetCacheKey(entityType.Namespace, entityType.Name);
@@ -84,7 +72,9 @@ namespace Shesha.DynamicEntities.Cache
         {
             using (var uow = _unitOfWorkManager.Begin())
             {
-                var properties = await _propertyRepository.GetAll().Where(p => p.EntityConfig.ClassName == entityType.Name && p.EntityConfig.Namespace == entityType.Namespace).ToListAsync();
+                var properties = await _propertyRepository.GetAll()
+                    .Where(p => p.EntityConfig.ClassName == entityType.Name && p.EntityConfig.Namespace == entityType.Namespace && p.ParentProperty == null)
+                    .ToListAsync();
 
                 var propertyDtos = properties.Select(p => _mapper.Map<EntityPropertyDto>(p)).ToList();
 
@@ -105,11 +95,6 @@ namespace Shesha.DynamicEntities.Cache
             });
             
             return item.Properties;
-        }
-
-        public Task<List<EntityPropertyDto>> Test1(string testvals)
-        {
-            throw new NotImplementedException();
         }
     }
 }

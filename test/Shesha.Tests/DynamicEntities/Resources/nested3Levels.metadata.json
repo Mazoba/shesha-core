@@ -1,33 +1,7 @@
 [
   {
-    "Name": "Title",
-    "Label": "Title",
-    "Description": null,
-    "DataType": "reference-list-item",
-    "DataFormat": null,
-    "EntityType": null,
-    "ReferenceListName": "PersonTitles",
-    "ReferenceListNamespace": "Shesha.Core",
-    "Source": 1,
-    "Properties": [],
-    "Id": "a8edd824-cf98-43a0-8c91-33f9612eda7c"
-  },
-  {
-    "Name": "LastName",
-    "Label": "Last Name",
-    "Description": null,
-    "DataType": "string",
-    "DataFormat": "singleline",
-    "EntityType": null,
-    "ReferenceListName": null,
-    "ReferenceListNamespace": null,
-    "Source": 1,
-    "Properties": [],
-    "Id": "c59a432e-9a30-46c3-8d6e-47514a57ec80"
-  },
-  {
-    "Name": "NestedDynamicAddress",
-    "Label": "Nested Dynamic Address",
+    "Name": "NestedLevel1",
+    "Label": "Nested Level 1",
     "Description": null,
     "DataType": "object",
     "DataFormat": null,
@@ -37,8 +11,8 @@
     "Source": 2,
     "Properties": [
       {
-        "Name": "Line2",
-        "Label": "Line 2",
+        "Name": "NestedLevel1_Prop1",
+        "Label": "Nested Level1 Prop1",
         "Description": null,
         "DataType": "string",
         "DataFormat": "singleline",
@@ -50,8 +24,8 @@
         "Id": "b80219b0-6c52-4e9a-9e96-24cc3ae4afeb"
       },
       {
-        "Name": "ThirdLevelProp",
-        "Label": "Third Level Prop",
+        "Name": "NestedLevel2",
+        "Label": "Nested Level 2",
         "Description": null,
         "DataType": "object",
         "DataFormat": null,
@@ -61,8 +35,8 @@
         "Source": 2,
         "Properties": [
           {
-            "Name": "Name",
-            "Label": "Name",
+            "Name": "NestedLevel2_Prop1",
+            "Label": "Nested Level2 Prop1",
             "Description": null,
             "DataType": "string",
             "DataFormat": null,
@@ -104,70 +78,5 @@
       }
     ],
     "Id": "ef30d4a2-49f6-4f94-aa39-4cad92e90877"
-  },
-  {
-    "Name": "FirstName",
-    "Label": "First Name",
-    "Description": null,
-    "DataType": "string",
-    "DataFormat": "singleline",
-    "EntityType": null,
-    "ReferenceListName": null,
-    "ReferenceListNamespace": null,
-    "Source": 1,
-    "Properties": [],
-    "Id": "f7ef53d4-ea24-4efb-90da-b2d4d7e5f96f"
-  },
-  {
-    "Name": "PostCode",
-    "Label": "Post Code",
-    "Description": null,
-    "DataType": "string",
-    "DataFormat": "singleline",
-    "EntityType": null,
-    "ReferenceListName": null,
-    "ReferenceListNamespace": null,
-    "Source": 2,
-    "Properties": [],
-    "Id": "f21d1e7b-4fd2-4261-a122-b507ac8f8bc3"
-  },
-  {
-    "Name": "DynamicBool",
-    "Label": "Dynamic bool",
-    "Description": "This is a dynamic boolean property",
-    "DataType": "boolean",
-    "DataFormat": null,
-    "EntityType": null,
-    "ReferenceListName": null,
-    "ReferenceListNamespace": null,
-    "Source": 2,
-    "Properties": [],
-    "Id": "57eef876-f618-4781-a471-e7efc9d8e983"
-  },
-  {
-    "Name": "MobileNumber",
-    "Label": "Mobile Number",
-    "Description": null,
-    "DataType": "string",
-    "DataFormat": "singleline",
-    "EntityType": null,
-    "ReferenceListName": null,
-    "ReferenceListNamespace": null,
-    "Source": 1,
-    "Properties": [],
-    "Id": "b315eec8-de78-415d-8f94-f0a5516acd98"
-  },
-  {
-    "Name": "Name",
-    "Label": "Name",
-    "Description": null,
-    "DataType": "string",
-    "DataFormat": null,
-    "EntityType": null,
-    "ReferenceListName": null,
-    "ReferenceListNamespace": null,
-    "Source": 2,
-    "Properties": [],
-    "Id": "9ec0722f-0508-40c6-99a0-f3cecfc66650"
   }
 ]

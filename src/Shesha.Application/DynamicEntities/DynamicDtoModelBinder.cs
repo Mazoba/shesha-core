@@ -14,6 +14,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -117,12 +118,17 @@ namespace Shesha.DynamicEntities
             var modelType = bindingContext.ModelType;
             var metadata = bindingContext.ModelMetadata;
 
-            if (!(modelType is IDynamicDtoProxy))
-            {
-                modelType = await _dtoBuilder.BuildDtoFullProxyTypeAsync(bindingContext.ModelType);
+            if (modelType is IDynamicDtoProxy)
+                throw new NotSupportedException($"{this.GetType().FullName} doesn't support binding of the dynamic poxies. Type `{modelType.FullName}` is implementing `{nameof(IDynamicDtoProxy)}` interface");
 
-                metadata = bindingContext.ModelMetadata.GetMetadataForType(modelType);
-            }
+            var fullDtoBuildContext = new DynamicDtoTypeBuildingContext
+            {
+                ModelType = bindingContext.ModelType,
+                PropertyFilter = propName => true,
+            };
+            modelType = await _dtoBuilder.BuildDtoFullProxyTypeAsync(bindingContext.ModelType, fullDtoBuildContext);
+
+            metadata = bindingContext.ModelMetadata.GetMetadataForType(modelType);
             
             #endregion
 
@@ -189,12 +195,14 @@ namespace Shesha.DynamicEntities
                         //var formFields = modelWithFormFields._formFields.Select(f => f.ToLower()).ToList();
                         var bindKeys = GetAllPropertyKeys(modelWithFormFields._formFields);
 
-                        var effectiveModelType = await _dtoBuilder.BuildDtoProxyTypeAsync(bindingContext.ModelType, 
-                            propName => {
+                        var buildContext = new DynamicDtoTypeBuildingContext {
+                            ModelType = bindingContext.ModelType,
+                            PropertyFilter = propName => {
                                 return bindKeys.Contains(propName.ToLower());
                             }
-                        );
-                        var mapper = GetMapper(result.Model.GetType(), effectiveModelType);
+                        };
+                        var effectiveModelType = await _dtoBuilder.BuildDtoProxyTypeAsync(buildContext);
+                        var mapper = GetMapper(result.Model.GetType(), effectiveModelType, fullDtoBuildContext.Classes);
                         var effectiveModel = mapper.Map(result.Model, result.Model.GetType(), effectiveModelType);
                         
                         bindingContext.Result = ModelBindingResult.Success(effectiveModel);
@@ -254,30 +262,22 @@ namespace Shesha.DynamicEntities
             return result;
         }
 
-        private IMapper GetMapper(Type sourceType, Type destinationType)
+        private IMapper GetMapper(Type sourceType, Type destinationType, Dictionary<string, Type> classes)
         {
-            // todo: collect types during the building of the proxy type
-            /*
-            var dynamicTypes = sourceType.GetProperties()
-                .Select(p => p.PropertyType).Where(t => typeof(IDynamicNestedObject).IsAssignableFrom(t))
-                .ToList();
-            */
-            // note: types with the same name may be different (partial type and full type)
-            // todo: create a test for this case
             var nestedTypes = new Dictionary<Type, Type>();
-            var dstProps = destinationType.GetProperties().ToList();
-            foreach (var dstProp in dstProps)
+            foreach (var srcClassInfo in classes) 
             {
-                if (typeof(IDynamicNestedObject).IsAssignableFrom(dstProp.PropertyType)) 
+                var srcType = srcClassInfo.Value;
+                if (typeof(IDynamicNestedObject).IsAssignableFrom(srcType))
                 {
-                    var srcProp = sourceType.GetProperty(dstProp.Name);
-                    if (srcProp != null) 
+                    var path = srcClassInfo.Key;
+                    var dstProperty = FindProperty(destinationType, path);
+                    if (dstProperty != null)
                     {
-                        nestedTypes.Add(srcProp.PropertyType, dstProp.PropertyType);
+                        nestedTypes.Add(srcType, dstProperty.PropertyType);
                     }
                 }
             }
-
 
             var modelConfigMapperConfig = new MapperConfiguration(cfg => {
                 var mapExpression = cfg.CreateMap(sourceType, destinationType);
@@ -287,6 +287,26 @@ namespace Shesha.DynamicEntities
             });
 
             return modelConfigMapperConfig.CreateMapper();
+        }
+
+        private PropertyInfo FindProperty(Type type, string path) 
+        {
+            PropertyInfo currentProperty = null;
+            var currentType = type;
+
+            var pathParts = path.Split('.');
+            foreach (var pathPart in pathParts) 
+            {
+                var property = currentType.GetProperty(pathPart);
+
+                if (property == null)
+                    return null;
+
+                currentType = property.PropertyType;
+                currentProperty = property;
+            }
+
+            return currentProperty;
         }
 
         private bool ShouldHandleException(IInputFormatter formatter)

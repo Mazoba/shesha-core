@@ -36,8 +36,9 @@ namespace Shesha.Tests.DynamicEntities
             var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object);
 
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
-            
-            var proxyType = await builder.BuildDtoFullProxyTypeAsync(baseDtoType);
+
+            var context = new DynamicDtoTypeBuildingContext() { ModelType = baseDtoType };
+            var proxyType = await builder.BuildDtoFullProxyTypeAsync(baseDtoType, context);
 
             var properties = proxyType.GetProperties();
 
@@ -82,8 +83,8 @@ namespace Shesha.Tests.DynamicEntities
 
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
 
-            var proxyType = await builder.BuildDtoFullProxyTypeAsync(baseDtoType);
-
+            var context = new DynamicDtoTypeBuildingContext() { ModelType = baseDtoType };
+            var proxyType = await builder.BuildDtoFullProxyTypeAsync(baseDtoType, context);
 
             proxyType.Assembly.IsDynamic.ShouldBeTrue();
 

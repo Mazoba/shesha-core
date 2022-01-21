@@ -46,7 +46,8 @@ namespace Shesha.Application.Persons
         private async Task<DynamicDto<Person, Guid>> MapToEntityDtoAsync(Person person) 
         {
             // build dto type
-            var dtoType = await _dtoBuilder.BuildDtoFullProxyTypeAsync(typeof(DynamicDto<Person, Guid>));
+            var context = new DynamicDtoTypeBuildingContext() { ModelType = typeof(DynamicDto<Person, Guid>) };
+            var dtoType = await _dtoBuilder.BuildDtoFullProxyTypeAsync(typeof(DynamicDto<Person, Guid>), context);
             var dto = Activator.CreateInstance(dtoType) as DynamicDto<Person, Guid>;
 
             // create mapper

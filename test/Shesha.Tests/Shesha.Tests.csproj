@@ -16,6 +16,8 @@
     <None Remove="StoredFiles\**" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="DynamicEntities\Resources\flatModel.json" />
+    <None Remove="DynamicEntities\Resources\flatModel.metadata.json" />
     <None Remove="DynamicEntities\Resources\nested2Levels.json" />
     <None Remove="DynamicEntities\Resources\nested2Levels.metadata.json" />
     <None Remove="DynamicEntities\Resources\nested3Levels.json" />
@@ -30,6 +32,8 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="DynamicEntities\Resources\flatModel.json" />
+    <EmbeddedResource Include="DynamicEntities\Resources\flatModel.metadata.json" />
     <EmbeddedResource Include="DynamicEntities\Resources\nested3Levels.metadata.json" />
     <EmbeddedResource Include="DynamicEntities\Resources\nested2Levels.metadata.json" />
     <EmbeddedResource Include="DynamicEntities\Resources\nested3Levels.json" />

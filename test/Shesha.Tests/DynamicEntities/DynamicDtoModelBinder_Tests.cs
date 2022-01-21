@@ -7,24 +7,50 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Newtonsoft.Json;
 using Shesha.Domain;
+using Shesha.Domain.Enums;
 using Shesha.DynamicEntities;
+using Shesha.DynamicEntities.Cache;
 using Shesha.DynamicEntities.Dtos;
 using Shesha.Tests.DynamicEntities.Mvc;
+using Shouldly;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
-using Shouldly;
-using Shesha.DynamicEntities.Cache;
-using Shesha.Tests.DynamicEntities.Dtos;
-using Shesha.Metadata;
 
 namespace Shesha.Tests.DynamicEntities
 {
     public class DynamicDtoModelBinder_Tests : AbpIntegratedTestBase<SheshaTestModule>
     {
+        [Fact]
+        public async Task BindFlatModel_Test()
+        {
+            var bindingResult = await BindAsync<PersonDynamicDto>("flatModel.json", "flatModel.metadata.json");
+
+            // Assert
+            Assert.True(bindingResult.IsModelSet);
+
+            var model = bindingResult.Model;
+
+            var testItems = new Dictionary<string, object> 
+            {
+                { "FirstName", "John" },
+                { "LastName", "Doe" },
+                { "Title", (int)RefListPersonTitle.Mr },
+                { "DynamicDate", new DateTime(2022, 1, 4) },
+                { "DynamicDateTime", new DateTime(2021, 4, 8, 21, 15, 10) },
+                { "DynamicBool", true },                
+            };
+
+            foreach (var item in testItems) 
+            {
+                var (prop, value) = GetPropertyAndValue(model, item.Key);
+                value.ShouldBe(item.Value);
+            }
+        }
+
         [Fact]
         public async Task Bind2NestedLevels_Test() 
         {
@@ -35,20 +61,9 @@ namespace Shesha.Tests.DynamicEntities
 
             var model = bindingResult.Model;
 
-            const string addressPropertyName = "NestedDynamicAddress";
-            const string addressLine1PropertyName = "Line1";
-
-            var nestedAddressProperty = model.GetType().GetProperty(addressPropertyName);
-            nestedAddressProperty.ShouldNotBeNull($"'{addressPropertyName}' property is missing in the model");
-
-            var nestedAddressValue = nestedAddressProperty.GetValue(model);
-            nestedAddressValue.ShouldNotBeNull($"'{addressPropertyName}' property must not be null");
-
-            var line1Property = nestedAddressValue.GetType().GetProperty(addressLine1PropertyName);
-            line1Property.ShouldNotBeNull($"'{addressLine1PropertyName}' property is missing in the nested '{addressPropertyName}' property");
-
-            var line1Value = line1Property.GetValue(nestedAddressValue);
-            line1Value.ShouldBe("address line 1");
+            var (level1_Prop, level1_Value) = GetPropertyAndValue(model, "NestedLevel1");
+            var (level1_Prop1_Prop, level1_Prop1_Value) = GetPropertyAndValue(level1_Value, "NestedLevel1_Prop1");
+            level1_Prop1_Value.ShouldBe("NestedLevel1_Prop1 string value");
         }
 
         [Fact]
@@ -61,27 +76,27 @@ namespace Shesha.Tests.DynamicEntities
 
             var model = bindingResult.Model;
 
-            const string addressPropertyName = "NestedDynamicAddress";
-            const string addressLine1PropertyName = "Line1";
+            var (level1_Prop, level1_Value) = GetPropertyAndValue(model, "NestedLevel1");
+            var (level1_Prop1_Prop, level1_Prop1_Value) = GetPropertyAndValue(level1_Value, "NestedLevel1_Prop1");
+            level1_Prop1_Value.ShouldBe("NestedLevel1_Prop1 string value");
 
-            var nestedAddressProperty = model.GetType().GetProperty(addressPropertyName);
-            nestedAddressProperty.ShouldNotBeNull($"'{addressPropertyName}' property is missing in the model");
+            var (level1_level2_Prop, level1_level2_Value) = GetPropertyAndValue(level1_Value, "NestedLevel2");
 
-            var nestedAddressValue = nestedAddressProperty.GetValue(model);
-            nestedAddressValue.ShouldNotBeNull($"'{addressPropertyName}' property must not be null");
+            var (level1_level2_Prop1_Prop, level1_level2_Prop1_Value) = GetPropertyAndValue(level1_level2_Value, "NestedLevel2_Prop1");
+            level1_level2_Prop1_Value.ShouldBe("NestedLevel2_Prop1 string value");
+        }
 
-            var line1Property = nestedAddressValue.GetType().GetProperty(addressLine1PropertyName);
-            line1Property.ShouldNotBeNull($"'{addressLine1PropertyName}' property is missing in the nested '{addressPropertyName}' property");
+        private (PropertyInfo, object) GetPropertyAndValue(object container, string propertyName, bool requireProperty = true, bool requireValue = true) 
+        {
+            var property = container.GetType().GetProperty(propertyName);
+            if (requireProperty && property == null)
+                property.ShouldNotBeNull($"'{propertyName}' property is missing in the '{container.GetType().FullName}' class");
 
-            var line1Value = line1Property.GetValue(nestedAddressValue);
-            line1Value.ShouldBe("address line 1");
+            var value = property?.GetValue(container);
+            if (requireValue && value == null)
+                property.ShouldNotBeNull($"'{propertyName}' property must not be null");
 
-            const string thirdLevelPropName = "ThirdLevelProp";
-            var thirdLevelProperty = nestedAddressValue.GetType().GetProperty(thirdLevelPropName);
-            thirdLevelProperty.ShouldNotBeNull($"'{thirdLevelPropName}' property is missing in the nested '{addressPropertyName}' property");
-
-            var thirdLevelPropValue = thirdLevelProperty.GetValue(nestedAddressValue);
-            thirdLevelPropValue.ShouldNotBeNull();
+            return (property, value);
         }
 
         private async Task<ModelBindingResult> BindAsync<TModel>(string jsonResourceName, string schemaResourceName) 
@@ -202,7 +217,7 @@ namespace Shesha.Tests.DynamicEntities
         public class PersonDynamicDto : DynamicDto<Person, Guid>
         {
             public string FirstName { get; set; }
-            public string lastName { get; set; }
+            public string LastName { get; set; }
         }
     }
 }

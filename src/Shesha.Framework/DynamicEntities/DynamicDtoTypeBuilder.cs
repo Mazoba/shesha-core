@@ -29,16 +29,10 @@ namespace Shesha.DynamicEntities
             _entityConfigCache = entityConfigCache;
         }
 
-        public async Task<Type> BuildDtoProxyTypeAsync(Type baseType, Func<string, bool> propertyFilter)
+        /// inheritedDoc
+        public async Task<Type> BuildDtoProxyTypeAsync(DynamicDtoTypeBuildingContext context)
         {
-            return await CompileResultTypeAsync(baseType, propertyFilter);
-        }
-
-        public async Task<object> CreateDtoInstanceAsync(Type baseType)
-        {
-            var dynamicType = await CompileResultTypeAsync(baseType);
-            var dynamicObject = Activator.CreateInstance(dynamicType);
-            return dynamicObject;
+            return await CompileResultTypeAsync(context);
         }
 
         public async Task<List<EntityPropertyDto>> GetEntityPropertiesAsync(Type entityType)
@@ -46,7 +40,7 @@ namespace Shesha.DynamicEntities
             return await _entityConfigCache.GetEntityPropertiesAsync(entityType);
         }
 
-        public async Task<List<DynamicProperty>> GetDynamicPropertiesAsync(Type type, string prefix = "")
+        public async Task<List<DynamicProperty>> GetDynamicPropertiesAsync(Type type, DynamicDtoTypeBuildingContext context)
         {
             var entityType = DynamicDtoExtensions.GetDynamicDtoEntityType(type);
             if (entityType == null)
@@ -63,7 +57,7 @@ namespace Shesha.DynamicEntities
                 if (hardCodedDtoProperties.Contains(property.Name.ToLower()))
                     continue;
 
-                var propertyType = await GetDtoPropertyTypeAsync(property, prefix);
+                var propertyType = await GetDtoPropertyTypeAsync(property, context);
                 if (propertyType != null)
                     properties.Add(property.Name, propertyType);
             }
@@ -90,7 +84,7 @@ namespace Shesha.DynamicEntities
         /// <summary>
         /// Returns .Net type that is used to store data for the specified DTO property (according to the property settings)
         /// </summary>
-        public async Task<Type> GetDtoPropertyTypeAsync(EntityPropertyDto propertyDto, string prefix = "")
+        public async Task<Type> GetDtoPropertyTypeAsync(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context)
         {
             var dataType = propertyDto.DataType;
             var dataFormat = propertyDto.DataFormat;
@@ -136,49 +130,63 @@ namespace Shesha.DynamicEntities
                 case DataTypes.Array:
                     return null;
                 case DataTypes.Object:
-                    return await BuildNestedTypeAsync(propertyDto, prefix); // JSON content
+                    return await BuildNestedTypeAsync(propertyDto, context); // JSON content
                 default:
                     throw new NotSupportedException($"Data type not supported: {dataType}");
             }
         }
 
-        private async Task<Type> BuildNestedTypeAsync(EntityPropertyDto propertyDto, string prefix = "") 
+        private async Task<Type> BuildNestedTypeAsync(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context) 
         {
             if (propertyDto.DataType != DataTypes.Object)
                 throw new NotSupportedException($"{nameof(BuildNestedTypeAsync)}: unsupported type of property (expected '{DataTypes.Object}', actual: '{propertyDto.DataType}')");
 
             // todo: build name of the class according ot the level of the property
-            var tb = GetTypeBuilder(typeof(object), "DynamicModule", $"{prefix}_{propertyDto.Name}", new List<Type> { typeof(IDynamicNestedObject) });
-            var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
-
-            foreach (var property in propertyDto.Properties)
+            using (context.OpenNamePrefix(propertyDto.Name)) 
             {
-                //if (propertyFilter == null || propertyFilter.Invoke(property.PropertyName))
-                var propertyType = await GetDtoPropertyTypeAsync(property, prefix + propertyDto.Name);
-                CreateProperty(tb, property.Name, propertyType);
-            }
+                var className = context.CurrentPrefix.Replace('.', '_');
 
-            var objectType = tb.CreateType();
-            return objectType;
+                var tb = GetTypeBuilder(typeof(object), "DynamicModule", className, new List<Type> { typeof(IDynamicNestedObject) });
+                var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
+
+                foreach (var property in propertyDto.Properties)
+                {
+                    //if (propertyFilter == null || propertyFilter.Invoke(property.PropertyName))
+                    var propertyType = await GetDtoPropertyTypeAsync(property, context);
+                    CreateProperty(tb, property.Name, propertyType);
+                }
+
+                var objectType = tb.CreateType();
+
+                context.ClassCreated(objectType);
+
+                return objectType;
+            }
         }
 
-        private async Task<Type> CompileResultTypeAsync(Type baseType, Func<string, bool> propertyFilter = null)
+        private async Task<Type> CompileResultTypeAsync(DynamicDtoTypeBuildingContext context)
         {
-            var proxyClassName = GetProxyTypeName(baseType, "Proxy");
+            var proxyClassName = GetProxyTypeName(context.ModelType, "Proxy");
 
-            var tb = GetTypeBuilder(baseType, "DynamicModule", proxyClassName, new List<Type> { typeof(IDynamicDtoProxy) });
+            var tb = GetTypeBuilder(context.ModelType, "DynamicModule", proxyClassName, new List<Type> { typeof(IDynamicDtoProxy) });
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
-            var properties = await GetDynamicPropertiesAsync(baseType, proxyClassName);
-
-            foreach (var property in properties) 
+            using (context.OpenNamePrefix(proxyClassName)) 
             {
-                if (propertyFilter == null || propertyFilter.Invoke(property.PropertyName))
-                    CreateProperty(tb, property.PropertyName, property.PropertyType);
-            }
+                var properties = await GetDynamicPropertiesAsync(context.ModelType, context);
 
-            var objectType = tb.CreateType();
-            return objectType;
+                foreach (var property in properties)
+                {
+                    if (context.PropertyFilter == null || context.PropertyFilter.Invoke(property.PropertyName))
+                        CreateProperty(tb, property.PropertyName, property.PropertyType);
+                }
+
+                var objectType = tb.CreateType();
+
+                context.ClassCreated(objectType);
+
+                return objectType;
+            }
         }
 
         private static TypeBuilder GetTypeBuilder(Type baseType, string moduleName, string typeName, IEnumerable<Type> interfaces)
@@ -276,22 +284,24 @@ namespace Shesha.DynamicEntities
             return $"{type.Name}{suffix}";
         }
 
-        public async Task<Type> BuildDtoFullProxyTypeAsync(Type baseType)
+        public async Task<Type> BuildDtoFullProxyTypeAsync(Type baseType, DynamicDtoTypeBuildingContext context)
         {
             var proxyClassName = GetProxyTypeName(baseType, "FullProxy");
-            var properties = await GetDynamicPropertiesAsync(baseType);
+            var properties = await GetDynamicPropertiesAsync(baseType, context);
             
             if (!properties.Any(p => p.PropertyName == nameof(IHasFormFieldsList._formFields)))
                 properties.Add(new DynamicProperty { PropertyName = nameof(IHasFormFieldsList._formFields), PropertyType = typeof(List<string>) });
 
-            var type = await CompileResultTypeAsync(baseType, proxyClassName, new List<Type> { typeof(IHasFormFieldsList) }, properties);
+            var type = await CompileResultTypeAsync(baseType, proxyClassName, new List<Type> { typeof(IHasFormFieldsList) }, properties, context);
+
             return type;
         }
 
         private async Task<Type> CompileResultTypeAsync(Type baseType,
             string proxyClassName,
             List<Type> interfaces,
-            List<DynamicProperty> properties)
+            List<DynamicProperty> properties, 
+            DynamicDtoTypeBuildingContext context)
         {
             var tb = GetTypeBuilder(baseType, "DynamicModule", proxyClassName, interfaces.Union(new List<Type> { typeof(IDynamicDtoProxy) }));
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
@@ -302,6 +312,9 @@ namespace Shesha.DynamicEntities
             }
 
             var objectType = tb.CreateType();
+
+            context.ClassCreated(objectType);
+
             return objectType;
         }
     }
