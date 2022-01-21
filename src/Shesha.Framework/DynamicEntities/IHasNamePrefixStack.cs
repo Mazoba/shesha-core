@@ -12,13 +12,14 @@ namespace Shesha.DynamicEntities
     public interface IHasNamePrefixStack
     {
         /// <summary>
-        /// Opens new prefix context
+        /// Open name prefix context and returns disposable action that automaticaly closes it. Is used in the recursive operations
         /// </summary>
-        /// <param name="prefix"></param>
+        /// <param name="prefix">New prefix value</param>
+        /// <returns></returns>
         IDisposable OpenNamePrefix(string prefix);
 
         /// <summary>
-        /// Current prefix value
+        /// Current prefix in dot notation (e.g. 'prefix1.prefix2')
         /// </summary>
         string CurrentPrefix { get; }
     }

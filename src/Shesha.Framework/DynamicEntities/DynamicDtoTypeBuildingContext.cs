@@ -22,38 +22,15 @@ namespace Shesha.DynamicEntities
         /// </summary>
         public Func<string, bool> PropertyFilter { get; set; }
 
-        /*
         /// <summary>
-        /// Fired when new property is created
+        /// Classes dictionary, is used for analyze of the building process and for constructions of the automapper configurations
         /// </summary>
-        public event EventHandler OnPropertyCreated;
-
-        /// <summary>
-        /// Fired when new class is created
-        /// </summary>
-        public event EventHandler OnClassCreated;
-
-        /// <summary>
-        /// Fire the <see cref="OnClassCreated"/> event
-        /// </summary>
-        /// <param name="type"></param>
-        /// <param name="e"></param>
-        public void FireClassCreated(Type type, EventArgs e) 
-        {
-            OnClassCreated?.Invoke(type, e);
-        }
-
-        /// <summary>
-        /// Fire the <see cref="OnPropertyCreated"/> event
-        /// </summary>
-        /// <param name="type"></param>
-        /// <param name="e"></param>
-        public void FirePropertyCreated(Type type, EventArgs e)
-        {
-            OnClassCreated?.Invoke(type, e);
-        }
-        */
         public Dictionary<string, Type> Classes = new Dictionary<string, Type>();
+
+        /// <summary>
+        /// Register .net type that created during the building process. This method updates classes dictionary <see cref="Classes"/>
+        /// </summary>
+        /// <param name="class"></param>
         public void ClassCreated(Type @class) 
         {
             Classes.Add(CurrentPrefix, @class);
@@ -63,19 +40,35 @@ namespace Shesha.DynamicEntities
 
         private Stack<string> _namePrefixStack = new Stack<string>();
 
+        /// <summary>
+        /// Open name prefix context and returns disposable action that automaticaly closes it. Is used in the recursive operations
+        /// </summary>
+        /// <param name="prefix">New prefix value</param>
+        /// <returns></returns>
         public IDisposable OpenNamePrefix(string prefix)
         {
             _namePrefixStack.Push(prefix);
+            
+            var currentPrefix = CurrentPrefix;
 
-            return new DisposeAction(() => CloseNamePrefix(prefix));
+            return new DisposeAction(() => CloseNamePrefix(currentPrefix));
         }
 
-        private void CloseNamePrefix(string prefix)
+        /// <summary>
+        /// Close name prefix and with nesting
+        /// </summary>
+        private void CloseNamePrefix(string fullPrefix)
         {
+            if (CurrentPrefix != fullPrefix)
+                throw new Exception($"Name prefix closed in a wrong order. Expected prefix value: '{CurrentPrefix}', actual: '{fullPrefix}'. Make sure that you use dispose results of the {nameof(OpenNamePrefix)} method");
+            
+
             var closedPrefix = _namePrefixStack.Pop();
-            if (prefix != closedPrefix)
-                throw new Exception($"Name prefix closed in a wrong order. Expected prefix value: '{prefix}', actual: '{closedPrefix}'. Make sure that you use dispose results of the {nameof(OpenNamePrefix)} method");
         }
+        
+        /// <summary>
+        /// Current prefix in dot notation (e.g. 'prefix1.prefix2')
+        /// </summary>
         public string CurrentPrefix {
             get {
                 var value = _namePrefixStack.Any()
@@ -88,6 +81,3 @@ namespace Shesha.DynamicEntities
         #endregion
     }
 }
-
-/// <param name="baseType">DTO type</param>
-/// <param name="propertyFilter">Property filter. Return true if the field should be included into the result type</param>
