@@ -30,6 +30,8 @@ namespace Shesha
 
         public override async Task<TDynamicDto> GetAsync(EntityDto<TPrimaryKey> input)
         {
+            CheckGetAllPermission();
+
             var entity = await Repository.GetAsync(input.Id);
 
             return await MapToEntityDtoAsync(entity);
@@ -38,11 +40,29 @@ namespace Shesha
 
         public override async Task<TDynamicDto> UpdateAsync(TDynamicDto input)
         {
+            CheckUpdatePermission();
+
             var entity = await Repository.GetAsync(input.Id);
 
-            await MapToEntityDtoAsync(input, entity);
+            await MapStaticPropertiesToEntityDtoAsync(input, entity);
+            await MapDynamicPropertiesToEntityDtoAsync(input, entity);
 
             await Repository.UpdateAsync(entity);
+
+            return await MapToEntityDtoAsync(entity);
+        }
+
+        public override async Task<TDynamicDto> CreateAsync(TDynamicDto input)
+        {
+            CheckCreatePermission();
+
+            var entity = Activator.CreateInstance<TEntity>();
+
+            await MapStaticPropertiesToEntityDtoAsync(input, entity);
+
+            await Repository.InsertAsync(entity);
+
+            await MapDynamicPropertiesToEntityDtoAsync(input, entity);
 
             return await MapToEntityDtoAsync(entity);
         }
@@ -84,13 +104,14 @@ namespace Shesha
             return dto;
         }
 
-        private async Task MapToEntityDtoAsync(TDynamicDto dto, TEntity entity)
+        private async Task MapStaticPropertiesToEntityDtoAsync(TDynamicDto dto, TEntity entity) 
         {
-            // add cache 
             var mapper = GetMapper(dto.GetType(), entity.GetType());
             mapper.Map(dto, entity);
+        }
 
-            // manual mapping???
+        private async Task MapDynamicPropertiesToEntityDtoAsync(TDynamicDto dto, TEntity entity) 
+        {
             var dynamicProperties = (await DtoBuilder.GetEntityPropertiesAsync(typeof(TEntity)))
                 .Where(p => p.Source == MetadataSourceType.UserDefined)
                 .ToList();
