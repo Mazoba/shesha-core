@@ -18,7 +18,7 @@ namespace Shesha.Tests.DynamicEntities
 {
     public class DynamicEntity_Tests : AbpIntegratedTestBase<SheshaTestModule>//SheshaNhTestBase
     {
-        [Fact]
+        //[Fact]
         public async Task ConstructDynamicEntity_Test()
         {
             try 
