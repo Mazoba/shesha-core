@@ -20,6 +20,35 @@ where
 	UserName = 'admin'
 	and not exists (select 1 from Core_Persons where UserId = AbpUsers.Id)");
 
+            // insert default `System Administrator` role
+            Execute.Sql(
+@$"insert into Core_ShaRoles 
+    (Id, 
+    NameSpace, 
+    Name, 
+    Description, 
+    CanAssignToMultiple, 
+    CanAssignToPerson, 
+    CanAssignToOrganisationRoleLevel,
+    CanAssignToRole,
+    CanAssignToUnit,
+    HardLinkToApplication,
+    IsProcessConfigurationSpecific,
+    SortIndex) 
+values 
+    (NEWID(), 
+    '', 
+    'System Administrator',
+    'Can access certain administrative functions required for the general monitoring and maintenance of the system (e.g. Log audit trails, Scheduled Jobs Maintenance, Notification templates).', 
+    1, 
+    1, 
+    0,
+    0,
+    0,  
+    1,
+    0,
+    0)");
+
             Execute.Sql(
 @"insert into 
 	Core_ShaRoleAppointments
