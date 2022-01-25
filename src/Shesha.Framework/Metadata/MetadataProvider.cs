@@ -163,6 +163,9 @@ namespace Shesha.Metadata
             if (propType.IsSubtypeOfGeneric(typeof(IList<>)) || propType.IsSubtypeOfGeneric(typeof(ICollection<>)))
                 return new DataTypeInfo(DataTypes.Array);
 
+            if (propType.IsClass)
+                return new DataTypeInfo(DataTypes.Object);
+
             throw new NotSupportedException($"Data type not supported: {propType.FullName}");
         }
 
