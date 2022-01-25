@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Shesha.Tests.DynamicEntity
+namespace Shesha.DynamicEntities
 {
     /// <summary>
     /// Dynamic entity property

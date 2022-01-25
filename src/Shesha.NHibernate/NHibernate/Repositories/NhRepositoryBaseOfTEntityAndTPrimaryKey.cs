@@ -1,6 +1,7 @@
 ﻿using Abp.Collections.Extensions;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
+using Abp.Domain.Uow;
 using NHibernate;
 using NHibernate.Linq;
 using System;
@@ -23,6 +24,11 @@ namespace Shesha.NHibernate.Repositories
         /// Gets the NHibernate session object to perform database operations.
         /// </summary>
         public virtual ISession Session { get { return _sessionProvider.Session; } }
+
+        /// <summary>
+        /// Reference to the current UOW provider.
+        /// </summary>
+        public ICurrentUnitOfWorkProvider CurrentUnitOfWorkProvider { get; set; }
 
         private readonly ISessionProvider _sessionProvider;
 
@@ -129,9 +135,44 @@ namespace Shesha.NHibernate.Repositories
             return entity;
         }
 
+        protected virtual int? GetCurrentTenantIdOrNull()
+        {
+            if (CurrentUnitOfWorkProvider?.Current != null)
+            {
+                return CurrentUnitOfWorkProvider.Current.GetTenantId();
+            }
+
+            return null;
+        }
+
+        protected virtual bool IsHardDeleteEntity(TEntity entity)
+        {
+            if (CurrentUnitOfWorkProvider?.Current?.Items == null)
+            {
+                return false;
+            }
+
+            if (!CurrentUnitOfWorkProvider.Current.Items.ContainsKey(UnitOfWorkExtensionDataTypes.HardDelete))
+            {
+                return false;
+            }
+
+            var hardDeleteItems = CurrentUnitOfWorkProvider.Current.Items[UnitOfWorkExtensionDataTypes.HardDelete];
+            if (!(hardDeleteItems is HashSet<string> objects))
+            {
+                return false;
+            }
+
+            var currentTenantId = GetCurrentTenantIdOrNull();
+            var hardDeleteKey = EntityHelper.GetHardDeleteKey(entity, currentTenantId);
+            return objects.Contains(hardDeleteKey);
+        }
+
         public override void Delete(TEntity entity)
         {
-            if (entity is ISoftDelete softDeleteEntity)
+            var isHardDelete = IsHardDeleteEntity(entity);
+
+            if (!isHardDelete && entity is ISoftDelete softDeleteEntity)
             {
                 softDeleteEntity.IsDeleted = true;
                 Update(entity);
@@ -151,7 +192,9 @@ namespace Shesha.NHibernate.Repositories
 
         public override async Task DeleteAsync(TEntity entity)
         {
-            if (entity is ISoftDelete softDeleteEntity)
+            var isHardDelete = IsHardDeleteEntity(entity);
+
+            if (!isHardDelete && entity is ISoftDelete softDeleteEntity)
             {
                 softDeleteEntity.IsDeleted = true;
                 await UpdateAsync(entity);
@@ -198,5 +241,10 @@ namespace Shesha.NHibernate.Repositories
         {
             return GetAll().LongCountAsync(predicate);
         }
+    }
+
+    internal class UnitOfWorkExtensionDataTypes
+    {
+        public static string HardDelete { get; } = "HardDelete";
     }
 }

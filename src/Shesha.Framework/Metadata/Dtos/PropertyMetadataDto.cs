@@ -22,10 +22,11 @@ namespace Shesha.Metadata.Dtos
         public string Label { get; set; }
         public string Description { get; set; }
 
-        public bool IsEmail { get; set; }
+        //public bool IsEmail { get; set; }
 
         public string DataType { get; set; }
-        
+        public string DataFormat { get; set; }
+
         [JsonProperty("entityType")]
         [JsonPropertyName("entityType")]
         public string EntityTypeShortAlias { get; set; }

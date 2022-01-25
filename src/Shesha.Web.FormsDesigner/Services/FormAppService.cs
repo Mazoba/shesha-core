@@ -85,11 +85,11 @@ namespace Shesha.Web.FormsDesigner.Services
                 */
             }
 
-            //// Note: temporary stuff, is used for development only, to be removed
-            //if (!string.IsNullOrWhiteSpace(form.Path) && File.Exists(form.Path))
-            //{
-            //    form.Markup = await File.ReadAllTextAsync(form.Path);
-            //}
+            // Note: temporary stuff, is used for development only, to be removed
+            if (!string.IsNullOrWhiteSpace(form.Path) && File.Exists(form.Path))
+            {
+                form.Markup = await File.ReadAllTextAsync(form.Path);
+            }
 
             return form;
         }

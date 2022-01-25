@@ -7,6 +7,7 @@ using Abp.Runtime.Validation;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.AutoMapper.Dto;
 using Shesha.Configuration.Runtime;
+using Shesha.DynamicEntities;
 using Shesha.Metadata.Dtos;
 
 namespace Shesha.Metadata
@@ -16,11 +17,13 @@ namespace Shesha.Metadata
     {
         private readonly IEntityConfigurationStore _entityConfigurationStore;
         private readonly IMetadataProvider _metadataProvider;
+        private readonly IModelConfigurationProvider _modelConfigurationProvider;
 
-        public MetadataAppService(IEntityConfigurationStore entityConfigurationStore, IMetadataProvider metadataProvider)
+        public MetadataAppService(IEntityConfigurationStore entityConfigurationStore, IMetadataProvider metadataProvider, IModelConfigurationProvider modelConfigurationProvider)
         {
             _entityConfigurationStore = entityConfigurationStore;
             _metadataProvider = metadataProvider;
+            _modelConfigurationProvider = modelConfigurationProvider;
         }
 
         [HttpGet]
@@ -104,15 +107,47 @@ namespace Shesha.Metadata
             //if (config.HideInherited)
             //    flags = flags | BindingFlags.DeclaredOnly;
 
-            var allProps = containerType.GetProperties(flags);
-
-            var allPropsMetadata = allProps.Select(p => _metadataProvider.GetPropertyMetadata(p)).ToList();
-
-            var result = allPropsMetadata
+            var hardCodedProps = containerType.GetProperties(flags)
+                .Select(p => _metadataProvider.GetPropertyMetadata(p))
                 .OrderBy(e => e.Path)
                 .ToList();
 
-            return result;
+            // try to get data-driven configuration
+            var modelConfig = await _modelConfigurationProvider.GetModelConfigurationOrNullAsync(containerType.Namespace, containerType.Name);
+            if (modelConfig != null) 
+            {
+                var idx = 0;
+                return modelConfig.Properties
+                    .Select(p => {
+                        var hardCodedProp = hardCodedProps.FirstOrDefault(pp => pp.Path == p.Name);
+
+                        return new PropertyMetadataDto
+                        {
+
+                            IsVisible = hardCodedProp?.IsVisible ?? true,
+                            Required = hardCodedProp?.Required ?? false,
+                            Readonly = hardCodedProp?.Readonly ?? false,
+                            MinLength = hardCodedProp?.MinLength,
+                            MaxLength = hardCodedProp?.MaxLength,
+                            Min = hardCodedProp?.Min,
+                            Max = hardCodedProp?.Max,
+                            EnumType = hardCodedProp?.EnumType,
+                            OrderIndex = idx++,
+                            GroupName = hardCodedProp?.GroupName,
+
+                            Path = p.Name,
+                            Label = p.Label,
+                            Description = p.Description,
+                            DataType = p.DataType,
+                            DataFormat = p.DataFormat,
+                            EntityTypeShortAlias = p.EntityType,
+                            ReferenceListName = p.ReferenceListName,
+                            ReferenceListNamespace = p.ReferenceListNamespace,
+                        };
+                    })
+                    .ToList();
+            } else
+                return hardCodedProps;
         }
 
         /*

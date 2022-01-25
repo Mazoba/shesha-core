@@ -1,4 +1,5 @@
 ﻿using FluentMigrator;
+using Shesha.Domain;
 
 namespace Shesha.Migrations
 {

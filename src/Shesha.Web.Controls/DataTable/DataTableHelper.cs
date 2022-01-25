@@ -360,13 +360,15 @@ namespace Shesha.Web.DataTable
                 ? displayAttribute.Name
                 : propName.ToFriendlyName();
 
+            var dataTypeInfo = _metadataProvider.GetDataType(prop);
             var column = new DataTablesDisplayPropertyColumn()
             {
                 Name = (propName ?? "").Replace('.', '_'),
                 PropertyName = propName,
                 Caption = caption,
                 Description = prop?.GetDescription(),
-                StandardDataType = _metadataProvider.GetDataType(prop),
+                StandardDataType = dataTypeInfo.DataType,
+                DataFormat = dataTypeInfo.DataFormat,
 
                 #region backward compatibility, to be removed
                 GeneralDataType = prop != null

@@ -22,6 +22,7 @@ using NHibernate.Driver;
 using Shesha.Attributes;
 using Shesha.Bootstrappers;
 using Shesha.Configuration.Startup;
+using Shesha.Domain;
 using Shesha.Locks;
 using Shesha.NHibernate.Configuration;
 using Shesha.NHibernate.Filters;

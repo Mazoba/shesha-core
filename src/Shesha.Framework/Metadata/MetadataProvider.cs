@@ -1,5 +1,6 @@
 ﻿using Abp.Dependency;
 using Shesha.Configuration.Runtime;
+using Shesha.Domain;
 using Shesha.Extensions;
 using Shesha.Metadata.Dtos;
 using Shesha.Reflection;
@@ -8,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -32,7 +34,9 @@ namespace Shesha.Metadata
         {
             var flags = BindingFlags.Public | BindingFlags.Instance;
 
-            var allProps = containerType.GetProperties(flags);
+            var allProps = containerType.GetProperties(flags).OrderBy(p => p.Name).ToList();
+            if (containerType.IsEntityType())
+                allProps = allProps.Where(p => MappingHelper.IsPersistentProperty(p)).ToList();
 
             var allPropsMetadata = allProps.Select(p => GetPropertyMetadata(p)).ToList();
 
@@ -53,6 +57,8 @@ namespace Shesha.Metadata
                 : null;
             var epc = entityConfig?[property.Name];
 
+
+            var dataType = GetDataType(property);
             var result = new PropertyMetadataDto
             {
                 Path = path,
@@ -61,7 +67,8 @@ namespace Shesha.Metadata
                 IsVisible = property.GetAttribute<BrowsableAttribute>()?.Browsable ?? true,
                 Required = property.HasAttribute<RequiredAttribute>(),
                 Readonly = property.GetAttribute<ReadOnlyAttribute>()?.IsReadOnly ?? false,
-                DataType = GetDataType(property),
+                DataType = dataType.DataType,
+                DataFormat = dataType.DataFormat,
                 EntityTypeShortAlias = property.PropertyType.IsEntityType()
                     ? _entityConfigurationStore.Get(property.PropertyType)?.SafeTypeShortAlias
                     : null,
@@ -76,55 +83,140 @@ namespace Shesha.Metadata
             return result;
         }
 
+        private string GetStringFormat(PropertyInfo propInfo) 
+        {
+            var dataTypeAtt = ReflectionHelper.GetPropertyAttribute<DataTypeAttribute>(propInfo);
+
+            switch (dataTypeAtt?.DataType)
+            {
+                case DataType.Password:
+                    return StringFormats.Password;
+                case DataType.Text:
+                    return StringFormats.Singleline;
+                case DataType.MultilineText:
+                    return StringFormats.Multiline;
+                case DataType.Html:
+                    return StringFormats.Html;
+                case DataType.EmailAddress:
+                    return StringFormats.EmailAddress;
+                case DataType.PhoneNumber:
+                    return StringFormats.PhoneNumber;
+                case DataType.Url:
+                    return StringFormats.Url;
+                default: 
+                    return StringFormats.Singleline;
+            }
+        }
+
         /// inheritedDoc
-        public string GetDataType(PropertyInfo propInfo)
+        public DataTypeInfo GetDataType(PropertyInfo propInfo)
         {
             var propType = ReflectionHelper.GetUnderlyingTypeIfNullable(propInfo.PropertyType);
             //var isNullable = ReflectionHelper.IsNullableType(propInfo.PropertyType);
 
             if (propType == typeof(Guid)) 
-                return DataTypes.Uuid;
+                return new DataTypeInfo(DataTypes.Guid);
 
-            if (propType == typeof(string))
-                return DataTypes.String;
+            var dataTypeAtt = ReflectionHelper.GetPropertyAttribute<DataTypeAttribute>(propInfo);
+
+            // for enums - use underlaying type
+            if (propType.IsEnum)
+                propType = propType.GetEnumUnderlyingType();
+
+            if (propType == typeof(string)) 
+            {
+                return new DataTypeInfo(DataTypes.String, GetStringFormat(propInfo));
+            }
 
             if (propType == typeof(DateTime))
             {
-                var dataTypeAtt = ReflectionHelper.GetPropertyAttribute<DataTypeAttribute>(propInfo);
                 return dataTypeAtt != null && dataTypeAtt.GetDataTypeName().Equals("Date", StringComparison.InvariantCultureIgnoreCase)
-                    ? DataTypes.Date
-                    : DataTypes.DateTime;
+                    ? new DataTypeInfo(DataTypes.Date)
+                    : new DataTypeInfo(DataTypes.DateTime);
             }
 
             if (propType == typeof(TimeSpan))
-                return DataTypes.Time;
+                return new DataTypeInfo(DataTypes.Time);
 
             if (propType == typeof(bool))
-                return DataTypes.Boolean;
+                return new DataTypeInfo(DataTypes.Boolean);
 
             if (propInfo.IsReferenceListProperty())
-                return DataTypes.RefListValue;
+                return new DataTypeInfo(DataTypes.ReferenceListItem);
 
             if (propType.IsEntityType())
-                return DataTypes.EntityReference;
+                return new DataTypeInfo(DataTypes.EntityReference);
 
             // note: numeric datatypes mapping is based on the OpenApi 3
             if (propType  == typeof(int) || propType == typeof(byte) || propType == typeof(short))
-                return DataTypes.Int32;
+                return new DataTypeInfo(DataTypes.Number, NumberFormats.Int32);
 
             if (propType == typeof(Int64))
-                return DataTypes.Int64;
+                return new DataTypeInfo(DataTypes.Number, NumberFormats.Int64);
 
             if (propType == typeof(Single) || propType == typeof(float))
-                return DataTypes.Float;
+                return new DataTypeInfo(DataTypes.Number, NumberFormats.Float);
 
             if (propType == typeof(double) || propType == typeof(decimal))
-                return DataTypes.Double;
+                return new DataTypeInfo(DataTypes.Number, NumberFormats.Double);
 
             if (propType.IsSubtypeOfGeneric(typeof(IList<>)) || propType.IsSubtypeOfGeneric(typeof(ICollection<>)))
-                return DataTypes.Array;
+                return new DataTypeInfo(DataTypes.Array);
 
-            return "unknown";
+            if (propType.IsClass)
+                return new DataTypeInfo(DataTypes.Object);
+
+            throw new NotSupportedException($"Data type not supported: {propType.FullName}");
         }
+
+        /*
+        /// <summary>
+        /// Returns .Net type that is used to store data for the specified <paramref name="dataType"/> and <paramref name="dataFormat"/>
+        /// </summary>
+        /// <param name="dataType"></param>
+        /// <param name="dataFormat"></param>
+        /// <returns></returns>
+        public static Type GetType(string dataType, string dataFormat)
+        {
+            switch (dataType) 
+            {
+                case DataTypes.Guid:
+                    return typeof(Guid);
+                case DataTypes.String:
+                    return typeof(string);
+                case DataTypes.Date:
+                case DataTypes.DateTime:
+                    return typeof(DateTime);
+                case DataTypes.Time:
+                    return typeof(TimeSpan);
+                case DataTypes.Boolean:
+                    return typeof(bool);
+                case DataTypes.ReferenceListItem:
+                    return typeof(Int64);
+
+                case DataTypes.Number:
+                {
+                    switch (dataFormat) 
+                    {
+                        case NumberFormats.Int32:
+                            return typeof(int);
+                        case NumberFormats.Int64:
+                            return typeof(Int64);
+                        case NumberFormats.Float:
+                            return typeof(float);
+                        case NumberFormats.Double:
+                            return typeof(decimal);
+                        default: 
+                            return typeof(decimal);
+                    }
+                }
+
+                case DataTypes.EntityReference:
+                case DataTypes.Array:
+                default:
+                    throw new NotSupportedException($"Data type not supported: {dataType}");
+            }
+        }
+        */
     }
 }

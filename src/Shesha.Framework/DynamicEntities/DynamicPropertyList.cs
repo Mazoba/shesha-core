@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Shesha.Tests.DynamicEntity
+namespace Shesha.DynamicEntities
 {
     /// <summary>
     /// List of dynamic properties

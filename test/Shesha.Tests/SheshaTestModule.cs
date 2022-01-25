@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using Abp;
 using Abp.AutoMapper;
+using Abp.Castle.Logging.Log4Net;
 using Abp.Configuration.Startup;
 using Abp.Dependency;
 using Abp.Domain.Uow;
@@ -10,6 +11,7 @@ using Abp.MultiTenancy;
 using Abp.Net.Mail;
 using Abp.TestBase;
 using Abp.Zero.Configuration;
+using Castle.Facilities.Logging;
 using Castle.MicroKernel.Registration;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -35,7 +37,7 @@ namespace Shesha.Tests
     {
         public SheshaTestModule(SheshaNHibernateModule nhModule)
         {
-            nhModule.ConnectionString = @"Data Source=.;Initial Catalog=SheshaDemo;Integrated Security=True";
+            nhModule.ConnectionString = Environment.GetEnvironmentVariable("SHESHA_TEST_CONNECTION_STRING");
 
             /*
             nhModule.UseInMemoryDatabase = true;
@@ -88,6 +90,8 @@ namespace Shesha.Tests
         {
             var thisAssembly = Assembly.GetExecutingAssembly();
             IocManager.RegisterAssemblyByConvention(thisAssembly);
+
+            IocManager.IocContainer.AddFacility<LoggingFacility>(f => f.UseAbpLog4Net().WithConfig("log4net.config"));
 
             StaticContext.SetIocManager(IocManager);
 
