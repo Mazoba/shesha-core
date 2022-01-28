@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Reflection;
-using Abp;
+﻿using Abp;
 using Abp.AutoMapper;
 using Abp.Configuration;
 using Abp.Configuration.Startup;
@@ -21,6 +19,9 @@ using Shesha.Push.Configuration;
 using Shesha.Reflection;
 using Shesha.Sms;
 using Shesha.Sms.Configuration;
+using Shesha.Startup;
+using System.Linq;
+using System.Reflection;
 
 namespace Shesha
 {
@@ -32,6 +33,8 @@ namespace Shesha
     {
         public override void PreInitialize()
         {
+            IocManager.Register<IShaApplicationModuleConfiguration, ShaApplicationModuleConfiguration>();
+
             Configuration.Settings.Providers.Add<SmsSettingProvider>();
             Configuration.Settings.Providers.Add<PushSettingProvider>();
             Configuration.Settings.Providers.Add<EmailSettingProvider>();

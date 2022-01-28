@@ -21,7 +21,8 @@ using System.Threading.Tasks;
 namespace Shesha.DynamicEntities
 {
     /// <summary>
-    /// 
+    /// Model Binder that binds dynamic DTOs
+    /// It creates proxy types with dynamic properties according to the entity configuration
     /// </summary>
     public class DynamicDtoModelBinder : IModelBinder
     {

@@ -1,4 +1,5 @@
 ﻿using Abp.Application.Services.Dto;
+using Abp.Dependency;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using AutoMapper;
@@ -15,8 +16,9 @@ using System.Threading.Tasks;
 
 namespace Shesha
 {
+    [DynamicControllerNameConvention]
     public abstract class DynamicCrudAppService<TEntity, TDynamicDto, TPrimaryKey> : SheshaCrudServiceBase<TEntity,
-        TDynamicDto, TPrimaryKey, PagedAndSortedResultRequestDto, TDynamicDto, TDynamicDto>
+        TDynamicDto, TPrimaryKey, PagedAndSortedResultRequestDto, TDynamicDto, TDynamicDto>, ITransientDependency
         where TEntity : class, IEntity<TPrimaryKey>
         where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
     {
@@ -24,7 +26,7 @@ namespace Shesha
         public IVersionedFieldManager VersionedFieldManager { get; set; }
         public ISerializationManager SerializationManager { get; set; }
 
-        protected DynamicCrudAppService(IRepository<TEntity, TPrimaryKey> repository) : base(repository)
+        public DynamicCrudAppService(IRepository<TEntity, TPrimaryKey> repository) : base(repository)
         {
         }
 

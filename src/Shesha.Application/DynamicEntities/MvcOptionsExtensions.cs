@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shesha.DynamicEntities.Dtos;
 using Shesha.Services;
@@ -33,6 +34,12 @@ namespace Shesha.DynamicEntities
             var dynamicDtoBinderProvider = new DynamicDtoBinderProvider(options.InputFormatters, readerFactory, NullLoggerFactory.Instance, options, dynamicDtoTypeBuilder);
 
             options.ModelBinderProviders.Insert(idx, dynamicDtoBinderProvider);
+        }
+
+
+        public static void AddDynamicAppServices(this MvcOptions options, IServiceCollection services) 
+        {
+            options.Conventions.Add(new DynamicControllerRouteConvention(services));
         }
     }
 }
