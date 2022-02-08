@@ -97,22 +97,14 @@ namespace Shesha
 
         public override void PostInitialize()
         {
-            try
-            {
-                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                    this.GetType().Assembly,
-                    moduleName: "Shesha",
-                    useConventionalHttpVerbs: true);
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                this.GetType().Assembly,
+                moduleName: "Shesha",
+                useConventionalHttpVerbs: true);
 
-                Configuration.Modules.ShaApplication().CreateAppServicesForEntities(
-                    this.GetType().Assembly,
-                    "Shesha");
-            }
-            catch(Exception e)
-            {
-                // note: we mute exceptions for unit tests only
-                // todo: refactor and remove this try-catch block
-            }
+            Configuration.Modules.ShaApplication().CreateAppServicesForEntities(
+                this.GetType().Assembly,
+                "Shesha");
         }
     }
 }

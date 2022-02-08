@@ -62,7 +62,7 @@ namespace Shesha.Web.DataTable.Columns
                             var itemValue = Convert.ToInt64(val);
                             var displayText = refListHelper.GetItemDisplayText(propConfig.ReferenceListNamespace, propConfig.ReferenceListName, itemValue);
 
-                            if (!DataTableConfig.UseDtos || isExport)
+                            if (DataTableConfig != null && !DataTableConfig.UseDtos || isExport)
                                 return displayText;
 
                             var dto = new ReferenceListItemValueDto
@@ -79,7 +79,7 @@ namespace Shesha.Web.DataTable.Columns
                                 ? displayProperty.GetValue(val)?.ToString()
                                 : val.ToString();
 
-                            if (!DataTableConfig.UseDtos || isExport)
+                            if (isExport)
                                 return displayText;
 
                             var dto = new EntityWithDisplayNameDto<string>(val.GetId().ToString(), displayText);

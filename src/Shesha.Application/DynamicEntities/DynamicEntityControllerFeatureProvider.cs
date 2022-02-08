@@ -1,5 +1,4 @@
 ﻿using Abp.Dependency;
-using Castle.MicroKernel.Registration;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Shesha.Domain.Attributes;
@@ -29,10 +28,6 @@ namespace Shesha.DynamicEntities
 
         public void PopulateFeature(IEnumerable<ApplicationPart> parts, ControllerFeature feature)
         {
-            //var genericType = typeof(DynamicCrudAppService<,,>);
-            //if (!_iocManager.IsRegistered(genericType))
-            //    _iocManager.Register(genericType, lifeStyle: DependencyLifeStyle.Transient);
-
             var shaConfig = _iocManager.Resolve<IShaApplicationModuleConfiguration>();
             foreach (var registration in shaConfig.DynamicApplicationServiceRegistrations) 
             { 
@@ -53,16 +48,6 @@ namespace Shesha.DynamicEntities
                         if (!existingControllerNames.Contains(controllerName)) 
                         {
                             feature.Controllers.Add(appServiceType.GetTypeInfo());
-
-                            /*
-                            if (!_iocManager.IsRegistered(appServiceType)) 
-                            {
-                                //_iocManager.IocContainer.Register(
-                                //    Component.For(appServiceType).ImplementedBy(appServiceType).LifestyleTransient()
-                                //);
-                                _iocManager.Register(appServiceType, lifeStyle: DependencyLifeStyle.Transient);
-                            } 
-                            */
                         }
                     }
                 }
