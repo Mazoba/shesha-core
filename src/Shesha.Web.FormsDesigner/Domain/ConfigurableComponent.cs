@@ -1,7 +1,7 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
-using Abp.Domain.Entities.Auditing;
+﻿using Abp.Domain.Entities.Auditing;
 using Shesha.Domain.Attributes;
+using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Shesha.Web.FormsDesigner.Domain
 {
@@ -43,5 +43,11 @@ namespace Shesha.Web.FormsDesigner.Domain
         /// </summary>
         [StringLength(int.MaxValue)]
         public virtual string ModelType { get; set; }
+
+        /// <summary>
+        /// Type
+        /// </summary>
+        [StringLength(100)]
+        public virtual string Type { get; set; }
     }
 }

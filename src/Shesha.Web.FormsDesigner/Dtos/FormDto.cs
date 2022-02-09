@@ -1,7 +1,5 @@
-﻿using System;
-using Abp.Application.Services.Dto;
-using Abp.AutoMapper;
-using Shesha.Web.FormsDesigner.Domain;
+﻿using Abp.Application.Services.Dto;
+using System;
 
 namespace Shesha.Web.FormsDesigner.Dtos
 {
@@ -34,5 +32,10 @@ namespace Shesha.Web.FormsDesigner.Dtos
         /// Type of the form model
         /// </summary>
         public string ModelType { get; set; }
+
+        /// <summary>
+        /// Type
+        /// </summary>
+        public string Type { get; set; }
     }
 }
