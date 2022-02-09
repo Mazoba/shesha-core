@@ -30,6 +30,12 @@ namespace Shesha.Domain
         /// </summary>
         public virtual MetadataSourceType? Source { get; set; }
 
+        /// <summary>
+        /// MD5 hash of the hardcoded properties, is used for performance optimization of the bootstrapper
+        /// </summary>
+        [StringLength(40)]
+        public virtual string PropertiesMD5 { get; set; }
+
         public EntityConfig()
         {
             // set to user-defined by default, `ApplicationCode` is used in the bootstrapper only
