@@ -1,8 +1,7 @@
-﻿using Newtonsoft.Json;
-using Shesha.Configuration.Runtime;
+﻿using Abp.Domain.Entities;
+using Abp.Domain.Entities.Auditing;
+using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Text.Json.Serialization;
 
 namespace Shesha.Metadata.Dtos
@@ -22,8 +21,6 @@ namespace Shesha.Metadata.Dtos
         public string Label { get; set; }
         public string Description { get; set; }
 
-        //public bool IsEmail { get; set; }
-
         public string DataType { get; set; }
         public string DataFormat { get; set; }
 
@@ -40,5 +37,10 @@ namespace Shesha.Metadata.Dtos
 
         public int OrderIndex { get; set; }
         public string GroupName { get; set; }
+
+        /// <summary>
+        /// If true, indicates that current property is a framework-related (e.g. <see cref="ISoftDelete.IsDeleted"/>, <see cref="IHasModificationTime.LastModificationTime"/>)
+        /// </summary>
+        public bool IsFrameworkRelated { get; set; }
     }
 }

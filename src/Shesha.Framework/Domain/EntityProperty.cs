@@ -1,4 +1,5 @@
-﻿using Abp.Domain.Entities.Auditing;
+﻿using Abp.Domain.Entities;
+using Abp.Domain.Entities.Auditing;
 using Shesha.Domain.Attributes;
 using Shesha.Domain.Enums;
 using System;
@@ -87,6 +88,11 @@ namespace Shesha.Domain
         /// </summary>
         [InverseProperty("ParentPropertyId")]
         public virtual IList<EntityProperty> Properties { get; set; }
+
+        /// <summary>
+        /// If true, indicates that current property is a framework-related (e.g. <see cref="ISoftDelete.IsDeleted"/>, <see cref="IHasModificationTime.LastModificationTime"/>)
+        /// </summary>
+        public virtual bool IsFrameworkRelated { get; set; }
 
         public EntityProperty()
         {

@@ -178,11 +178,27 @@ namespace Shesha.DynamicEntities
 
                             Source = Domain.Enums.MetadataSourceType.ApplicationCode,
                             SortOrder = nextSortOrder++,
+                            IsFrameworkRelated = cp.IsFrameworkRelated,
                         };
                         await _entityPropertyRepository.InsertAsync(dbp);
                     }
+                    else {
+                        // update hardcoded part
+                        dbp.DataType = cp.DataType;
+                        dbp.DataFormat = cp.DataFormat;
+                        dbp.EntityType = cp.EntityTypeShortAlias;
+                        dbp.ReferenceListName = cp.ReferenceListName;
+                        dbp.ReferenceListNamespace = cp.ReferenceListNamespace;
+
+                        dbp.Source = Domain.Enums.MetadataSourceType.ApplicationCode;
+                        dbp.IsFrameworkRelated = cp.IsFrameworkRelated;
+
+                        await _entityPropertyRepository.UpdateAsync(dbp);
+                    }
 
                     // todo: how to update properties? merge issue
+                    //dbp.Label = cp.Label;
+                    //dbp.Description = cp.Description;
                 }
 
                 // todo: inactivate missing properties

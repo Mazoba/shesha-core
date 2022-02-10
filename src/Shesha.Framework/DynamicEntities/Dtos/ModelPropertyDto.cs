@@ -60,5 +60,10 @@ namespace Shesha.DynamicEntities.Dtos
         /// Child properties, applicable for complex data types (e.g. object, array)
         /// </summary>
         public List<ModelPropertyDto> Properties { get; set; } = new List<ModelPropertyDto>();
+
+        /// <summary>
+        /// If true, indicates that current property is a framework-related (e.g. <see cref="ISoftDelete.IsDeleted"/>, <see cref="IHasModificationTime.LastModificationTime"/>)
+        /// </summary>
+        public bool IsFrameworkRelated { get; set; }
     }
 }

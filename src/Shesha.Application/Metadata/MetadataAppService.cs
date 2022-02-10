@@ -143,6 +143,7 @@ namespace Shesha.Metadata
                             EntityTypeShortAlias = p.EntityType,
                             ReferenceListName = p.ReferenceListName,
                             ReferenceListNamespace = p.ReferenceListNamespace,
+                            IsFrameworkRelated = p.IsFrameworkRelated,
                         };
                     })
                     .ToList();
