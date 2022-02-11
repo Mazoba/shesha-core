@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Abp.ObjectMapping;
 using Abp.Runtime.Validation;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.AutoMapper.Dto;
 using Shesha.Configuration.Runtime;
 using Shesha.DynamicEntities;
+using Shesha.DynamicEntities.Dtos;
 using Shesha.Metadata.Dtos;
 
 namespace Shesha.Metadata
 {
     /// inheritedDoc
-    public class MetadataAppService : IMetadataAppService
+    public class MetadataAppService : SheshaAppServiceBase, IMetadataAppService
     {
         private readonly IEntityConfigurationStore _entityConfigurationStore;
         private readonly IMetadataProvider _metadataProvider;
@@ -144,6 +146,7 @@ namespace Shesha.Metadata
                             ReferenceListName = p.ReferenceListName,
                             ReferenceListNamespace = p.ReferenceListNamespace,
                             IsFrameworkRelated = p.IsFrameworkRelated,
+                            Properties = p.Properties.Select(pp => ObjectMapper.Map<PropertyMetadataDto>(pp)).ToList()
                         };
                     })
                     .ToList();

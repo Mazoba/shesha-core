@@ -1,9 +1,7 @@
 ﻿using Shesha.AutoMapper;
 using Shesha.Domain;
-using System;
-using System.Collections.Generic;
+using Shesha.Metadata.Dtos;
 using System.Linq;
-using System.Text;
 
 namespace Shesha.DynamicEntities.Dtos
 {
@@ -22,6 +20,11 @@ namespace Shesha.DynamicEntities.Dtos
 
             CreateMap<EntityConfig, ModelConfigurationDto>()
                 .ForMember(e => e.Properties, c => c.Ignore());
+
+            CreateMap<ModelPropertyDto, PropertyMetadataDto>()
+                .ForMember(e => e.Path, c => c.MapFrom(e => e.Name))
+                .ForMember(e => e.IsVisible, c => c.MapFrom(e => true));
+            //CreateMap<PropertyMetadataDto, ModelPropertyDto>();            
         }
     }
 }

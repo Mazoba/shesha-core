@@ -2,6 +2,7 @@
 using Abp.Domain.Entities.Auditing;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace Shesha.Metadata.Dtos
@@ -42,5 +43,10 @@ namespace Shesha.Metadata.Dtos
         /// If true, indicates that current property is a framework-related (e.g. <see cref="ISoftDelete.IsDeleted"/>, <see cref="IHasModificationTime.LastModificationTime"/>)
         /// </summary>
         public bool IsFrameworkRelated { get; set; }
+
+        /// <summary>
+        /// Child properties, applicable for complex data types (e.g. object, array)
+        /// </summary>
+        public List<PropertyMetadataDto> Properties { get; set; } = new List<PropertyMetadataDto>();
     }
 }
