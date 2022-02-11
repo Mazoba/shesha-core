@@ -55,6 +55,9 @@ namespace Shesha.Web.DataTable
                 // get list of properties existing in the table configuration
                 var props = GetPropertiesForSqlQuickSearch(rowType, columns, cacheKey);
 
+                if (!props.Any())
+                    subQueries.Add("0=1");
+
                 var addSubQuery = new Action<string, object>((q, v) =>
                 {
                     var queryParamName = "p" + filterCriteria.FilterParameters.Count.ToString();
@@ -360,7 +363,9 @@ namespace Shesha.Web.DataTable
                 ? displayAttribute.Name
                 : propName.ToFriendlyName();
 
-            var dataTypeInfo = _metadataProvider.GetDataType(prop);
+            var dataTypeInfo = prop != null
+                ? _metadataProvider.GetDataType(prop)
+                : new DataTypeInfo(null);
             var column = new DataTablesDisplayPropertyColumn()
             {
                 Name = (propName ?? "").Replace('.', '_'),

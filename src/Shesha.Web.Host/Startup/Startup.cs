@@ -40,6 +40,11 @@ namespace Shesha.Web.Host.Startup
 
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
+            services.Configure<IISServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
+            });
+
             services.AddElmah<XmlFileErrorLog>(options =>
             {
                 options.Path = @"elmah";
@@ -55,6 +60,7 @@ namespace Shesha.Web.Host.Startup
                     options.Conventions.Add(new ApiExplorerGroupPerVersionConvention());
 
                     options.EnableDynamicDtoBinding();
+                    options.AddDynamicAppServices(services);
                 })
                 .AddApiExplorer()
                 .AddNewtonsoftJson(options =>

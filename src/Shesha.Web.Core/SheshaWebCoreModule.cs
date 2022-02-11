@@ -21,18 +21,21 @@ using Shesha.Languages;
 using Shesha.NHibernate;
 using Shesha.Scheduler;
 using Shesha.Web;
+using Shesha.Startup;
+using Shesha.Domain;
 
 namespace Shesha
 {
     [DependsOn(
-         typeof(SheshaApplicationModule),
-         typeof(SheshaNHibernateModule),
-         typeof(AbpAspNetCoreModule),
-         typeof(AbpAspNetCoreSignalRModule),
-         typeof(AbpAutoMapperModule),
-         typeof(SheshaWebControlsModule),
-         typeof(SheshaElmahModule),
-        typeof(SheshaSchedulerModule)
+        typeof(SheshaApplicationModule),
+        typeof(SheshaNHibernateModule),
+        typeof(AbpAspNetCoreModule),
+        typeof(AbpAspNetCoreSignalRModule),
+        typeof(AbpAutoMapperModule),
+        typeof(SheshaWebControlsModule),
+        typeof(SheshaElmahModule),
+        typeof(SheshaSchedulerModule),
+        typeof(SheshaApplicationModule)
      )]
     public class SheshaWebCoreModule : AbpModule
     {
@@ -94,18 +97,14 @@ namespace Shesha
 
         public override void PostInitialize()
         {
-            try
-            {
-                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                    this.GetType().Assembly,
-                    moduleName: "Shesha",
-                    useConventionalHttpVerbs: true);
-            }
-            catch
-            {
-                // note: we mute exceptions for unit tests only
-                // todo: refactor and remove this try-catch block
-            }
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                this.GetType().Assembly,
+                moduleName: "Shesha",
+                useConventionalHttpVerbs: true);
+
+            Configuration.Modules.ShaApplication().CreateAppServicesForEntities(
+                this.GetType().Assembly,
+                "Shesha");
         }
     }
 }

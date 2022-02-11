@@ -296,7 +296,7 @@ namespace Shesha.Notifications
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [AutomaticRetry(Attempts = 5)]
+        [AutomaticRetry(Attempts = 5, DelaysInSeconds = new int[] { 10, 20, 20, 20, 20 })]
         public async Task SendNotification(Guid id)
         {
             RefListNotificationStatus? status = null;
@@ -306,10 +306,10 @@ namespace Shesha.Notifications
                 var message = await NotificationMessageRepository.GetAll().FirstOrDefaultAsync(m => m.Id == id);
 
                 if (message == null)
-                    return;
+                    throw new Exception($"Notification with id = '{id}' not found");
 
                 if (message.Status == RefListNotificationStatus.Preparing)
-                    return;
+                    throw new Exception($"Notification with id = '{id}' is still preparing");
 
                 message.TryCount++;
                 message.SendDate = DateTime.Now;
@@ -518,17 +518,17 @@ namespace Shesha.Notifications
                     }
                 }
 
+                // send all prepared messages in background
+                UowManager.Current.DoAfterTransaction(() =>
+                {
+                    foreach (var messageId in messagesToSend)
+                    {
+                        BackgroundJob.Enqueue(() => SendNotification(messageId));
+                    }
+                });
+
                 await uow.CompleteAsync();
             }
-
-            // send all prepared messages in background
-            UowManager.Current.DoAfterTransaction(() =>
-            {
-                foreach (var messageId in messagesToSend)
-                {
-                    BackgroundJob.Enqueue(() => SendNotification(messageId));
-                }
-            });
         }
 
         /// <summary>

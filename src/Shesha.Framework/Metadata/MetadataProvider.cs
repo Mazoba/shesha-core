@@ -1,4 +1,6 @@
 ﻿using Abp.Dependency;
+using Abp.Domain.Entities;
+using Abp.Domain.Entities.Auditing;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.Extensions;
@@ -76,11 +78,44 @@ namespace Shesha.Metadata
                 ReferenceListNamespace = epc?.ReferenceListNamespace,
                 EnumType = epc?.EnumType,
                 OrderIndex = property.GetAttribute<DisplayAttribute>()?.GetOrder() ?? -1,
+                IsFrameworkRelated = IsFrameworkRelatedProperty(property),
                 //ConfigurableByUser = property.GetAttribute<BindableAttribute>()?.Bindable ?? true,
                 //GroupName = ReflectionHelper.get(declaredProperty ?? property),
             };
 
             return result;
+        }
+
+        private bool IsFrameworkRelatedProperty(PropertyInfo property)
+        {
+            return IsInterfaceProperty(property, typeof(IEntity<>), nameof(IEntity.Id)) ||
+                IsInterfaceProperty(property, typeof(IHasCreationTime), nameof(IHasCreationTime.CreationTime)) ||
+                IsInterfaceProperty(property, typeof(ICreationAudited), nameof(ICreationAudited.CreatorUserId)) ||
+                IsInterfaceProperty(property, typeof(ICreationAudited<>), nameof(ICreationAudited<IEntity<long>>.CreatorUser)) ||
+
+                IsInterfaceProperty(property, typeof(IHasModificationTime), nameof(IHasModificationTime.LastModificationTime)) ||
+                IsInterfaceProperty(property, typeof(IModificationAudited), nameof(IModificationAudited.LastModifierUserId)) ||
+                IsInterfaceProperty(property, typeof(IModificationAudited<>), nameof(IModificationAudited<IEntity<long>>.LastModifierUser)) ||
+
+                IsInterfaceProperty(property, typeof(IHasDeletionTime), nameof(IHasDeletionTime.DeletionTime)) ||
+                IsInterfaceProperty(property, typeof(IDeletionAudited), nameof(IDeletionAudited.DeleterUserId)) ||
+                IsInterfaceProperty(property, typeof(IDeletionAudited<>), nameof(IDeletionAudited<IEntity<long>>.DeleterUser)) ||
+
+                IsInterfaceProperty(property, typeof(ISoftDelete), nameof(ISoftDelete.IsDeleted)) ||
+                IsInterfaceProperty(property, typeof(IMayHaveTenant), nameof(IMayHaveTenant.TenantId)) ||
+                IsInterfaceProperty(property, typeof(IMustHaveTenant), nameof(IMustHaveTenant.TenantId));
+        }
+
+        private bool IsInterfaceProperty(PropertyInfo property, Type @interface, string name) 
+        {
+            if (property.Name != name)
+                return false;
+
+            return @interface.IsGenericType
+                ? property.DeclaringType.GetInterfaces().Any(x =>
+                        x.IsGenericType &&
+                        x.GetGenericTypeDefinition() == @interface)
+                : property.DeclaringType.GetInterfaces().Contains(@interface);
         }
 
         private string GetStringFormat(PropertyInfo propInfo) 

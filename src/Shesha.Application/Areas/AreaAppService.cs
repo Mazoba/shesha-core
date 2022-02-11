@@ -13,7 +13,6 @@ using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.Web.DataTable;
-using Shesha.Web.DataTable;
 
 namespace Shesha.Areas
 {

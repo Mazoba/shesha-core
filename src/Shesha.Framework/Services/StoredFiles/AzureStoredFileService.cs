@@ -35,7 +35,8 @@ namespace Shesha.Services.StoredFiles
         }
 
         private BlobContainerClient _blobContainerClient;
-        protected BlobContainerClient BlobContainerClient {
+        protected BlobContainerClient BlobContainerClient
+        {
             get
             {
                 if (_blobContainerClient != null)
@@ -68,21 +69,31 @@ namespace Shesha.Services.StoredFiles
         {
             var blob = GetBlobClient(GetAzureFileName(fileVersion));
             var stream = new MemoryStream();
-            var downloadResult = await blob.DownloadToAsync(stream);
-            stream.Seek(0, SeekOrigin.Begin);
 
-            // todo: check status
+            // note: Azure throws an exception if file is empty
+            var props = await blob.GetPropertiesAsync();
+            if (props.Value.ContentLength > 0)
+            {
+                var downloadResult = await blob.DownloadToAsync(stream);
+                stream.Seek(0, SeekOrigin.Begin);
+            }
 
             return stream;
         }
+
+
         public async Task<Stream> GetStreamAsync(string filePath)
         {
             var blob = GetBlobClient(filePath.ToLower());
             var stream = new MemoryStream();
-            var downloadResult = await blob.DownloadToAsync(stream);
-            stream.Seek(0, SeekOrigin.Begin);
 
-            // todo: check status
+            // note: Azure throws an exception if file is empty
+            var props = await blob.GetPropertiesAsync();
+            if (props.Value.ContentLength > 0)
+            {
+                var downloadResult = await blob.DownloadToAsync(stream);
+                stream.Seek(0, SeekOrigin.Begin);
+            }
 
             return stream;
         }
@@ -91,15 +102,17 @@ namespace Shesha.Services.StoredFiles
         {
             var blob = GetBlobClient(GetAzureFileName(fileVersion));
             var stream = new MemoryStream();
-            var downloadResult = blob.DownloadTo(stream);
-            stream.Seek(0, SeekOrigin.Begin);
-            
-            // todo: check status
-            
+
+            // note: Azure throws an exception if file is empty
+            var props = blob.GetProperties();
+            if (props.Value.ContentLength > 0)
+            {
+                var downloadResult = blob.DownloadTo(stream);
+                stream.Seek(0, SeekOrigin.Begin);
+            }
+
             return stream;
         }
-
-        
 
         /// inheritedDoc
         public override async Task UpdateVersionContentAsync(StoredFileVersion version, Stream stream)
@@ -108,7 +121,7 @@ namespace Shesha.Services.StoredFiles
                 throw new Exception($"{nameof(stream)} must not be null");
 
             var blob = GetBlobClient(GetAzureFileName(version));
-            
+
             // update properties
             version.FileSize = stream.Length;
             await VersionRepository.UpdateAsync(version);

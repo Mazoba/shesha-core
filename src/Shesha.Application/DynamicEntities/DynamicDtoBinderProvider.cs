@@ -8,6 +8,9 @@ using System.Collections.Generic;
 
 namespace Shesha.DynamicEntities
 {
+    /// <summary>
+    /// Dynamic DTO binder provider
+    /// </summary>
     public class DynamicDtoBinderProvider : IModelBinderProvider
     {
         private readonly IList<IInputFormatter> _formatters;
