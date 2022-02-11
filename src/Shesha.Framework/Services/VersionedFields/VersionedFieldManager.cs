@@ -48,8 +48,6 @@ namespace Shesha.Services.VersionedFields
             if (field != null)
                 return field;
 
-            // todo: add unique constraint to the VersionedField: OwnerId, OwnerType, Name
-
             var ioc = StaticContext.IocManager;
             var lockFactory = ioc.Resolve<ILockFactory>();
             var resource = owner.FullyQualifiedEntityId<TEntity, TId>() + "|" + fieldName;

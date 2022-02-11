@@ -21,8 +21,7 @@ namespace Shesha
         where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
     {
         public IDynamicDtoTypeBuilder DtoBuilder { get; set; }
-        public IVersionedFieldManager VersionedFieldManager { get; set; }
-        public ISerializationManager SerializationManager { get; set; }
+        public IDynamicPropertyManager DynamicPropertyManager { get; set; }
 
         protected DynamicCrudAppService(IRepository<TEntity, TPrimaryKey> repository) : base(repository)
         {
@@ -45,7 +44,7 @@ namespace Shesha
             var entity = await Repository.GetAsync(input.Id);
 
             await MapStaticPropertiesToEntityDtoAsync(input, entity);
-            await MapDynamicPropertiesToEntityDtoAsync(input, entity);
+            await DynamicPropertyManager.MapDtoToEntityAsync<TPrimaryKey, TDynamicDto, TEntity>(input, entity);
 
             await Repository.UpdateAsync(entity);
 
@@ -62,7 +61,7 @@ namespace Shesha
 
             await Repository.InsertAsync(entity);
 
-            await MapDynamicPropertiesToEntityDtoAsync(input, entity);
+            await DynamicPropertyManager.MapDtoToEntityAsync<TPrimaryKey, TDynamicDto, TEntity>(input, entity);
 
             return await MapToEntityDtoAsync(entity);
         }
@@ -81,26 +80,9 @@ namespace Shesha
 
             // map entity to DTO
             mapper.Map(entity, dto);
-
-            // todo: map dynamic fields
-            var dynamicProperties = (await DtoBuilder.GetEntityPropertiesAsync(typeof(TEntity)))
-                .Where(p => p.Source == MetadataSourceType.UserDefined)
-                .ToList();
-            var dtoProps = dto.GetType().GetProperties();
-            foreach (var property in dynamicProperties)
-            {
-                var dtoProp = dtoProps.FirstOrDefault(p => p.Name == property.Name);
-
-                if (dtoProp != null)
-                {
-                    var serializedValue = await VersionedFieldManager.GetVersionedFieldValueAsync<TEntity, TPrimaryKey>(entity, property.Name);
-                    var rawValue = serializedValue != null
-                        ? SerializationManager.DeserializeProperty(dtoProp.PropertyType, serializedValue)
-                        : null;
-                    dtoProp.SetValue(dto, rawValue);
-                }
-            }
-
+            // map dynamic fields
+            await DynamicPropertyManager.MapEntityToDtoAsync<TPrimaryKey, TDynamicDto, TEntity>(entity, dto);
+            
             return dto;
         }
 
@@ -108,26 +90,6 @@ namespace Shesha
         {
             var mapper = GetMapper(dto.GetType(), entity.GetType());
             mapper.Map(dto, entity);
-        }
-
-        private async Task MapDynamicPropertiesToEntityDtoAsync(TDynamicDto dto, TEntity entity) 
-        {
-            var dynamicProperties = (await DtoBuilder.GetEntityPropertiesAsync(typeof(TEntity)))
-                .Where(p => p.Source == MetadataSourceType.UserDefined)
-                .ToList();
-
-            var dtoProps = dto.GetType().GetProperties();
-            foreach (var property in dynamicProperties)
-            {
-                var dtoProp = dtoProps.FirstOrDefault(p => p.Name == property.Name);
-
-                if (dtoProp != null)
-                {
-                    var rawValue = dtoProp.GetValue(dto);
-                    var convertedValue = SerializationManager.SerializeProperty(property, rawValue);
-                    await VersionedFieldManager.SetVersionedFieldValueAsync<TEntity, TPrimaryKey>(entity, property.Name, convertedValue, false);
-                }
-            }
         }
 
         private IMapper GetMapper(Type sourceType, Type destinationType)
