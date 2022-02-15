@@ -119,6 +119,7 @@ namespace Shesha.DynamicEntities
 
         private void ActionPropertiesRecursive(List<ModelPropertyDto> properties, Action<ModelPropertyDto> action)
         {
+            if (properties == null) return;
             foreach (var property in properties) 
             {
                 action.Invoke(property);
@@ -129,6 +130,7 @@ namespace Shesha.DynamicEntities
 
         private async Task BindProperties(Dictionary<MetadataSourceType, IMapper>  mappers, List<EntityProperty> allProperties, List<ModelPropertyDto> inputProperties, EntityConfig modelConfig, EntityProperty parentProperty)
         {
+            if (inputProperties == null) return;
             var sortOrder = 0;
             foreach (var inputProp in inputProperties)
             {
