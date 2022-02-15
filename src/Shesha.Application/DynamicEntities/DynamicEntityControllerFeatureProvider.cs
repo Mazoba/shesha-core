@@ -48,6 +48,9 @@ namespace Shesha.DynamicEntities
                         if (!existingControllerNames.Contains(controllerName)) 
                         {
                             feature.Controllers.Add(appServiceType.GetTypeInfo());
+                            
+                            if (!_iocManager.IsRegistered(appServiceType))
+                                _iocManager.Register(appServiceType, lifeStyle: DependencyLifeStyle.Transient);
                         }
                     }
                 }
