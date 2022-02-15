@@ -81,7 +81,7 @@ namespace Shesha.DynamicEntities
             });
         }
 
-        public async Task MapEntityToDtoAsync<TId, TDynamicDto, TEntity>(TEntity entity, TDynamicDto dynamicDto )
+        public async Task MapEntityToDtoAsync<TId, TDynamicDto, TEntity>(TEntity entity, TDynamicDto dynamicDto)
             where TEntity : class, IEntity<TId>
             where TDynamicDto : class, IDynamicDto<TEntity, TId>
         {
@@ -106,7 +106,7 @@ namespace Shesha.DynamicEntities
                 var dtoProp = dtoProps.FirstOrDefault(p => p.Name == property.Name);
                 if (dtoProp != null)
                 {
-                    await action.Invoke(entity, dto, property, dtoProp);
+                    await action(entity, dto, property, dtoProp);
                 }
             }
         }
