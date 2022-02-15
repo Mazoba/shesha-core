@@ -28,6 +28,14 @@ namespace Shesha.Swagger
 
             var types = GetRegisteredControllerTypes();
 
+            var assemblyFinder = StaticContext.IocManager.Resolve<IAssemblyFinder>();
+            var assemblies = assemblyFinder.GetAllAssemblies();
+            
+            // filter assemblies to include only the ones which are defined in modules
+            types = types.Where(t => assemblies.Contains(t.Assembly)).ToList();
+
+            //var controllers = typeFinder.Find(c => !c.IsAbstract && typeof(ControllerBase).IsAssignableFrom(c));
+
             // 1. add controllers
             var controllers = types.Where(t => typeof(ControllerBase).IsAssignableFrom(t)).ToList();
             foreach (var controller in controllers)

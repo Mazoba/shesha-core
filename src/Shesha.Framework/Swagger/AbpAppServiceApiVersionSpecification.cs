@@ -16,8 +16,7 @@ namespace Shesha.Swagger
         {
             var typeInfo = controller.ControllerType;
             var type = controller.ControllerType.AsType();
-            if (!typeof(IApplicationService).IsAssignableFrom(type) ||
-               !typeInfo.IsPublic || typeInfo.IsAbstract || typeInfo.IsGenericType)
+            if (!typeof(IApplicationService).IsAssignableFrom(type) || !typeInfo.IsPublic)
             {
                 return false;
             }

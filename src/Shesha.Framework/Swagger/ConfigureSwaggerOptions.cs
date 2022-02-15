@@ -38,7 +38,7 @@ namespace Shesha.Swagger
         {
             var info = new OpenApiInfo
             {
-                Title = string.Format(_openApiInfo.Title ?? "KznOtp Api", description.ApiVersion.ToString()),
+                Title = string.Format(_openApiInfo.Title ?? "Web Api", description.ApiVersion.ToString()),
                 Version = description.ApiVersion.ToString(),
                 Description = _openApiInfo.Description,
                 Contact = new OpenApiContact
