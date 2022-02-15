@@ -36,7 +36,7 @@ namespace Shesha
             IocManager.Register<IShaPermissionChecker, PermissionChecker>(DependencyLifeStyle.Transient);
             
 
-            IocManager.Register<ILockFactory, NullLockFactory>(DependencyLifeStyle.Singleton);
+            IocManager.Register<ILockFactory, NamedLockFactory>(DependencyLifeStyle.Singleton);
 
             IocManager.Register<StoredFileService, StoredFileService>(DependencyLifeStyle.Transient);
             IocManager.Register<AzureStoredFileService, AzureStoredFileService>(DependencyLifeStyle.Transient);

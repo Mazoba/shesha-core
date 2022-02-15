@@ -5,18 +5,18 @@ using Abp.Domain.Uow;
 using NHibernate.Linq;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
+using Shesha.Extensions;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Shesha.Locks;
 
 namespace Shesha.Services.VersionedFields
 {
     /// <summary>
     /// Versioned field manager
     /// </summary>
-    public class VersionedFieldManager: IVersionedFieldManager, ITransientDependency
+    public class VersionedFieldManager : IVersionedFieldManager, ITransientDependency
     {
         private readonly IRepository<VersionedField, Guid> _fieldRepository;
         private readonly IRepository<VersionedFieldVersion, Guid> _fieldVersionRepository;
@@ -48,53 +48,30 @@ namespace Shesha.Services.VersionedFields
             if (field != null)
                 return field;
 
-            // todo: add unique constraint to the VersionedField: OwnerId, OwnerType, Name
-            // convert lock to distributed lock on the multiple instances environment
+            var ioc = StaticContext.IocManager;
+            var lockFactory = ioc.Resolve<ILockFactory>();
+            var resource = owner.FullyQualifiedEntityId<TEntity, TId>() + "|" + fieldName;
+            var expiry = TimeSpan.FromSeconds(5);
+            var wait = TimeSpan.FromSeconds(2);
+            var retry = TimeSpan.FromSeconds(1);
 
-            field = await CreateFieldAsync<TEntity, TId>(owner, fieldName, initAction);
+            await lockFactory.DoExclusiveAsync(resource, expiry, wait, retry, async () =>
+            {
+                // trying to get the field one more time because it might be created while we were waiting for the lock
+                field = await GetVersionedFieldAsync<TEntity, TId>(owner, fieldName) 
+                        ?? await CreateFieldAsync<TEntity, TId>(owner, fieldName, initAction);
+            });
+
+            if (field == null)
+                throw new Exception($"Failed to create versioned field, owner: {resource}, field: {fieldName}");
 
             return field;
-            /*
-            lock (_locker.GetLock(owner.FullyQualifiedEntityId() + fieldName))
-            {
-                field = owner.GetVersionedField(fieldName);
-                if (field != null)
-                    return field;
-
-                // Important: create field in a separate thread to handle unique constraint
-                var task = Task.Factory.StartNew(() =>
-                {
-                    var sessionFactory = DependencyResolver.Current.GetService<ISessionFactory>();
-                    using (var session = sessionFactory.OpenSession())
-                    {
-                        var service = new ServiceWithTypedId<VersionedField, Guid>();
-                        service.SetSession(session);
-                        var newField = new VersionedField()
-                        {
-                            Name = fieldName,
-                            TrackVersions = trackVersions,
-                            FieldType = fieldType
-                        };
-                        newField.SetOwner(owner);
-                        session.SaveOrUpdate(newField);
-                        session.Flush();
-                        session.Close();
-                    }
-                });
-
-                Task.WaitAll(task);
-
-                // retrieve field using the current session
-                field = owner.GetVersionedField(fieldName);
-                if (field == null)
-                    throw new Exception($"Failed to create versioned field, owner: {owner.FullyQualifiedEntityId()}, field: {fieldName}");
-                return field;
-            }*/
         }
 
         public async Task<VersionedField> CreateFieldAsync<TEntity, TId>(TEntity owner, string fieldName, Action<VersionedField> initAction = null) where TEntity : IEntity<TId>
         {
-            var field = new VersionedField {
+            var field = new VersionedField
+            {
                 Name = fieldName,
             };
             initAction?.Invoke(field);
@@ -113,7 +90,6 @@ namespace Shesha.Services.VersionedFields
 
         public async Task<string> GetVersionedFieldValueAsync<TEntity, TId>(TEntity owner, string fieldName) where TEntity : IEntity<TId>
         {
-            //var field = await GetOrCreateFieldAsync<TEntity, TId>(owner, fieldName);
             var field = await GetVersionedFieldAsync<TEntity, TId>(owner, fieldName);
             var version = field != null
                 ? await GetLastVersionAsync(field)
@@ -125,9 +101,9 @@ namespace Shesha.Services.VersionedFields
         public async Task SetVersionedFieldValueAsync<TEntity, TId>(TEntity owner, string fieldName, string value, bool createNewVersion) where TEntity : IEntity<TId>
         {
             var field = await GetOrCreateFieldAsync<TEntity, TId>(owner, fieldName);
-            
+
             var version = await GetLastVersionAsync(field);
-            
+
             // check content of the last version and skip if not changed
             if (version != null && version.Content == value)
                 return;
@@ -147,48 +123,6 @@ namespace Shesha.Services.VersionedFields
                 await _fieldVersionRepository.UpdateAsync(version);
             }
             await _currentUowProvider.Current.SaveChangesAsync();
-
-            /*
-            lock (_locker.GetLock(owner.FullyQualifiedEntityId()))
-            {
-                var field = owner.GetOrCreateField(fieldName, trackVersions, fieldType);
-
-                var version = field.LastVersion;
-
-                modified = !version.ContentEqualsTo(value);
-                if (!modified)
-                    return;
-
-                if (createNewVersion || version == null)
-                {
-                    var newVersion = new VersionedFieldVersion()
-                    {
-                        Field = field,
-                        Status = status,
-                        Content = value,
-                        FieldType = fieldType
-                    };
-                    if (createdOn.HasValue)
-                    {
-                        newVersion.ChangeCreationAuditInfo(createdOn, userName);
-                    }
-                    field.Versions.Add(newVersion);
-                    VersionService.SaveOrUpdateAssert(newVersion);
-                }
-                else
-                {
-                    version.Content = value;
-                    version.FieldType = fieldType;
-                    if (createdOn.HasValue)
-                    {
-                        version.ChangeCreationAuditInfo(createdOn, userName);
-                    }
-                    VersionService.SaveOrUpdateAssert(version);
-                }
-
-                DeleteUnusedImages(owner, fieldName);
-            }
-            */
         }
     }
 }
