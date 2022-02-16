@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Abp.Dependency;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
+using Abp.Events.Bus.Entities;
+using Abp.Events.Bus.Handlers;
 using Abp.ObjectMapping;
 using Abp.Runtime.Caching;
 using NHibernate.Linq;
@@ -13,7 +15,7 @@ using Shesha.Services.ReferenceLists.Dto;
 
 namespace Shesha.Services
 {
-    public class ReferenceListHelper: IReferenceListHelper, ITransientDependency
+    public class ReferenceListHelper: IEventHandler<EntityChangedEventData<ReferenceListItem>>, IReferenceListHelper, ITransientDependency
     {
         private const string ListItemsCacheName = "ReferenceListCache";
 
@@ -143,6 +145,42 @@ namespace Shesha.Services
                 absoluteExpireTime: TimeSpan.FromMinutes(60));
 
             return itemDtos;
+        }
+
+        private string GetCacheKey(string @namespace, string name)
+        {
+            return $"{@namespace}.{name}";
+        }
+
+        private string GetCacheKey(ReferenceList refList)
+        {
+            return GetCacheKey(refList.Namespace, refList.Name);
+        }
+
+        public void HandleEvent(EntityChangedEventData<ReferenceListItem> eventData)
+        {
+            var refList = eventData.Entity?.ReferenceList;
+
+            if (refList == null)
+                return;
+
+            ListItemsCache.Remove(GetCacheKey(refList));
+        }
+
+        /// <summary>
+        /// Clear reference list cache
+        /// </summary>
+        public async Task ClearCacheAsync()
+        {
+            await ListItemsCache.ClearAsync();
+        }
+
+        /// <summary>
+        /// Clear reference list cache
+        /// </summary>
+        public async Task ClearCacheAsync(string @namespace, string name)
+        {
+            await ListItemsCache.RemoveAsync(GetCacheKey(@namespace, name));
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Shesha.Domain;
 using Shesha.Services.ReferenceLists.Dto;
 
@@ -27,5 +28,15 @@ namespace Shesha.Services
         /// <param name="value">Value</param>
         /// <returns></returns>
         List<ReferenceListItemDto> DecomposeMultiValueIntoItems(string refListNamespace, string refListName, Int64? value);
+
+        /// <summary>
+        /// Clear reference list cache
+        /// </summary>
+        Task ClearCacheAsync();
+
+        /// <summary>
+        /// Clear reference list cache
+        /// </summary>
+        Task ClearCacheAsync(string @namespace, string name);
     }
 }
