@@ -37,21 +37,25 @@ namespace Shesha.Scheduler.Services.ScheduledJobs
             table.DeleteUrl = url => "/api/services/Scheduler/ScheduledJobExecution/Delete";
 
             table.AddProperty(e => e.StartedOn, m => m.SortDescending());
-
-            //table.AddHtmlColumn("triggerLink",
-            //    (e, html, url) => e.Trigger != null
-            //        ? html.SPAActionLink($"{e.Trigger.Description} ({e.Trigger.CronString})", "Details", "ScheduledJobTrigger", new { id = e.Trigger.Id }).ToString()
-            //        : "-", c => c.Caption("Trigger"));
-
             table.AddProperty(e => e.FinishedOn);
             table.AddProperty(e => e.Status);
             table.AddProperty(e => e.StartedBy);
             table.AddProperty(e => e.ErrorMessage);
-            //table.AddHtmlColumn("LogFile",
-            //    (e, html, url) => !string.IsNullOrWhiteSpace(e.LogFilePath)
-            //        ? html.Shesha().AjaxDownload(url.Action("Download", "VirtualFile", new { path = e.LogFilePath }), Path.GetFileName(e.LogFilePath)).ToHtmlString()
-            //        : null,
-            //    t => t.Caption("Log File").WidthPixels(150));
+
+            return table;
+        }
+
+        public static DataTableConfig<ScheduledJobExecution, Guid> JobsExecutionLog()
+        {
+            var table = ChildDataTableConfig<ScheduledJob, ScheduledJobExecution, Guid>.OneToMany("ScheduledJobs_ExecutionLog", ex => ex.Job);
+
+            table.AddProperty(e => e.StartedOn, m => m.SortDescending());
+            table.AddProperty(e => e.Job.JobNamespace, c => c.Caption("Job Namespace"));
+            table.AddProperty(e => e.Job.JobName, c => c.Caption("Job Name"));
+            table.AddProperty(e => e.FinishedOn);
+            table.AddProperty(e => e.Status);
+            table.AddProperty(e => e.StartedBy);
+            table.AddProperty(e => e.ErrorMessage);
 
             return table;
         }
