@@ -1,12 +1,17 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Shesha.AutoMapper.Dto;
 using Shesha.Web.DataTable;
 using Shesha.Web.FormsDesigner.Domain;
 using Shesha.Web.FormsDesigner.Dtos;
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Shesha.Web.FormsDesigner.Services
@@ -16,7 +21,7 @@ namespace Shesha.Web.FormsDesigner.Services
     /// </summary>
     //[AbpAuthorize]
     [Route("api/services/Forms")]
-    public class FormAppService: SheshaAppServiceBase, IFormAppService
+    public class FormAppService : SheshaAppServiceBase, IFormAppService
     {
         private readonly IFormStore _formStore;
 
@@ -140,7 +145,7 @@ namespace Shesha.Web.FormsDesigner.Services
         public async Task<List<AutocompleteItemDto>> AutocompleteAsync(string term, string selectedValue)
         {
             var items = await _formStore.AutocompleteAsync(term, selectedValue);
-            
+
             var result = items
                 .Select(i => new AutocompleteItemDto
                 {
@@ -148,8 +153,123 @@ namespace Shesha.Web.FormsDesigner.Services
                     DisplayText = $"{i.Name} ({i.Path})"
                 })
                 .ToList();
-            
+
             return result;
         }
+
+        [HttpPost, Route("Export")]
+        public async Task<FileContentResult> ExportConfigurationsAsync()
+        {
+            var fileName = "formConfigExport_" + DateTime.Now;
+            var mimeType = "application/json";
+
+            try
+            {
+                //Loop through the list of IDs, 
+                // for each ID get form configs from DB, then append to JSON
+                var configList = new List<Dictionary<string, string>>();
+                var forms = await _formStore.GetAllAsync();
+
+                foreach (var config in forms)
+                {
+
+                    var configDictionary = new Dictionary<string, string>();
+                    configDictionary.Add("Path", config.Path);
+                    configDictionary.Add("Name", config.Name);
+                    configDictionary.Add("Description", config.Description);
+                    configDictionary.Add("Markup", config.Markup);
+                    configDictionary.Add("ModelType", config.ModelType);
+                    configDictionary.Add("Type", config.Type);
+                    configList.Add(configDictionary);
+
+                }
+
+                byte[] fileBytes = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(configList));
+
+
+                return new FileContentResult(fileBytes, mimeType)
+                {
+                    FileDownloadName = fileName
+                };
+
+            }
+            catch (Exception e)
+            {
+                Logger.Error("An error occurred", e);
+                throw new Exception("An error occurred!");
+            }
+
+        }
+
+        [HttpPost, Route("Import")]
+        [Consumes("multipart/form-data")]
+        public async Task<string> ImportConfigurationAsync([FromForm] ImportConfigDto importConfig)
+        {
+            IFormFile formFile = importConfig.File;
+
+            if (formFile.Length > 0)
+            {
+                var result = new StringBuilder();
+                using (var reader = new StreamReader(formFile.OpenReadStream()))
+                {
+                    while (reader.Peek() >= 0)
+                        result.AppendLine(await reader.ReadLineAsync());
+                }
+  
+
+               var deserialisedJson = JsonSerializer.Deserialize<List<Dictionary<string, string>>>(result.ToString());
+
+                foreach(var config in deserialisedJson)
+                {
+                    //Create FormDTO and validate
+                    string formPath = config.GetValueOrDefault("Path");
+
+                    var existingFormPath = await _formStore.GetByPathAsync(formPath);
+
+                    if (existingFormPath == null)
+                    {
+                        FormDto form = GenerateFormDtoHelper(config, formPath);
+
+                        await _formStore.CreateAsync(form);
+                        Logger.Info("Config added successfully!");
+
+                    }
+                    else
+                    {
+                        //Handle scenario that the path already exists
+                        Logger.Info("Duplicate config!");
+                        //Overide the config
+                        Logger.Info("Overwriting them");
+                        FormDto form = GenerateFormDtoHelper(config, formPath);
+
+                        await _formStore.CreateAsync(form);
+                        Logger.Info("Config added successfully!");
+                    }
+
+
+                                     
+                }
+
+                return "Import success!";
+
+            }
+            else
+            {
+                return "File Import Failed. An error occured!";
+            }
+           
+        }
+
+        private static FormDto GenerateFormDtoHelper(Dictionary<string, string> config, string formPath)
+        {
+            FormDto form = new FormDto();
+            form.Path = formPath;
+            form.Markup = config.GetValueOrDefault("Markup");
+            form.Name = config.GetValueOrDefault("Name");
+            form.ModelType = config.GetValueOrDefault("ModelType");
+            form.Description = config.GetValueOrDefault("Description");
+            return form;
+        }
     }
+
 }

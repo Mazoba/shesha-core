@@ -40,5 +40,8 @@ namespace Shesha.Web.FormsDesigner.Services
         /// Autocomplete
         /// </summary>
         Task<List<FormListItemDto>> AutocompleteAsync(string term, string selectedValue);
+
+        Task<List<FormDto>> GetAllAsync();
+
     }
 }

@@ -85,5 +85,14 @@ namespace Shesha.Web.FormsDesigner.Services
 
             return result;
         }
+
+        public async Task<List<FormDto>> GetAllAsync()
+        {
+            var forms = await _formRepository.GetAll()
+                .OrderBy(f => f.Name)
+                .ToListAsync();
+
+            return ObjectMapper.Map<List<FormDto>>(forms); ;
+        }
     }
 }
