@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Newtonsoft.Json;
+using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.DynamicEntities;
@@ -209,7 +210,8 @@ namespace Shesha.Tests.DynamicEntities
                     return schema;
                 });
 
-            return new DynamicDtoTypeBuilder(entityConfigCacheMock.Object);
+            var entityConfigStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
+            return new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore);
         }
 
         #endregion
