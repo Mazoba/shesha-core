@@ -325,7 +325,10 @@ namespace Shesha.Domain
                 .Where(a => a is DiscriminatorAttribute)
                 .Cast<DiscriminatorAttribute>().FirstOrDefault();
 
-            return attribute?.FilterUnknownDiscriminators == true;
+            // filter unknown discriminators by default
+            return attribute != null
+                ? attribute.FilterUnknownDiscriminators
+                : true;
         }
 
         /// <summary>

@@ -5,6 +5,7 @@ using Abp.Domain.Uow;
 using Abp.ObjectMapping;
 using Abp.Runtime.Caching;
 using NHibernate.Linq;
+using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.DynamicEntities.Cache;
 using Shesha.DynamicEntities.Dtos;
@@ -23,10 +24,12 @@ namespace Shesha.DynamicEntities
     public class DynamicDtoTypeBuilder : IDynamicDtoTypeBuilder, ITransientDependency
     {
         private readonly IEntityConfigCache _entityConfigCache;
-        
-        public DynamicDtoTypeBuilder(IEntityConfigCache entityConfigCache)
+        private IEntityConfigurationStore _entityConfigurationStore;
+
+        public DynamicDtoTypeBuilder(IEntityConfigCache entityConfigCache, IEntityConfigurationStore entityConfigurationStore)
         {
             _entityConfigCache = entityConfigCache;
+            _entityConfigurationStore = entityConfigurationStore;
         }
 
         /// inheritedDoc
@@ -126,7 +129,7 @@ namespace Shesha.DynamicEntities
                     }
 
                 case DataTypes.EntityReference:
-                    return null;
+                    return GetEntityReferenceType(propertyDto);
                 case DataTypes.Array:
                     return null;
                 case DataTypes.Object:
@@ -134,6 +137,18 @@ namespace Shesha.DynamicEntities
                 default:
                     throw new NotSupportedException($"Data type not supported: {dataType}");
             }
+        }
+
+        private Type GetEntityReferenceType(EntityPropertyDto propertyDto) 
+        {
+            if (propertyDto.DataType != DataTypes.EntityReference)
+                throw new NotSupportedException($"DataType {propertyDto.DataType} is not supported. Expected {DataTypes.EntityReference}");
+
+            if (string.IsNullOrWhiteSpace(propertyDto.EntityType))
+                return null;
+
+            var entityConfig = _entityConfigurationStore.Get(propertyDto.EntityType);
+            return entityConfig?.IdType;
         }
 
         private async Task<Type> BuildNestedTypeAsync(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context) 
@@ -146,7 +161,7 @@ namespace Shesha.DynamicEntities
             {
                 var className = context.CurrentPrefix.Replace('.', '_');
 
-                var tb = GetTypeBuilder(typeof(object), "DynamicModule", className, new List<Type> { typeof(IDynamicNestedObject) });
+                var tb = GetTypeBuilder(typeof(object), className, new List<Type> { typeof(IDynamicNestedObject) });
                 var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
                 foreach (var property in propertyDto.Properties)
@@ -168,7 +183,7 @@ namespace Shesha.DynamicEntities
         {
             var proxyClassName = GetProxyTypeName(context.ModelType, "Proxy");
 
-            var tb = GetTypeBuilder(context.ModelType, "DynamicModule", proxyClassName, new List<Type> { typeof(IDynamicDtoProxy) });
+            var tb = GetTypeBuilder(context.ModelType, proxyClassName, new List<Type> { typeof(IDynamicDtoProxy) });
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
             using (context.OpenNamePrefix(proxyClassName)) 
@@ -189,11 +204,12 @@ namespace Shesha.DynamicEntities
             }
         }
 
-        private static TypeBuilder GetTypeBuilder(Type baseType, string moduleName, string typeName, IEnumerable<Type> interfaces)
+        private static TypeBuilder GetTypeBuilder(Type baseType, string typeName, IEnumerable<Type> interfaces)
         {
-            var an = new AssemblyName(moduleName);
+            var assemblyName = new AssemblyName($"{typeName}Assembly");
+            var moduleName = $"{typeName}Module";
             
-            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(an, AssemblyBuilderAccess.Run);
+            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(moduleName);
             var tb = moduleBuilder.DefineType(typeName,
                     TypeAttributes.Public |
@@ -303,7 +319,7 @@ namespace Shesha.DynamicEntities
             List<DynamicProperty> properties, 
             DynamicDtoTypeBuildingContext context)
         {
-            var tb = GetTypeBuilder(baseType, "DynamicModule", proxyClassName, interfaces.Union(new List<Type> { typeof(IDynamicDtoProxy) }));
+            var tb = GetTypeBuilder(baseType, proxyClassName, interfaces.Union(new List<Type> { typeof(IDynamicDtoProxy) }));
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
             foreach (var property in properties)

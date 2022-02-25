@@ -103,6 +103,9 @@ namespace Shesha
                 // todo: move to conventions
                 cfg.CreateMap<RefListPersonTitle, Int64>().ConvertUsing<EnumToInt64TypeConverter<RefListPersonTitle>>();
                 cfg.CreateMap<Int64, RefListPersonTitle>().ConvertUsing<Int64ToEnumTypeConverter<RefListPersonTitle>>();
+
+                var entityMapProfile = IocManager.Resolve<EntityMapProfile>();
+                cfg.AddProfile(entityMapProfile);
             });
 
             return modelConfigMapperConfig.CreateMapper();
