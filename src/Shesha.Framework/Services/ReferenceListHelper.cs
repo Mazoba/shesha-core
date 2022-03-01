@@ -10,6 +10,7 @@ using Abp.Events.Bus.Handlers;
 using Abp.ObjectMapping;
 using Abp.Runtime.Caching;
 using NHibernate.Linq;
+using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
 using Shesha.Services.ReferenceLists.Dto;
 
@@ -182,5 +183,37 @@ namespace Shesha.Services
         {
             await ListItemsCache.RemoveAsync(GetCacheKey(@namespace, name));
         }
+
+        /// <summary>
+        /// Decompose raw value into a multivalue reference list DTOs
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="rawValue"></param>
+        /// <returns></returns>
+        public static List<ReferenceListItemValueDto> DecomposeMultiReferenceListValue<T>(T rawValue) where T : struct, IConvertible
+        {
+            var result = new List<ReferenceListItemValueDto>();
+
+            if (rawValue.ToString() == "0")
+                return result;
+
+            var flag = Enum.Parse(typeof(T), rawValue.ToString()) as Enum;
+
+            foreach (var r in (long[])Enum.GetValues(typeof(T)))
+            {
+                if ((Convert.ToInt32(flag) & r) == r)
+                {
+                    var nameValue = new ReferenceListItemValueDto()
+                    {
+                        Item = Enum.GetName(typeof(T), r),
+                        ItemValue = r
+                    };
+
+                    result.Add(nameValue);
+                }
+            }
+            return result;
+        }
     }
+}
 }
