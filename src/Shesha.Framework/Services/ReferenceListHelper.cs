@@ -201,7 +201,7 @@ namespace Shesha.Services
 
             foreach (var r in (long[])Enum.GetValues(typeof(T)))
             {
-                if ((Convert.ToInt32(flag) & r) == r)
+                if ((Convert.ToInt64(flag) & r) == r)
                 {
                     var nameValue = new ReferenceListItemValueDto()
                     {
