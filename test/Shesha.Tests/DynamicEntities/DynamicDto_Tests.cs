@@ -1,5 +1,6 @@
 ﻿using Abp.TestBase;
 using Moq;
+using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Cache;
@@ -33,7 +34,8 @@ namespace Shesha.Tests.DynamicEntities
                     return Task.FromResult(r);
                 });
 
-            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object);
+            var entityConfigStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
+            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore);
 
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
 
@@ -79,7 +81,8 @@ namespace Shesha.Tests.DynamicEntities
                     return Task.FromResult(r);
                 });
 
-            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object);
+            var entityConfigStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
+            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore);
 
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
 

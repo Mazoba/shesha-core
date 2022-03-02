@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using Abp.Domain.Entities;
+using Shesha.Domain;
 using Shesha.Reflection;
 
 namespace Shesha.Extensions
@@ -31,6 +32,16 @@ namespace Shesha.Extensions
                     || type.GetInterfaces().Any(x =>
                         x.IsGenericType &&
                         x.GetGenericTypeDefinition() == typeof(IEntity<>)));
+        }
+
+        /// <summary>
+        /// Get type of the `Id` property. Applicable for entity types
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public static Type GetEntityIdType(this Type type) 
+        {
+            return type?.GetProperty(SheshaDatabaseConsts.IdColumn)?.PropertyType;
         }
     }
 }

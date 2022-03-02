@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using Abp.Configuration;
 using Abp.Dependency;
 using Abp.Domain.Entities;
+using Abp.Domain.Entities.Auditing;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
 using Abp.EntityHistory;
@@ -83,13 +85,13 @@ namespace Shesha.NHibernate.EntityHistory
                 typeOfEntity = typeOfEntity.BaseType;
             }
 
-            var isTracked = IsTypeOfTrackedEntity(typeOfEntity);
-            if (isTracked != null && !isTracked.Value) return null;
-
             if (!IsTypeOfEntity(typeOfEntity))
             {
                 return null;
             }
+
+            var isTracked = IsTypeOfTrackedEntity(typeOfEntity);
+            if (isTracked != null && !isTracked.Value) return null;
 
             var isAudited = IsTypeOfAuditedEntity(typeOfEntity);
             if (isAudited != null && !isAudited.Value) return null;
@@ -113,22 +115,17 @@ namespace Shesha.NHibernate.EntityHistory
             var id = entityEntry.Id;
 
             EntityChangeType changeType;
-            if (Session.IsEntityDeleted(entity)) changeType = EntityChangeType.Deleted;
+            if /*(typeof(Setting).IsAssignableFrom(entity.GetType())) changeType = EntityChangeType.Updated; // fix for Settings (the first save is to change from the default value)
+            else if*/ (Session.IsEntityDeleted(entity)) changeType = EntityChangeType.Deleted;
             else if (entityEntry.LoadedState == null) changeType = EntityChangeType.Created;
             else changeType = EntityChangeType.Updated;
-
-            if (id == null && changeType != EntityChangeType.Created)
-            {
-                Logger.Error($"EntityChangeType {changeType} must have non-empty entity id");
-                return null;
-            }
 
             var className = NHibernateProxyHelper.GuessClass(entity).FullName;
             var sessionImpl = Session.GetSessionImplementation();
             var persister = sessionImpl.Factory.GetEntityPersister(className);
 
             Object[] currentState = persister.GetPropertyValues(entity);
-            Int32[] dirtyP = changeType != EntityChangeType.Created
+            Int32[] dirtyP = changeType != EntityChangeType.Created && entityEntry.LoadedState != null
                 ? persister.FindDirty(currentState, entityEntry.LoadedState, entity, sessionImpl) // changed properties
                 : Enumerable.Range(0, currentState.Length - 1).ToArray(); // all properties for new entity
 
@@ -160,6 +157,20 @@ namespace Shesha.NHibernate.EntityHistory
             entityChange.PropertyChanges = propertyChanges;
 
             return entityChange;
+        }
+
+        protected override bool? IsAuditedPropertyInfo(PropertyInfo propertyInfo)
+        {
+            // do not save properties of audition
+            return 
+                propertyInfo.Name == nameof(FullAuditedEntity.CreatorUserId)
+                || propertyInfo.Name == nameof(FullAuditedEntity.CreationTime)
+                || propertyInfo.Name == nameof(FullAuditedEntity.DeleterUserId)
+                || propertyInfo.Name == nameof(FullAuditedEntity.DeletionTime)
+                || propertyInfo.Name == nameof(FullAuditedEntity.LastModifierUserId)
+                || propertyInfo.Name == nameof(FullAuditedEntity.LastModificationTime)
+                ? false
+                : base.IsAuditedPropertyInfo(propertyInfo);
         }
 
         /// <summary>

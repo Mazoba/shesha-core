@@ -3,6 +3,7 @@ using System.Reflection;
 using Abp;
 using Abp.AutoMapper;
 using Abp.Castle.Logging.Log4Net;
+using Abp.Configuration;
 using Abp.Configuration.Startup;
 using Abp.Dependency;
 using Abp.Domain.Uow;
@@ -20,6 +21,7 @@ using NSubstitute;
 using Shesha.NHibernate;
 using Shesha.Services;
 using Shesha.Tests.DependencyInjection;
+using Shesha.Tests.DynamicEntities;
 using Shesha.Web;
 
 namespace Shesha.Tests
@@ -44,7 +46,7 @@ namespace Shesha.Tests
             nhModule.SkipDbSeed = true;
             */
         }
-        
+
         public override void PreInitialize()
         {
             Configuration.UnitOfWork.Timeout = TimeSpan.FromMinutes(30);
@@ -84,6 +86,10 @@ namespace Shesha.Tests
             Configuration.ReplaceService<IDbPerTenantConnectionStringResolver, TestConnectionStringResolver>(DependencyLifeStyle.Transient);
 
             Configuration.ReplaceService<ICurrentUnitOfWorkProvider, AsyncLocalCurrentUnitOfWorkProvider>(DependencyLifeStyle.Singleton);
+
+            Configuration.Settings.Providers.Add<TestSettingsProvider>();
+
+            Configuration.EntityHistory.Selectors.Add( "Settings", typeof(Setting));
         }
 
         public override void Initialize()
