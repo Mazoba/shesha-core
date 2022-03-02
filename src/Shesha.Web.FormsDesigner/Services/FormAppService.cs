@@ -157,8 +157,8 @@ namespace Shesha.Web.FormsDesigner.Services
             return result;
         }
 
-        [HttpPost, Route("Export")]
-        public async Task<FileContentResult> ExportConfigurationsAsync()
+        [HttpPost, Route("Export/Default")]
+        public async Task<FileContentResult> ExportConfigurationsAsyncDefault()
         {
             var fileName = "formConfigExport_" + DateTime.Now;
             var mimeType = "application/json";
@@ -180,6 +180,50 @@ namespace Shesha.Web.FormsDesigner.Services
                     configDictionary.Add("Markup", config.Markup);
                     configDictionary.Add("ModelType", config.ModelType);
                     configDictionary.Add("Type", config.Type);
+                    configList.Add(configDictionary);
+
+                }
+
+                byte[] fileBytes = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(configList));
+
+
+                return new FileContentResult(fileBytes, mimeType)
+                {
+                    FileDownloadName = fileName
+                };
+
+            }
+            catch (Exception e)
+            {
+                Logger.Error("An error occurred", e);
+                throw new Exception("An error occurred!");
+            }
+
+        }
+
+        [HttpPost, Route("Export")]
+        public async Task<FileContentResult> ExportConfigurationsAsync(ExportConfigurationDto ids)
+        {
+            var fileName = "formConfigExport_" + DateTime.Now;
+            var mimeType = "application/json";
+
+            try
+            {
+                //Loop through the list of IDs, 
+                // for each ID get form configs from DB, then append to JSON
+                var configList = new List<Dictionary<string, string>>();
+
+                foreach (var id in ids.Components)
+                {
+                    var forms = await _formStore.GetAsync(id);
+
+                    var configDictionary = new Dictionary<string, string>();
+                    configDictionary.Add("Path", forms.Path);
+                    configDictionary.Add("Name", forms.Name);
+                    configDictionary.Add("Description", forms.Description);
+                    configDictionary.Add("Markup", forms.Markup);
+                    configDictionary.Add("ModelType", forms.ModelType);
+                    configDictionary.Add("Type", forms.Type);
                     configList.Add(configDictionary);
 
                 }
