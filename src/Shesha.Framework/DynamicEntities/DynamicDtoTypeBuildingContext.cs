@@ -36,6 +36,11 @@ namespace Shesha.DynamicEntities
             Classes.Add(CurrentPrefix, @class);
         }
 
+        /// <summary>
+        /// If true, indicates that a service property '_formFields' should be added to the result type
+        /// </summary>
+        public bool AddFormFieldsProperty { get; set; }
+
         #region IHasNamePrefixStack implementation
 
         private Stack<string> _namePrefixStack = new Stack<string>();

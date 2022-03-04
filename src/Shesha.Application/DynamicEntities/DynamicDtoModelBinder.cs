@@ -126,6 +126,7 @@ namespace Shesha.DynamicEntities
             {
                 ModelType = bindingContext.ModelType,
                 PropertyFilter = propName => true,
+                AddFormFieldsProperty = true,
             };
             modelType = await _dtoBuilder.BuildDtoFullProxyTypeAsync(bindingContext.ModelType, fullDtoBuildContext);
 
@@ -200,7 +201,8 @@ namespace Shesha.DynamicEntities
                             ModelType = bindingContext.ModelType,
                             PropertyFilter = propName => {
                                 return bindKeys.Contains(propName.ToLower());
-                            }
+                            },
+                            AddFormFieldsProperty = true,
                         };
                         var effectiveModelType = await _dtoBuilder.BuildDtoProxyTypeAsync(buildContext);
                         var mapper = GetMapper(result.Model.GetType(), effectiveModelType, fullDtoBuildContext.Classes);

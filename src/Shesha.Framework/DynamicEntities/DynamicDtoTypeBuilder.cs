@@ -4,6 +4,7 @@ using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
 using Abp.ObjectMapping;
 using Abp.Runtime.Caching;
+using Castle.Core.Logging;
 using NHibernate.Linq;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
@@ -25,6 +26,11 @@ namespace Shesha.DynamicEntities
     {
         private readonly IEntityConfigCache _entityConfigCache;
         private IEntityConfigurationStore _entityConfigurationStore;
+
+        /// <summary>
+        /// Reference to the logger to write logs.
+        /// </summary>
+        public ILogger Logger { protected get; set; } = NullLogger.Instance;
 
         public DynamicDtoTypeBuilder(IEntityConfigCache entityConfigCache, IEntityConfigurationStore entityConfigurationStore)
         {
@@ -60,13 +66,20 @@ namespace Shesha.DynamicEntities
                 if (hardCodedDtoProperties.Contains(property.Name.ToLower()))
                     continue;
 
+                if (string.IsNullOrWhiteSpace(property.DataType))
+                {
+                    Logger.Warn($"Type '{type.FullName}': {nameof(property.DataType)} of property {property.Name} is empty");
+                    continue;
+                }
+
                 var propertyType = await GetDtoPropertyTypeAsync(property, context);
                 if (propertyType != null)
                     properties.Add(property.Name, propertyType);
             }
 
             // internal fields
-            properties.Add("_formFields", typeof(List<string>));
+            if (context.AddFormFieldsProperty)
+                properties.Add(nameof(IHasFormFieldsList._formFields), typeof(List<string>));
 
             return properties;
         }
@@ -305,10 +318,14 @@ namespace Shesha.DynamicEntities
             var proxyClassName = GetProxyTypeName(baseType, "FullProxy");
             var properties = await GetDynamicPropertiesAsync(baseType, context);
             
-            if (!properties.Any(p => p.PropertyName == nameof(IHasFormFieldsList._formFields)))
+            if (context.AddFormFieldsProperty && !properties.Any(p => p.PropertyName == nameof(IHasFormFieldsList._formFields)))
                 properties.Add(new DynamicProperty { PropertyName = nameof(IHasFormFieldsList._formFields), PropertyType = typeof(List<string>) });
 
-            var type = await CompileResultTypeAsync(baseType, proxyClassName, new List<Type> { typeof(IHasFormFieldsList) }, properties, context);
+            var interfaces = new List<Type>();
+            if (context.AddFormFieldsProperty)
+                interfaces.Add(typeof(IHasFormFieldsList));
+
+            var type = await CompileResultTypeAsync(baseType, proxyClassName, interfaces, properties, context);
 
             return type;
         }

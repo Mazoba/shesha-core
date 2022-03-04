@@ -8,13 +8,17 @@ using Abp.Domain.Repositories;
 using Abp.IdentityFramework;
 using Abp.Runtime.Session;
 using Abp.UI;
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
 using NHibernate.Linq;
 using Shesha.Authorization.Users;
+using Shesha.DynamicEntities;
+using Shesha.DynamicEntities.Dtos;
 using Shesha.MultiTenancy;
+using Shesha.ObjectMapper;
 using Shesha.Services;
 
 namespace Shesha
@@ -44,6 +48,15 @@ namespace Shesha
         /// </summary>
         public UserManager UserManager { get; set; }
 
+        /// <summary>
+        /// Dynamic DTO builder
+        /// </summary>
+        public IDynamicDtoTypeBuilder DtoBuilder { get; set; }
+
+        /// <summary>
+        /// Dynamic property manager
+        /// </summary>
+        public IDynamicPropertyManager DynamicPropertyManager { get; set; }
 
         private IUrlHelper _url;
 
@@ -219,6 +232,69 @@ namespace Shesha
             {
                 return await SettingManager.GetSettingValueForApplicationAsync(name);
             }
+        }
+
+        #endregion
+
+        #region Dynamic DTOs
+
+        /// <summary>
+        /// Map entity to a <see cref="DynamicDto{TEntity, TPrimaryKey}"/>
+        /// </summary>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <typeparam name="TPrimaryKey">Type of entity primary key</typeparam>
+        /// <param name="entity">entity to map</param>
+        /// <returns></returns>
+        protected async Task<DynamicDto<TEntity, TPrimaryKey>> MapToDynamicDtoAsync<TEntity, TPrimaryKey>(TEntity entity) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            return await MapToCustomDynamicDtoAsync<DynamicDto<TEntity, TPrimaryKey>, TEntity, TPrimaryKey>(entity);
+        }
+
+        /// <summary>
+        /// Map entity to a custom <see cref="DynamicDto{TEntity, TPrimaryKey}"/>
+        /// </summary>
+        /// <typeparam name="TDynamicDto">Type of dynamic DTO</typeparam>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <typeparam name="TPrimaryKey">Type of entity primary key</typeparam>
+        /// <param name="entity">entity to map</param>
+        /// <returns></returns>
+        protected async Task<TDynamicDto> MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(TEntity entity) 
+            where TEntity : class, IEntity<TPrimaryKey>
+            where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
+        {
+            // build dto type
+            var context = new DynamicDtoTypeBuildingContext() { 
+                ModelType = typeof(TDynamicDto),
+            };
+            var dtoType = await DtoBuilder.BuildDtoFullProxyTypeAsync(typeof(TDynamicDto), context);
+            var dto = Activator.CreateInstance(dtoType) as TDynamicDto;
+
+            // create mapper
+            var mapper = GetMapper(typeof(TEntity), dtoType);
+
+            // map entity to DTO
+            mapper.Map(entity, dto);
+            // map dynamic fields
+            await DynamicPropertyManager.MapEntityToDtoAsync<TPrimaryKey, TDynamicDto, TEntity>(entity, dto);
+
+            return dto;
+        }
+
+        private IMapper GetMapper(Type sourceType, Type destinationType)
+        {
+            var modelConfigMapperConfig = new MapperConfiguration(cfg =>
+            {
+                var mapExpression = cfg.CreateMap(sourceType, destinationType);
+
+                // todo: move to conventions
+                //cfg.CreateMap<RefListPersonTitle, Int64>().ConvertUsing<EnumToInt64TypeConverter<RefListPersonTitle>>();
+                //cfg.CreateMap<Int64, RefListPersonTitle>().ConvertUsing<Int64ToEnumTypeConverter<RefListPersonTitle>>();
+
+                var entityMapProfile = IocManager.Resolve<EntityMapProfile>();
+                cfg.AddProfile(entityMapProfile);
+            });
+
+            return modelConfigMapperConfig.CreateMapper();
         }
 
         #endregion

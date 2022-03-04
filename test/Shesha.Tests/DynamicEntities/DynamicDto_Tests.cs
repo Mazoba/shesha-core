@@ -39,7 +39,10 @@ namespace Shesha.Tests.DynamicEntities
 
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
 
-            var context = new DynamicDtoTypeBuildingContext() { ModelType = baseDtoType };
+            var context = new DynamicDtoTypeBuildingContext() { 
+                ModelType = baseDtoType,
+                AddFormFieldsProperty = true,
+            };
             var proxyType = await builder.BuildDtoFullProxyTypeAsync(baseDtoType, context);
 
             var properties = proxyType.GetProperties();
@@ -86,7 +89,10 @@ namespace Shesha.Tests.DynamicEntities
 
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
 
-            var context = new DynamicDtoTypeBuildingContext() { ModelType = baseDtoType };
+            var context = new DynamicDtoTypeBuildingContext() { 
+                ModelType = baseDtoType,
+                // AddFormFieldsProperty = false // note: false is a default value for AddFormFieldsProperty. Leave it blank to test default value 
+            };
             var proxyType = await builder.BuildDtoFullProxyTypeAsync(baseDtoType, context);
 
             proxyType.Assembly.IsDynamic.ShouldBeTrue();
@@ -95,7 +101,7 @@ namespace Shesha.Tests.DynamicEntities
 
             properties.ShouldContain(p => p.Name == "Name");
             properties.ShouldContain(p => p.Name == "Description");
-            properties.ShouldContain(p => p.Name == nameof(IHasFormFieldsList._formFields));
+            properties.ShouldNotContain(p => p.Name == nameof(IHasFormFieldsList._formFields));
             proxyType.ShouldNotBeAssignableTo(typeof(IHasFormFieldsList));
 
             var supervisorProp = properties.FirstOrDefault(p => p.Name == supervisorPropName);
