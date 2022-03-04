@@ -17,6 +17,8 @@ namespace Shesha.Web.FormsDesigner.Services
         /// <returns></returns>
         Task<FormDto> GetAsync(Guid id);
 
+        Task<FormDto> GetAsyncOrDefault(Guid id);
+
         /// <summary>
         /// Update form
         /// </summary>
@@ -30,6 +32,9 @@ namespace Shesha.Web.FormsDesigner.Services
         /// <param name="form"></param>
         /// <returns></returns>
         Task<FormDto> CreateAsync(FormDto form);
+
+
+        Task<FormDto> CreateAsync(FormDto form, Guid id);
 
         /// <summary>
         /// Get form by path

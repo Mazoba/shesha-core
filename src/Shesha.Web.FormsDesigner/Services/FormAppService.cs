@@ -218,6 +218,7 @@ namespace Shesha.Web.FormsDesigner.Services
                     var forms = await _formStore.GetAsync(id);
 
                     var configDictionary = new Dictionary<string, string>();
+                    configDictionary.Add("Id", forms.Id.ToString());
                     configDictionary.Add("Path", forms.Path);
                     configDictionary.Add("Name", forms.Name);
                     configDictionary.Add("Description", forms.Description);
@@ -266,15 +267,15 @@ namespace Shesha.Web.FormsDesigner.Services
                 foreach(var config in deserialisedJson)
                 {
                     //Create FormDTO and validate
-                    string formPath = config.GetValueOrDefault("Path");
+                    string formId = config.GetValueOrDefault("Id");
 
-                    var existingFormPath = await _formStore.GetByPathAsync(formPath);
+                    var existingForm = await _formStore.GetAsyncOrDefault(Guid.Parse(formId));
 
-                    if (existingFormPath == null)
+                    if (existingForm == null)
                     {
-                        FormDto form = GenerateFormDtoHelper(config, formPath);
+                        FormDto form = GenerateFormDtoHelper(config, formId);
 
-                        await _formStore.CreateAsync(form);
+                        await _formStore.CreateAsync(form, Guid.Parse(formId));
                         Logger.Info("Config added successfully!");
 
                     }
@@ -284,9 +285,16 @@ namespace Shesha.Web.FormsDesigner.Services
                         Logger.Info("Duplicate config!");
                         //Overide the config
                         Logger.Info("Overwriting them");
-                        FormDto form = GenerateFormDtoHelper(config, formPath);
+                        FormDto form = GenerateFormDtoHelper(config, formId);
 
-                        await _formStore.CreateAsync(form);
+                        existingForm.Markup = form.Markup;
+                        existingForm.Name = form.Name;
+                        existingForm.Path = form.Path;
+                        existingForm.ModelType = form.ModelType;
+                        existingForm.Type = form.Type;
+                        existingForm.Description = form.Description;
+
+                        await _formStore.UpdateAsync(existingForm);
                         Logger.Info("Config added successfully!");
                     }
 
@@ -307,10 +315,11 @@ namespace Shesha.Web.FormsDesigner.Services
         private static FormDto GenerateFormDtoHelper(Dictionary<string, string> config, string formPath)
         {
             FormDto form = new FormDto();
-            form.Path = formPath;
+            form.Id = Guid.Parse(config.GetValueOrDefault("Id"));
             form.Markup = config.GetValueOrDefault("Markup");
             form.Name = config.GetValueOrDefault("Name");
             form.ModelType = config.GetValueOrDefault("ModelType");
+            form.Path = config.GetValueOrDefault("Path");
             form.Description = config.GetValueOrDefault("Description");
             return form;
         }

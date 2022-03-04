@@ -94,5 +94,35 @@ namespace Shesha.Web.FormsDesigner.Services
 
             return ObjectMapper.Map<List<FormDto>>(forms); ;
         }
+
+        public async Task<FormDto> CreateAsync(FormDto formDto, Guid id)
+        {
+            var form = ObjectMapper.Map<Form>(formDto);
+            form.Id = id;
+
+            await _formRepository.InsertAsync(form);
+
+            return ObjectMapper.Map<FormDto>(form);
+        }
+
+        public async Task<FormDto> GetAsyncOrDefault(Guid id)
+        {
+
+            try
+            {
+                var form = await _formRepository.GetAsync(id);
+                       
+   
+                return ObjectMapper.Map<FormDto>(form);
+      
+
+            }catch(Exception e)
+            {
+                return null;
+            }
+           
+
+           
+        }
     }
 }
