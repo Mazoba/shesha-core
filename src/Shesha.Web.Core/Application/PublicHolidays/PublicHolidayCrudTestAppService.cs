@@ -1,4 +1,5 @@
-﻿using Abp.Domain.Repositories;
+﻿using Abp.Application.Services.Dto;
+using Abp.Domain.Repositories;
 using Shesha.Domain;
 using Shesha.DynamicEntities.Dtos;
 using System;
@@ -6,24 +7,24 @@ using System.Threading.Tasks;
 
 namespace Shesha.Application.Persons
 {
-    /*
-    public class PublicHolidayCrudTestAppService : SheshaCrudAppServiceInternal
+    public class PublicHolidayCrudTestAppService : SheshaCrudServiceBase<PublicHoliday, DynamicDto<PublicHoliday, Guid>, Guid>
     {
-        private readonly IRepository<PublicHoliday, Guid> _repository;
-
-        public PublicHolidayCrudTestAppService(IRepository<PublicHoliday, Guid> repository)
+        public PublicHolidayCrudTestAppService(IRepository<PublicHoliday, Guid> repository) : base(repository)
         {
-            _repository = repository;
         }
 
-        public async Task<DynamicDto<PublicHoliday, Guid>> GetAsync(Guid id)
+        public override Task<DynamicDto<PublicHoliday, Guid>> GetAsync(EntityDto<Guid> input)
         {
-            var entity = await _repository.GetAsync(id);
+            return base.GetAsync(input);
+        }
+
+        public async Task<DynamicDto<PublicHoliday, Guid>> TestGetAsync(Guid id)
+        {
+            var entity = await Repository.GetAsync(id);
 
             var dto = await MapToDynamicDtoAsync<PublicHoliday, Guid>(entity);
 
             return dto;
         }
     }
-    */
 }

@@ -156,7 +156,7 @@ namespace Shesha.Tests.DynamicEntities
                     try
                     {
                         // Save dynamic properties to DB
-                        await dynamicPropertyManager.MapDtoToEntityAsync<Guid, DynamicDto<Person, Guid>, Person>(dto,
+                        await dynamicPropertyManager.MapDtoToEntityAsync<DynamicDto<Person, Guid>, Person, Guid>(dto,
                             entity);
                         session?.Flush();
 
@@ -167,7 +167,7 @@ namespace Shesha.Tests.DynamicEntities
 
                         // Create new DTO and map values from entity to DTO
                         var newDto = Activator.CreateInstance(dtoType) as DynamicDto<Person, Guid>;
-                        await dynamicPropertyManager.MapEntityToDtoAsync<Guid, DynamicDto<Person, Guid>, Person>(newEntity,
+                        await dynamicPropertyManager.MapEntityToDtoAsync<DynamicDto<Person, Guid>, Person, Guid>(newEntity,
                             newDto);
 
                         // Check values. Values from the DB should be the same as from the test list

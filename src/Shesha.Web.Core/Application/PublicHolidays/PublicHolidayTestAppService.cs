@@ -23,5 +23,16 @@ namespace Shesha.Application.Persons
 
             return dto;
         }
+
+        public async Task<DynamicDto<PublicHoliday, Guid>> UpdateAsync(DynamicDto<PublicHoliday, Guid> input)
+        {
+            var entity = await _repository.GetAsync(input.Id);
+
+            await MapDynamicDtoToEntityAsync<DynamicDto<PublicHoliday, Guid>, PublicHoliday, Guid>(input, entity);
+
+            await _repository.UpdateAsync(entity);
+
+            return await MapToDynamicDtoAsync<PublicHoliday, Guid>(entity);
+        }
     }
 }
