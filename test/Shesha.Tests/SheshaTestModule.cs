@@ -15,6 +15,7 @@ using Abp.Zero.Configuration;
 using Castle.Facilities.Logging;
 using Castle.MicroKernel.Registration;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using NSubstitute;
@@ -89,7 +90,10 @@ namespace Shesha.Tests
 
             Configuration.Settings.Providers.Add<TestSettingsProvider>();
 
-            Configuration.EntityHistory.Selectors.Add( "Settings", typeof(Setting));
+            Configuration.EntityHistory.Selectors.Add("Settings", typeof(Setting));
+
+            if (!IocManager.IsRegistered<ApplicationPartManager>())
+                IocManager.IocContainer.Register(Component.For<ApplicationPartManager>().ImplementedBy<ApplicationPartManager>());
         }
 
         public override void Initialize()
