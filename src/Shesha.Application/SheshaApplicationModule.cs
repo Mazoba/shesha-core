@@ -1,4 +1,5 @@
 ﻿using Abp;
+using Abp.AspNetCore;
 using Abp.AutoMapper;
 using Abp.Configuration;
 using Abp.Configuration.Startup;
@@ -27,7 +28,8 @@ namespace Shesha
 {
     [DependsOn(
         typeof(AbpKernelModule),
-        typeof(SheshaCoreModule), 
+        typeof(SheshaCoreModule),
+        typeof(AbpAspNetCoreModule),
         typeof(AbpAutoMapperModule))]
     public class SheshaApplicationModule : AbpModule
     {
@@ -107,7 +109,7 @@ namespace Shesha
         {
             var thisAssembly = Assembly.GetExecutingAssembly();
             IocManager.RegisterAssemblyByConvention(thisAssembly);
-
+            
             Configuration.Modules.AbpAutoMapper().Configurators.Add(
                 // Scan the assembly for classes which inherit from AutoMapper.Profile
                 cfg => cfg.AddMaps(thisAssembly)
