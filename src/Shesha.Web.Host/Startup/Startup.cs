@@ -18,6 +18,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Shesha.Configuration;
 using Shesha.DynamicEntities;
+using Shesha.DynamicEntities.Swagger;
 using Shesha.Identity;
 using Shesha.Scheduler.Extensions;
 using Shesha.Swagger;
@@ -104,6 +105,8 @@ namespace Shesha.Web.Host.Startup
                     In = ParameterLocation.Header,
                     Type = SecuritySchemeType.ApiKey
                 });
+
+                options.SchemaFilter<DynamicDtoSchemaFilter>();
             });
 
             services.AddHttpContextAccessor();
