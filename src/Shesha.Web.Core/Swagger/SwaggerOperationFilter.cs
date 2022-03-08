@@ -8,7 +8,10 @@ using Abp.AspNetCore.Mvc.ExceptionHandling;
 using Abp.AspNetCore.Mvc.Results;
 using Abp.Web.Models;
 using Microsoft.OpenApi.Models;
+using Shesha.DynamicEntities;
 using Shesha.Reflection;
+using Shesha.Services;
+using Shesha.Utilities;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Shesha.Swagger
@@ -45,12 +48,25 @@ namespace Shesha.Swagger
                 unwrappedReturnType != typeof(AjaxResponseBase) // not added manually as AjaxResponseBase
                 )
             {
+                if (unwrappedReturnType.IsDynamicDto())
+                {
+                    var dtoBuilder = StaticContext.IocManager.Resolve<IDynamicDtoTypeBuilder>();
+
+                    var builderContext = new DynamicDtoTypeBuildingContext
+                    {
+                        ModelType = unwrappedReturnType
+                    };
+                    var dtoType = AsyncHelper.RunSync(async () => await dtoBuilder.BuildDtoFullProxyTypeAsync(builderContext.ModelType, builderContext));
+                    unwrappedReturnType = dtoType;
+                }
+
                 var wrappedResponseType = typeof(AjaxResponse<>).MakeGenericType(unwrappedReturnType);
 
                 if (operation.Responses.ContainsKey(okResponse))
                     operation.Responses.Remove(okResponse);
 
                 var schema = context.SchemaGenerator.GenerateSchema(wrappedResponseType, context.SchemaRepository);
+
                 //schema.Reference.Id = unwrappedReturnType.Name; // use not wrapped class name
                 //schema.Reference.Id = schema.Reference.Id.RemovePostfix(nameof(AjaxResponse));
                 operation.Responses.Add(okResponse, new OpenApiResponse()

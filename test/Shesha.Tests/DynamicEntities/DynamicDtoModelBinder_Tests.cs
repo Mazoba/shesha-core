@@ -1,4 +1,5 @@
-﻿using Abp.TestBase;
+﻿using Abp.Runtime.Caching;
+using Abp.TestBase;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -211,7 +212,8 @@ namespace Shesha.Tests.DynamicEntities
                 });
 
             var entityConfigStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
-            return new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore);
+            var cacheManager = LocalIocManager.Resolve<ICacheManager>();
+            return new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore, cacheManager);
         }
 
         #endregion

@@ -85,7 +85,9 @@ namespace Shesha.Web.Host.Startup
 
                 options.OperationFilter<SwaggerOperationFilter>();
                 options.OperationFilter<SwaggerDefaultValues>();
-
+                
+                options.CustomSchemaIds(type => SwaggerHelper.GetSchemaId(type));
+                
                 options.CustomOperationIds(desc => desc.ActionDescriptor is ControllerActionDescriptor d 
                     ? d.ControllerName.ToCamelCase() + d.ActionName.ToPascalCase()
                     : null);

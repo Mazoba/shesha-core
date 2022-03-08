@@ -1,4 +1,5 @@
-﻿using Abp.TestBase;
+﻿using Abp.Runtime.Caching;
+using Abp.TestBase;
 using Moq;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
@@ -35,7 +36,8 @@ namespace Shesha.Tests.DynamicEntities
                 });
 
             var entityConfigStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
-            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore);
+            var cacheManager = LocalIocManager.Resolve<ICacheManager>();
+            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore, cacheManager);
 
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
 
@@ -85,7 +87,8 @@ namespace Shesha.Tests.DynamicEntities
                 });
 
             var entityConfigStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
-            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore);
+            var cacheManager = LocalIocManager.Resolve<ICacheManager>();
+            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore, cacheManager);
 
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
 

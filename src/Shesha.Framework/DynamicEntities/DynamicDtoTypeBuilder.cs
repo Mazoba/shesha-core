@@ -2,6 +2,8 @@
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
+using Abp.Events.Bus.Entities;
+using Abp.Events.Bus.Handlers;
 using Abp.ObjectMapping;
 using Abp.Runtime.Caching;
 using Castle.Core.Logging;
@@ -22,20 +24,27 @@ using System.Threading.Tasks;
 
 namespace Shesha.DynamicEntities
 {
-    public class DynamicDtoTypeBuilder : IDynamicDtoTypeBuilder, ITransientDependency
+    public class DynamicDtoTypeBuilder : IEventHandler<EntityChangedEventData<EntityProperty>>, IDynamicDtoTypeBuilder, ITransientDependency
     {
         private readonly IEntityConfigCache _entityConfigCache;
         private IEntityConfigurationStore _entityConfigurationStore;
+        private readonly ICacheManager _cacheManager;
+
+        /// <summary>
+        /// Cache of the ReferenceListItems
+        /// </summary>
+        protected ITypedCache<string, Type> FullProxyCache => _cacheManager.GetCache<string, Type>("DynamicDtoTypeBuilder_FullProxyCache");
 
         /// <summary>
         /// Reference to the logger to write logs.
         /// </summary>
         public ILogger Logger { protected get; set; } = NullLogger.Instance;
 
-        public DynamicDtoTypeBuilder(IEntityConfigCache entityConfigCache, IEntityConfigurationStore entityConfigurationStore)
+        public DynamicDtoTypeBuilder(IEntityConfigCache entityConfigCache, IEntityConfigurationStore entityConfigurationStore, ICacheManager cacheManager)
         {
             _entityConfigCache = entityConfigCache;
             _entityConfigurationStore = entityConfigurationStore;
+            _cacheManager = cacheManager;
         }
 
         /// inheritedDoc
@@ -315,6 +324,11 @@ namespace Shesha.DynamicEntities
 
         public async Task<Type> BuildDtoFullProxyTypeAsync(Type baseType, DynamicDtoTypeBuildingContext context)
         {
+            var cacheKey = GetTypeCacheKey(baseType);
+            var cachedType = await FullProxyCache.GetOrDefaultAsync(cacheKey);
+            if (cachedType != null)
+                return cachedType;
+
             var proxyClassName = GetProxyTypeName(baseType, "FullProxy");
             var properties = await GetDynamicPropertiesAsync(baseType, context);
             
@@ -326,6 +340,8 @@ namespace Shesha.DynamicEntities
                 interfaces.Add(typeof(IHasFormFieldsList));
 
             var type = await CompileResultTypeAsync(baseType, proxyClassName, interfaces, properties, context);
+
+            await FullProxyCache.SetAsync(cacheKey, type);
 
             return type;
         }
@@ -349,6 +365,27 @@ namespace Shesha.DynamicEntities
             context.ClassCreated(objectType);
 
             return objectType;
+        }
+
+        private string GetTypeCacheKey(Type type) 
+        {
+            var entityType = DynamicDtoExtensions.GetDynamicDtoEntityType(type);
+            if (entityType == null)
+                throw new NotSupportedException($"Type '{type.FullName}' is not a dynamic DTO");
+
+            return entityType.FullName;
+        }
+
+        public void HandleEvent(EntityChangedEventData<EntityProperty> eventData)
+        {
+            var entityConfig = eventData.Entity?.EntityConfig;
+
+            if (entityConfig == null)
+                return;
+
+            var cacheKey = $"{entityConfig.Namespace}.{entityConfig.ClassName}";
+
+            FullProxyCache.Remove(cacheKey);
         }
     }
 }

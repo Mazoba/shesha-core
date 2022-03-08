@@ -15,6 +15,7 @@ using Shesha.Metadata;
 using Shesha.NHibernate.UoW;
 using Xunit;
 using Shesha.Configuration.Runtime;
+using Abp.Runtime.Caching;
 
 namespace Shesha.Tests.DynamicEntities
 {
@@ -84,7 +85,8 @@ namespace Shesha.Tests.DynamicEntities
                 });
 
             var entityConfigStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
-            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore);
+            var cacheManager = LocalIocManager.Resolve<ICacheManager>();
+            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore, cacheManager);
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
             var context = new DynamicDtoTypeBuildingContext() { ModelType = baseDtoType };
             var dtoType = await builder.BuildDtoFullProxyTypeAsync(baseDtoType, context);
