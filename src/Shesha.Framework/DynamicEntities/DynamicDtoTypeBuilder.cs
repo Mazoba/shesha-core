@@ -33,7 +33,7 @@ namespace Shesha.DynamicEntities
         /// <summary>
         /// Cache of the ReferenceListItems
         /// </summary>
-        protected ITypedCache<string, Type> FullProxyCache => _cacheManager.GetCache<string, Type>("DynamicDtoTypeBuilder_FullProxyCache");
+        protected ITypedCache<string, DynamicDtoProxyCacheItem> FullProxyCache => _cacheManager.GetCache<string, DynamicDtoProxyCacheItem>("DynamicDtoTypeBuilder_FullProxyCache");
 
         /// <summary>
         /// Reference to the logger to write logs.
@@ -324,10 +324,13 @@ namespace Shesha.DynamicEntities
 
         public async Task<Type> BuildDtoFullProxyTypeAsync(Type baseType, DynamicDtoTypeBuildingContext context)
         {
-            var cacheKey = GetTypeCacheKey(baseType);
-            var cachedType = await FullProxyCache.GetOrDefaultAsync(cacheKey);
-            if (cachedType != null)
-                return cachedType;
+            var cacheKey = GetTypeCacheKey(baseType, context);
+            var cachedDtoItem = await FullProxyCache.GetOrDefaultAsync(cacheKey);
+            if (cachedDtoItem != null) 
+            {
+                context.Classes = cachedDtoItem.NestedClasses.ToDictionary(i => i.Key, i => i.Value);
+                return cachedDtoItem.DtoType;
+            }                
 
             var proxyClassName = GetProxyTypeName(baseType, "FullProxy");
             var properties = await GetDynamicPropertiesAsync(baseType, context);
@@ -341,7 +344,10 @@ namespace Shesha.DynamicEntities
 
             var type = await CompileResultTypeAsync(baseType, proxyClassName, interfaces, properties, context);
 
-            await FullProxyCache.SetAsync(cacheKey, type);
+            await FullProxyCache.SetAsync(cacheKey, new DynamicDtoProxyCacheItem { 
+                DtoType = type,
+                NestedClasses = context.Classes.ToDictionary(i => i.Key, i => i.Value)
+            });
 
             return type;
         }
@@ -367,13 +373,13 @@ namespace Shesha.DynamicEntities
             return objectType;
         }
 
-        private string GetTypeCacheKey(Type type) 
+        private string GetTypeCacheKey(Type type, DynamicDtoTypeBuildingContext context) 
         {
             var entityType = DynamicDtoExtensions.GetDynamicDtoEntityType(type);
             if (entityType == null)
                 throw new NotSupportedException($"Type '{type.FullName}' is not a dynamic DTO");
 
-            return entityType.FullName;
+            return $"{entityType.FullName}|formFields:{context.AddFormFieldsProperty.ToString().ToLower()}";
         }
 
         public void HandleEvent(EntityChangedEventData<EntityProperty> eventData)

@@ -57,6 +57,40 @@ namespace Shesha.Tests.DynamicEntities
         }
 
         [Fact]
+        public async Task BuildFullDynamicDto_HasNoSideEffect_Test() 
+        {
+            var entityConfigCacheMock = new Mock<IEntityConfigCache>();
+
+            entityConfigCacheMock.Setup(x => x.GetEntityPropertiesAsync(It.IsAny<Type>()))
+                .Returns(() => {
+                    var result = new EntityPropertyDtoList();
+                    var r = result as List<EntityPropertyDto>;
+                    return Task.FromResult(r);
+                });
+
+            var entityConfigStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
+            var cacheManager = LocalIocManager.Resolve<ICacheManager>();
+            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore, cacheManager);
+
+            var baseDtoType = typeof(DynamicDto<Person, Guid>);
+
+            var proxyType1 = await builder.BuildDtoFullProxyTypeAsync(baseDtoType, new DynamicDtoTypeBuildingContext()
+            {
+                ModelType = baseDtoType,
+                AddFormFieldsProperty = true,
+            });
+
+            var proxyType2 = await builder.BuildDtoFullProxyTypeAsync(baseDtoType, new DynamicDtoTypeBuildingContext()
+            {
+                ModelType = baseDtoType,
+                AddFormFieldsProperty = false,
+            });
+
+            proxyType1.GetProperties().ShouldContain(p => p.Name == nameof(IHasFormFieldsList._formFields));
+            proxyType2.GetProperties().ShouldNotContain(p => p.Name == nameof(IHasFormFieldsList._formFields), $"Check internal cache in the '{nameof(DynamicDtoTypeBuilder)}'. Looks like property `{nameof(IHasFormFieldsList._formFields)}` exists in the result type because of caching");
+        }
+
+        [Fact]
         public async Task BuildDynamicDto_Test()
         {
             var entityConfigCacheMock = new Mock<IEntityConfigCache>();

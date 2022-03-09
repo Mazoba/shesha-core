@@ -43,6 +43,14 @@ namespace Shesha.DynamicEntities.Swagger
 
                 schema.Properties.Add(property.Name.ToCamelCase(), propertySchema);
             }
+
+            // add `_formFields` with comment
+            var formFieldsProp = typeof(IHasFormFieldsList).GetProperty(nameof(IHasFormFieldsList._formFields));
+            if (!propNames.Contains(formFieldsProp.Name.ToLower())) 
+            {
+                var formFieldsSchema = context.SchemaGenerator.GenerateSchema(formFieldsProp.PropertyType, context.SchemaRepository, memberInfo: formFieldsProp);
+                schema.Properties.Add(formFieldsProp.Name, formFieldsSchema);
+            }
         }
     }
 }
