@@ -1,5 +1,4 @@
 ﻿using Abp;
-using Abp.AspNetCore;
 using Abp.AutoMapper;
 using Abp.Configuration;
 using Abp.Configuration.Startup;
@@ -29,7 +28,6 @@ namespace Shesha
     [DependsOn(
         typeof(AbpKernelModule),
         typeof(SheshaCoreModule),
-        typeof(AbpAspNetCoreModule),
         typeof(AbpAutoMapperModule))]
     public class SheshaApplicationModule : AbpModule
     {
