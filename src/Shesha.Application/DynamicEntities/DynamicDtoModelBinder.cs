@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Shesha.DynamicEntities.Dtos;
 using Shesha.Services;
 using System;
@@ -113,6 +115,7 @@ namespace Shesha.DynamicEntities
             }
 
             var httpContext = bindingContext.HttpContext;
+            httpContext.Request.EnableBuffering(); // enable buffering to read body twice
 
             #region 
 
@@ -182,6 +185,7 @@ namespace Shesha.DynamicEntities
 
             try
             {
+                var body = await GetRequestBodyAsync(httpContext); // read body (will be used on later stage)
                 var result = await formatter.ReadAsync(formatterContext);
 
                 if (result.HasError)
@@ -195,7 +199,10 @@ namespace Shesha.DynamicEntities
                 {
                     if (result.Model is IHasFormFieldsList modelWithFormFields) 
                     {
-                        //var formFields = modelWithFormFields._formFields.Select(f => f.ToLower()).ToList();
+                        // if _formFields is missing in the request - build it automatically according to the json request
+                        if (modelWithFormFields._formFields == null)
+                            modelWithFormFields._formFields = GetFormFieldsFromBody(body);
+
                         var bindKeys = GetAllPropertyKeys(modelWithFormFields._formFields);
 
                         var buildContext = new DynamicDtoTypeBuildingContext {
@@ -212,15 +219,6 @@ namespace Shesha.DynamicEntities
                         bindingContext.Result = ModelBindingResult.Success(effectiveModel);
                     } else
                         bindingContext.Result = ModelBindingResult.Success(result.Model);
-
-                    // map results (form manual bindings only)
-                    /*
-                    if (bindingContext.Model != null && result.Model != null) 
-                    {
-                        var mapper = GetMapper(result.Model.GetType(), bindingContext.Model.GetType());
-                        mapper.Map(result.Model, bindingContext.Model);
-                    }
-                    */
                 }
                 else
                 {
@@ -264,6 +262,46 @@ namespace Shesha.DynamicEntities
             }
 
             return result;
+        }
+
+        private async Task<string> GetRequestBodyAsync(HttpContext httpContext)
+        {
+            // Leave the body open so the next middleware can read it.
+            using (var reader = new StreamReader(
+                httpContext.Request.Body,
+                encoding: Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: false,
+                leaveOpen: true))
+            {
+                var body = await reader.ReadToEndAsync();
+                // Reset the request body stream position so the next middleware can read it
+                httpContext.Request.Body.Position = 0;
+
+                return body;      
+            }
+        }
+
+        private void FillPropertyNamesRecursive(JObject jsonObject, List<string>  propertyNames, string prefix = "")
+        {
+            if (jsonObject == null)
+                return;
+
+            foreach (JProperty property in jsonObject.Properties())
+            {
+                propertyNames.Add(prefix + property.Name);
+                if (property.Value != null && property.Value is JObject nestedJsonObject)
+                    FillPropertyNamesRecursive(nestedJsonObject, propertyNames, property.Name + ".");
+            }
+        }
+
+        private List<string> GetFormFieldsFromBody(string body)
+        {
+            var propertyNames = new List<string>();
+
+            var jsonObject = JObject.Parse(body);
+            FillPropertyNamesRecursive(jsonObject, propertyNames);
+
+            return propertyNames;
         }
 
         private IMapper GetMapper(Type sourceType, Type destinationType, Dictionary<string, Type> classes)
