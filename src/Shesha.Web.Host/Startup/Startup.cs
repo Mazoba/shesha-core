@@ -85,7 +85,6 @@ namespace Shesha.Web.Host.Startup
                 options.AddXmlDocuments();
 
                 options.OperationFilter<SwaggerOperationFilter>();
-                options.OperationFilter<SwaggerDefaultValues>();
                 
                 options.CustomSchemaIds(type => SwaggerHelper.GetSchemaId(type));
                 
@@ -107,6 +106,19 @@ namespace Shesha.Web.Host.Startup
                 });
 
                 options.SchemaFilter<DynamicDtoSchemaFilter>();
+            });
+
+            services.AddApiVersioning(options =>
+            {
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                options.DefaultApiVersion = ApiVersion.Default;
+                options.ReportApiVersions = true;
+            });
+
+            services.AddVersionedApiExplorer(options =>
+            {
+                options.GroupNameFormat = "'v'VVV";
+                options.SubstituteApiVersionInUrl = true;
             });
 
             services.AddHttpContextAccessor();
