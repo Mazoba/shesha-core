@@ -41,6 +41,11 @@ namespace Shesha.DynamicEntities
         /// </summary>
         public bool AddFormFieldsProperty { get; set; }
 
+        /// <summary>
+        /// If true, indicates that entity references should be mapped as DTOs (id and display name) instead of raw values (id)
+        /// </summary>
+        public bool UseDtoForEntityReferences { get; set; }
+
         #region IHasNamePrefixStack implementation
 
         private Stack<string> _namePrefixStack = new Stack<string>();

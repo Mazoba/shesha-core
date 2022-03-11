@@ -7,7 +7,7 @@ using System;
 namespace Shesha.ObjectMapper
 {
     /// <summary>
-    /// Id to Entity cnoverter
+    /// Id to Entity converter
     /// </summary>
     public class IdToEntityConverter<TEntity, TId> : ITypeConverter<TId, TEntity> where TEntity: class, IEntity<TId>
     {
@@ -18,7 +18,7 @@ namespace Shesha.ObjectMapper
 
             var repository = StaticContext.IocManager.Resolve<IRepository<TEntity, TId>>();
 
-            return repository.Get(source);
+            return repository.FirstOrDefault(source);
         }
     }
 }

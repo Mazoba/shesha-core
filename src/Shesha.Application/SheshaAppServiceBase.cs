@@ -244,10 +244,11 @@ namespace Shesha
         /// <typeparam name="TEntity">Type of entity</typeparam>
         /// <typeparam name="TPrimaryKey">Type of entity primary key</typeparam>
         /// <param name="entity">entity to map</param>
+        /// <param name="settings">mapping settings</param>
         /// <returns></returns>
-        protected async Task<DynamicDto<TEntity, TPrimaryKey>> MapToDynamicDtoAsync<TEntity, TPrimaryKey>(TEntity entity) where TEntity : class, IEntity<TPrimaryKey>
+        protected async Task<DynamicDto<TEntity, TPrimaryKey>> MapToDynamicDtoAsync<TEntity, TPrimaryKey>(TEntity entity, IDynamicMappingSettings settings = null) where TEntity : class, IEntity<TPrimaryKey>
         {
-            return await MapToCustomDynamicDtoAsync<DynamicDto<TEntity, TPrimaryKey>, TEntity, TPrimaryKey>(entity);
+            return await MapToCustomDynamicDtoAsync<DynamicDto<TEntity, TPrimaryKey>, TEntity, TPrimaryKey>(entity, settings);
         }
 
         /// <summary>
@@ -257,14 +258,16 @@ namespace Shesha
         /// <typeparam name="TEntity">Type of entity</typeparam>
         /// <typeparam name="TPrimaryKey">Type of entity primary key</typeparam>
         /// <param name="entity">entity to map</param>
+        /// <param name="settings">mapping settings</param>
         /// <returns></returns>
-        protected async Task<TDynamicDto> MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(TEntity entity) 
+        protected async Task<TDynamicDto> MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(TEntity entity, IDynamicMappingSettings settings = null) 
             where TEntity : class, IEntity<TPrimaryKey>
             where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
         {
             // build dto type
             var context = new DynamicDtoTypeBuildingContext() { 
                 ModelType = typeof(TDynamicDto),
+                UseDtoForEntityReferences = settings?.UseDtoForEntityReferences ?? false
             };
             var dtoType = await DtoBuilder.BuildDtoFullProxyTypeAsync(typeof(TDynamicDto), context);
             var dto = Activator.CreateInstance(dtoType) as TDynamicDto;
