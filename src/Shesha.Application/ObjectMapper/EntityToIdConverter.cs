@@ -7,7 +7,7 @@ using System;
 namespace Shesha.ObjectMapper
 {
     /// <summary>
-    /// Id to Entity cnoverter
+    /// Id to Entity converter
     /// </summary>
     public class EntityToIdConverter<TEntity, TId> : ITypeConverter<TEntity, TId> where TEntity: class, IEntity<TId>
     {

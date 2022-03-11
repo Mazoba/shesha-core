@@ -1,6 +1,7 @@
 ﻿using Abp.Dependency;
 using Abp.Reflection;
 using Shesha.AutoMapper;
+using Shesha.AutoMapper.Dto;
 using Shesha.Extensions;
 using Shesha.Services;
 using System;
@@ -27,12 +28,12 @@ namespace Shesha.ObjectMapper
             {
                 var idType = entityType.GetEntityIdType();
 
-                Converters.Add(new ConverterInfo { 
-                    EntityType = entityType, 
-                    IdType = idType, 
-                    IdToEntityConverter = typeof(IdToEntityConverter<,>).MakeGenericType(entityType, idType),
-                    EntityToIdConverter = typeof(EntityToIdConverter<,>).MakeGenericType(entityType, idType),
-                });
+                Converters.Add(new ConverterInfo(idType, entityType, typeof(IdToEntityConverter<,>).MakeGenericType(entityType, idType)));
+                Converters.Add(new ConverterInfo(entityType, idType, typeof(EntityToIdConverter<,>).MakeGenericType(entityType, idType)));
+
+                var dtoType = typeof(EntityWithDisplayNameDto<>).MakeGenericType(idType);
+                Converters.Add(new ConverterInfo(dtoType, entityType, typeof(EntityWithDisplayNameDtoToEntityConverter<,>).MakeGenericType(entityType, idType)));
+                Converters.Add(new ConverterInfo(entityType, dtoType, typeof(EntityToEntityWithDisplayNameDtoConverter<,>).MakeGenericType(entityType, idType)));
             }
         }
 
@@ -40,17 +41,22 @@ namespace Shesha.ObjectMapper
         {
             foreach (var converterInfo in Converters) 
             {
-                CreateMap(converterInfo.IdType, converterInfo.EntityType).ConvertUsing(converterInfo.IdToEntityConverter);
-                CreateMap(converterInfo.EntityType, converterInfo.IdType).ConvertUsing(converterInfo.EntityToIdConverter);
+                CreateMap(converterInfo.SrcType, converterInfo.DstType).ConvertUsing(converterInfo.ConverterType);
             }
         }
 
         public class ConverterInfo 
-        { 
-            public Type EntityType { get; set; }
-            public Type IdType { get; set; }
-            public Type IdToEntityConverter { get; set; }
-            public Type EntityToIdConverter { get; set; }
+        {
+            public Type SrcType { get; set; }
+            public Type DstType { get; set; }
+            public Type ConverterType { get; set; }
+
+            public ConverterInfo(Type srcType, Type dstType, Type converterType)
+            {
+                SrcType = srcType;
+                DstType = dstType;
+                ConverterType = converterType;
+            }
         }
     }
 }

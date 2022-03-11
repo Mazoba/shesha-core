@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
@@ -126,11 +127,19 @@ namespace Shesha.DynamicEntities
             if (modelType is IDynamicDtoProxy)
                 throw new NotSupportedException($"{this.GetType().FullName} doesn't support binding of the dynamic poxies. Type `{modelType.FullName}` is implementing `{nameof(IDynamicDtoProxy)}` interface");
 
+
+            var defaultMetadata = bindingContext.ModelMetadata as DefaultModelMetadata;
+            var bindingSettings = defaultMetadata != null
+                ? defaultMetadata.Attributes.ParameterAttributes?.OfType<IDynamicMappingSettings>().FirstOrDefault()
+                : null;
+            bindingSettings = bindingSettings ?? new DynamicMappingSettings();
+
             var fullDtoBuildContext = new DynamicDtoTypeBuildingContext
             {
                 ModelType = bindingContext.ModelType,
                 PropertyFilter = propName => true,
                 AddFormFieldsProperty = true,
+                UseDtoForEntityReferences = bindingSettings.UseDtoForEntityReferences,
             };
             modelType = await _dtoBuilder.BuildDtoFullProxyTypeAsync(bindingContext.ModelType, fullDtoBuildContext);
 

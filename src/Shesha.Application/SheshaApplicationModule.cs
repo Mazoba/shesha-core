@@ -29,7 +29,7 @@ namespace Shesha
     [DependsOn(
         typeof(AbpKernelModule),
         typeof(SheshaCoreModule),
-        typeof(AbpAspNetCoreModule),
+        //typeof(AbpAspNetCoreModule),
         typeof(AbpAutoMapperModule))]
     public class SheshaApplicationModule : AbpModule
     {

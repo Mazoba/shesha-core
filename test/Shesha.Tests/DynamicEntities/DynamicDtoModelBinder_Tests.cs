@@ -88,7 +88,36 @@ namespace Shesha.Tests.DynamicEntities
             level1_level2_Prop1_Value.ShouldBe("NestedLevel2_Prop1 string value");
         }
 
-        private (PropertyInfo, object) GetPropertyAndValue(object container, string propertyName, bool requireProperty = true, bool requireValue = true) 
+        [Fact]
+        public async Task BindEntityReference_DtoMode_Test()
+        {
+            var bindingResult = await BindAsync<PersonDynamicDto>("entityReference_DtoMode.json", "entityReference_DtoMode.metadata.json");
+
+            // Assert
+            Assert.True(bindingResult.IsModelSet);
+
+            var model = bindingResult.Model;
+
+            var testItems = new Dictionary<string, object>
+            {
+                { "FirstName", "John" },
+                { "LastName", "Doe" },
+                { "Title", (int)RefListPersonTitle.Mr },
+                { "DynamicDate", new DateTime(2022, 1, 4) },
+                { "DynamicDateTime", new DateTime(2021, 4, 8, 21, 15, 10) },
+                { "DynamicBool", true },
+            };
+
+            foreach (var item in testItems)
+            {
+                var (prop, value) = GetPropertyAndValue(model, item.Key);
+                value.ShouldBe(item.Value);
+            }
+        }
+
+        #region private methods
+
+        private (PropertyInfo, object) GetPropertyAndValue(object container, string propertyName, bool requireProperty = true, bool requireValue = true)
         {
             var property = container.GetType().GetProperty(propertyName);
             if (requireProperty && property == null)
@@ -101,7 +130,7 @@ namespace Shesha.Tests.DynamicEntities
             return (property, value);
         }
 
-        private async Task<ModelBindingResult> BindAsync<TModel>(string jsonResourceName, string schemaResourceName) 
+        private async Task<ModelBindingResult> BindAsync<TModel>(string jsonResourceName, string schemaResourceName)
         {
             // Arrange
             var mockInputFormatter = new Mock<IInputFormatter>();
@@ -133,8 +162,6 @@ namespace Shesha.Tests.DynamicEntities
 
             return bindingContext.Result;
         }
-
-        #region private methods
 
         private async Task<object> ReadJsonRequestAsync(Type modelType, string jsonResourceName) 
         {

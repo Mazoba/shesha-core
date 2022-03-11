@@ -8,6 +8,7 @@ using Abp.ObjectMapping;
 using Abp.Runtime.Caching;
 using Castle.Core.Logging;
 using NHibernate.Linq;
+using Shesha.AutoMapper.Dto;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.DynamicEntities.Cache;
@@ -151,7 +152,7 @@ namespace Shesha.DynamicEntities
                     }
 
                 case DataTypes.EntityReference:
-                    return GetEntityReferenceType(propertyDto);
+                    return GetEntityReferenceType(propertyDto, context);
                 case DataTypes.Array:
                     return null;
                 case DataTypes.Object:
@@ -161,7 +162,7 @@ namespace Shesha.DynamicEntities
             }
         }
 
-        private Type GetEntityReferenceType(EntityPropertyDto propertyDto) 
+        private Type GetEntityReferenceType(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context) 
         {
             if (propertyDto.DataType != DataTypes.EntityReference)
                 throw new NotSupportedException($"DataType {propertyDto.DataType} is not supported. Expected {DataTypes.EntityReference}");
@@ -170,7 +171,12 @@ namespace Shesha.DynamicEntities
                 return null;
 
             var entityConfig = _entityConfigurationStore.Get(propertyDto.EntityType);
-            return entityConfig?.IdType;
+            if (entityConfig == null)
+                return null;
+
+            return context.UseDtoForEntityReferences
+                ? typeof(EntityWithDisplayNameDto<>).MakeGenericType(entityConfig.IdType)
+                : entityConfig?.IdType;
         }
 
         private async Task<Type> BuildNestedTypeAsync(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context) 
@@ -379,7 +385,7 @@ namespace Shesha.DynamicEntities
             if (entityType == null)
                 throw new NotSupportedException($"Type '{type.FullName}' is not a dynamic DTO");
 
-            return $"{entityType.FullName}|formFields:{context.AddFormFieldsProperty.ToString().ToLower()}";
+            return $"{entityType.FullName}|formFields:{context.AddFormFieldsProperty.ToString().ToLower()}|useEntityDtos:{context.UseDtoForEntityReferences.ToString().ToLower()}";
         }
 
         public void HandleEvent(EntityChangedEventData<EntityProperty> eventData)

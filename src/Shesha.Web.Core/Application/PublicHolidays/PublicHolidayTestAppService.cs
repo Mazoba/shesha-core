@@ -1,5 +1,6 @@
 ﻿using Abp.Domain.Repositories;
 using Shesha.Domain;
+using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Dtos;
 using System;
 using System.Threading.Tasks;
