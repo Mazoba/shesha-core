@@ -108,18 +108,18 @@ namespace Shesha.Web.Host.Startup
                 options.SchemaFilter<DynamicDtoSchemaFilter>();
             });
 
-            services.AddApiVersioning(options =>
-            {
-                options.AssumeDefaultVersionWhenUnspecified = true;
-                options.DefaultApiVersion = ApiVersion.Default;
-                options.ReportApiVersions = true;
-            });
+            //services.AddApiVersioning(options =>
+            //{
+            //    options.AssumeDefaultVersionWhenUnspecified = true;
+            //    options.DefaultApiVersion = ApiVersion.Default;
+            //    options.ReportApiVersions = true;
+            //});
 
-            services.AddVersionedApiExplorer(options =>
-            {
-                options.GroupNameFormat = "'v'VVV";
-                options.SubstituteApiVersionInUrl = true;
-            });
+            //services.AddVersionedApiExplorer(options =>
+            //{
+            //    options.GroupNameFormat = "'v'VVV";
+            //    options.SubstituteApiVersionInUrl = true;
+            //});
 
             services.AddHttpContextAccessor();
             services.AddHangfire(config =>
