@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Moq;
 using Shesha.Domain.Enums;
-using Shesha.ObjectMapper;
+using Shesha.DynamicEntities.Mapper;
 using System;
 using Xunit;
 
