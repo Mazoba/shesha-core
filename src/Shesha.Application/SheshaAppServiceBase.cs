@@ -14,8 +14,8 @@ using NHibernate.Linq;
 using Shesha.Authorization.Users;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Dtos;
+using Shesha.DynamicEntities.Mapper;
 using Shesha.MultiTenancy;
-using Shesha.ObjectMapper;
 using Shesha.Services;
 using System;
 using System.Globalization;
@@ -57,6 +57,11 @@ namespace Shesha
         /// Dynamic property manager
         /// </summary>
         public IDynamicPropertyManager DynamicPropertyManager { get; set; }
+
+        /// <summary>
+        /// Dynamic DTO mapping helper
+        /// </summary>
+        public IDynamicDtoMappingHelper DynamicDtoMappingHelper { get; set; }
 
         private IUrlHelper _url;
 
@@ -273,7 +278,7 @@ namespace Shesha
             var dto = Activator.CreateInstance(dtoType) as TDynamicDto;
 
             // create mapper
-            var mapper = GetDynamicDtoMapper(typeof(TEntity), dtoType);
+            var mapper = await DynamicDtoMappingHelper.GetEntityToDtoMapperAsync(typeof(TEntity), dtoType);
 
             // map entity to DTO
             mapper.Map(entity, dto);
@@ -281,23 +286,6 @@ namespace Shesha
             await DynamicPropertyManager.MapEntityToDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(entity, dto);
 
             return dto;
-        }
-
-        protected IMapper GetDynamicDtoMapper(Type sourceType, Type destinationType)
-        {
-            var modelConfigMapperConfig = new MapperConfiguration(cfg =>
-            {
-                var mapExpression = cfg.CreateMap(sourceType, destinationType);
-
-                var entityMapProfile = IocManager.Resolve<EntityMapProfile>();
-                cfg.AddProfile(entityMapProfile);
-
-                var reflistMapProfile = IocManager.Resolve<ReferenceListMapProfile>();
-                cfg.AddProfile(reflistMapProfile);
-                
-            });
-
-            return modelConfigMapperConfig.CreateMapper();
         }
 
         /// <summary>
@@ -313,7 +301,8 @@ namespace Shesha
             where TEntity : class, IEntity<TPrimaryKey>
             where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
         {
-            var mapper = GetDynamicDtoMapper(dto.GetType(), entity.GetType());
+            var mapper = await DynamicDtoMappingHelper.GetDtoToEntityMapperAsync(dto.GetType(), entity.GetType());
+
             mapper.Map(dto, entity);
         }
 

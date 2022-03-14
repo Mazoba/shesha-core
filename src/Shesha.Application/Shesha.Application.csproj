@@ -38,4 +38,7 @@
     <ProjectReference Include="..\Shesha.Framework\Shesha.Framework.csproj" />
     <ProjectReference Include="..\Shesha.Web.Controls\Shesha.Web.Controls.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ObjectMapper\" />
+  </ItemGroup>
 </Project>

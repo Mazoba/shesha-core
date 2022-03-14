@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using System;
 
-namespace Shesha.ObjectMapper
+namespace Shesha.DynamicEntities.Mapper
 {
     /// <summary>
     /// Enum to numeric converter

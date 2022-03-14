@@ -6,7 +6,7 @@ using Shesha.Extensions;
 using Shesha.Services;
 using System;
 
-namespace Shesha.ObjectMapper
+namespace Shesha.DynamicEntities.Mapper
 {
     /// <summary>
     /// Entity to EntityWithDisplayNameDto converter

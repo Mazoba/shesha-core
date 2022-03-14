@@ -4,7 +4,7 @@ using AutoMapper;
 using Shesha.Services;
 using System;
 
-namespace Shesha.ObjectMapper
+namespace Shesha.DynamicEntities.Mapper
 {
     /// <summary>
     /// Id to Entity converter
