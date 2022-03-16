@@ -1,4 +1,5 @@
 ﻿using Abp.Authorization;
+using Abp.Domain.Uow;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Shesha.Authorization.Roles;
@@ -10,11 +11,15 @@ namespace Shesha.Authorization.Users
         public UserClaimsPrincipalFactory(
             UserManager userManager,
             RoleManager roleManager,
-            IOptions<IdentityOptions> optionsAccessor)
+            IOptions<IdentityOptions> optionsAccessor,
+            IUnitOfWorkManager unitOfWorkManager
+            )
             : base(
                   userManager,
                   roleManager,
-                  optionsAccessor)
+                  optionsAccessor,
+                  unitOfWorkManager
+                  )
         {
         }
     }

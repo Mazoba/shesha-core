@@ -116,7 +116,7 @@ namespace Shesha.Services
 
             await ListItemsCache.SetAsync(cacheKey,
                 itemDtos,
-                absoluteExpireTime: TimeSpan.FromMinutes(60));
+                slidingExpireTime: TimeSpan.FromMinutes(60));
 
             return itemDtos;
         }
@@ -143,7 +143,7 @@ namespace Shesha.Services
 
             ListItemsCache.Set(cacheKey,
                 itemDtos,
-                absoluteExpireTime: TimeSpan.FromMinutes(60));
+                slidingExpireTime: TimeSpan.FromMinutes(60));
 
             return itemDtos;
         }

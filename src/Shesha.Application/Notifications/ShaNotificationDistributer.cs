@@ -507,7 +507,8 @@ namespace Shesha.Notifications
                 {
                     using (var notifier = _iocResolver.ResolveAsDisposable<IRealTimeNotifier>(notifierType))
                     {
-                        notifier.Object.SendNotifications(userNotifications);
+                        // ToDo: ABP662
+                        notifier.Object.SendNotificationsAsync(userNotifications);
                     }
                 }
                 catch (Exception ex)

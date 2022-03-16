@@ -29,9 +29,9 @@
     <ProjectReference Include="..\Shesha.Web.Controls\Shesha.Web.Controls.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Abp.AspNetCore" Version="5.0.0" />
-    <PackageReference Include="Abp.AspNetCore.SignalR" Version="5.0.0" />
-    <PackageReference Include="Abp.ZeroCore" Version="5.0.0" />
+    <PackageReference Include="Abp.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Abp.AspNetCore.SignalR" Version="6.6.2" />
+    <PackageReference Include="Abp.ZeroCore" Version="6.6.2" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer" Version="5.0.0" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />

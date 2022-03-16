@@ -153,8 +153,8 @@ namespace Shesha.Web.DataTable
             var cacheManager = StaticContext.IocManager.Resolve<ICacheManager>();
 
             return cacheManager
-                .GetCache("MyCache")
-                .Get(cacheKey, () => DoGetPropertiesForSqlQuickSearch(rowType, columns));
+                .GetCache<string, List<KeyValuePair<string, GeneralDataType>>>("MyCache")
+                .Get(cacheKey, (s) => DoGetPropertiesForSqlQuickSearch(rowType, columns));
         }
 
         private List<KeyValuePair<string, GeneralDataType>> DoGetPropertiesForSqlQuickSearch(Type rowType, List<DataTableColumn> columns)

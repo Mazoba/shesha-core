@@ -66,7 +66,8 @@ namespace Shesha.Tests.DynamicEntities
             var options = new Mock<IMappingOperationOptions>();
             var mapper = new Mock<IRuntimeMapper>();
 
-            return new ResolutionContext(options.Object, mapper.Object);
+            // ToDo: ABP662
+            return null;//new ResolutionContext(options.Object, mapper.Object);
         }
 
         public enum IntItems : int 

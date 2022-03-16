@@ -37,10 +37,13 @@
     <ProjectReference Include="..\Shesha.Web.FormsDesigner\Shesha.Web.FormsDesigner.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Abp.Castle.Log4Net" Version="5.0.0" />
-    <PackageReference Include="Abp.HangFire.AspNetCore" Version="5.0.0" />
+    <PackageReference Include="Abp.Castle.Log4Net" Version="6.6.2" />
+    <PackageReference Include="Abp.HangFire.AspNetCore" Version="6.6.2" />
     <PackageReference Include="ElmahCore" Version="2.0.6" />
-    <PackageReference Include="Hangfire.SqlServer" Version="1.7.6" />
+    <PackageReference Include="Hangfire.Core" Version="1.7.25" />
+    <PackageReference Include="Hangfire.SqlServer" Version="1.7.25" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="3.8.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.8.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.0.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>

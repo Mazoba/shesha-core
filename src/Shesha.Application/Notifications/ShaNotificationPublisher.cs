@@ -112,14 +112,15 @@ namespace Shesha.Notifications
             if (isShaNotification || userIds != null && userIds.Length <= MaxUserCountToDirectlyDistributeANotification)
             {
                 //We can directly distribute the notification since there are not much receivers
-                foreach (var notificationDistributorType in _notificationConfiguration.Distributers)
+                // ToDo: ABP662
+                /*foreach (var notificationDistributorType in _notificationConfiguration.Distributers)
                 {
                     using (var notificationDistributer = _iocResolver.ResolveAsDisposable<INotificationDistributer>(notificationDistributorType))
                     {
                         var distributer = notificationDistributer.Object;
                         await distributer.DistributeAsync(notificationInfo.Id);
                     }
-                }
+                }*/
             }
             else
             {
@@ -180,13 +181,14 @@ namespace Shesha.Notifications
             if (isShaNotification || userIds != null && userIds.Length <= MaxUserCountToDirectlyDistributeANotification)
             {
                 //We can directly distribute the notification since there are not much receivers
-                foreach (var notificationDistributorType in _notificationConfiguration.Distributers)
+                // ToDo: ABP662
+                /*foreach (var notificationDistributorType in _notificationConfiguration.Distributers)
                 {
                     using (var notificationDistributer = _iocResolver.ResolveAsDisposable<INotificationDistributer>(notificationDistributorType))
                     {
                         notificationDistributer.Object.Distribute(notificationInfo.Id);
                     }
-                }
+                }*/
             }
             else
             {

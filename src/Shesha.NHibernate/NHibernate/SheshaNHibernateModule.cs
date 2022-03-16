@@ -19,6 +19,7 @@ using NHibernate;
 using NHibernate.Cfg;
 using NHibernate.Dialect;
 using NHibernate.Driver;
+using NHibernate.Engine;
 using Shesha.Attributes;
 using Shesha.Bootstrappers;
 using Shesha.Configuration.Startup;
@@ -120,11 +121,15 @@ namespace Shesha.NHibernate
             #region  from Abp
 
             var cfg = Configuration.Modules.ShaNHibernate().NhConfiguration;
-            
+           
             if (IocManager.IsRegistered<IInterceptor>())
                 cfg.SetInterceptor(IocManager.Resolve<IInterceptor>());
 
             cfg.SessionFactory().GenerateStatistics();
+
+            // ToDo: ABP662, some ABP entities (WebhookEvent, DynamicProperty) contain not virtual properties
+            cfg.Properties.Add("use_proxy_validator", "false");
+
             _sessionFactory = cfg.BuildSessionFactory();
 
             IocManager.IocContainer.Install(new NhRepositoryInstaller(_sessionFactory));

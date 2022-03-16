@@ -50,8 +50,9 @@ namespace Shesha
 
             Configuration.Settings.Providers.Add<OtpSettingProvider>();
 
-            Configuration.Notifications.Distributers.Clear();
-            Configuration.Notifications.Distributers.Add<ShaNotificationDistributer>();
+            // ToDo: migrate Notification to ABP 6.6.2
+            //Configuration.Notifications.Distributers.Clear();
+            //Configuration.Notifications.Distributers.Add<ShaNotificationDistributer>();
 
             Configuration.ReplaceService<INotificationPublisher, ShaNotificationPublisher>(DependencyLifeStyle.Transient);
 
