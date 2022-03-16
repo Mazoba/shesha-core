@@ -38,7 +38,11 @@ namespace Shesha.Metadata
 
             var allProps = containerType.GetProperties(flags).OrderBy(p => p.Name).ToList();
             if (containerType.IsEntityType())
-                allProps = allProps.Where(p => MappingHelper.IsPersistentProperty(p)).ToList();
+                allProps = allProps.Where(p => MappingHelper.IsPersistentProperty(p) || p.CanRead && p.HasAttribute<NotMappedAttribute>()).ToList();
+
+            if (containerType.IsEntityType()) {
+                var allPropsOld = allProps.Where(p => MappingHelper.IsPersistentProperty(p)).ToList();
+            }                
 
             var allPropsMetadata = allProps.Select(p => GetPropertyMetadata(p)).ToList();
 
@@ -68,7 +72,7 @@ namespace Shesha.Metadata
                 Description = ReflectionHelper.GetDescription(property),
                 IsVisible = property.GetAttribute<BrowsableAttribute>()?.Browsable ?? true,
                 Required = property.HasAttribute<RequiredAttribute>(),
-                Readonly = property.GetAttribute<ReadOnlyAttribute>()?.IsReadOnly ?? false,
+                Readonly = !property.CanWrite || (property.GetAttribute<ReadOnlyAttribute>()?.IsReadOnly ?? false),
                 DataType = dataType.DataType,
                 DataFormat = dataType.DataFormat,
                 EntityTypeShortAlias = property.PropertyType.IsEntityType()
