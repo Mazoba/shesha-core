@@ -8,6 +8,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Check list tree item
     /// </summary>
+    [Obsolete("Should use equivalent entity under Shesha.Enterprise")]
     [Table("vw_Core_CheckListTreeItems")]
     [ImMutable]
     public class CheckListTreeItem : Entity<Guid>, IMayHaveTenant

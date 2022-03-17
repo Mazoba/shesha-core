@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Shesha.Domain.Enums;
 
@@ -7,6 +8,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Check list item selection (value selected by the user)
     /// </summary>
+    [Obsolete("Should use equivalent entity under Shesha.Enterprise")]
     [Table("Core_CheckListItemSelections")]
     public class CheckListItemSelection: FullPowerManyToManyLinkEntity
     {
