@@ -2,9 +2,14 @@
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
+using Abp.Events.Bus.Entities;
+using Abp.Events.Bus.Handlers;
 using Abp.ObjectMapping;
 using Abp.Runtime.Caching;
+using Castle.Core.Logging;
 using NHibernate.Linq;
+using Shesha.AutoMapper.Dto;
+using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.DynamicEntities.Cache;
 using Shesha.DynamicEntities.Dtos;
@@ -20,13 +25,27 @@ using System.Threading.Tasks;
 
 namespace Shesha.DynamicEntities
 {
-    public class DynamicDtoTypeBuilder : IDynamicDtoTypeBuilder, ITransientDependency
+    public class DynamicDtoTypeBuilder : IEventHandler<EntityChangedEventData<EntityProperty>>, IDynamicDtoTypeBuilder, ITransientDependency
     {
         private readonly IEntityConfigCache _entityConfigCache;
-        
-        public DynamicDtoTypeBuilder(IEntityConfigCache entityConfigCache)
+        private IEntityConfigurationStore _entityConfigurationStore;
+        private readonly ICacheManager _cacheManager;
+
+        /// <summary>
+        /// Cache of the ReferenceListItems
+        /// </summary>
+        protected ITypedCache<string, DynamicDtoProxyCacheItem> FullProxyCache => _cacheManager.GetCache<string, DynamicDtoProxyCacheItem>("DynamicDtoTypeBuilder_FullProxyCache");
+
+        /// <summary>
+        /// Reference to the logger to write logs.
+        /// </summary>
+        public ILogger Logger { protected get; set; } = NullLogger.Instance;
+
+        public DynamicDtoTypeBuilder(IEntityConfigCache entityConfigCache, IEntityConfigurationStore entityConfigurationStore, ICacheManager cacheManager)
         {
             _entityConfigCache = entityConfigCache;
+            _entityConfigurationStore = entityConfigurationStore;
+            _cacheManager = cacheManager;
         }
 
         /// inheritedDoc
@@ -57,13 +76,20 @@ namespace Shesha.DynamicEntities
                 if (hardCodedDtoProperties.Contains(property.Name.ToLower()))
                     continue;
 
+                if (string.IsNullOrWhiteSpace(property.DataType))
+                {
+                    Logger.Warn($"Type '{type.FullName}': {nameof(property.DataType)} of property {property.Name} is empty");
+                    continue;
+                }
+
                 var propertyType = await GetDtoPropertyTypeAsync(property, context);
                 if (propertyType != null)
                     properties.Add(property.Name, propertyType);
             }
 
             // internal fields
-            properties.Add("_formFields", typeof(List<string>));
+            if (context.AddFormFieldsProperty)
+                properties.Add(nameof(IHasFormFieldsList._formFields), typeof(List<string>));
 
             return properties;
         }
@@ -126,7 +152,7 @@ namespace Shesha.DynamicEntities
                     }
 
                 case DataTypes.EntityReference:
-                    return null;
+                    return GetEntityReferenceType(propertyDto, context);
                 case DataTypes.Array:
                     return null;
                 case DataTypes.Object:
@@ -134,6 +160,23 @@ namespace Shesha.DynamicEntities
                 default:
                     throw new NotSupportedException($"Data type not supported: {dataType}");
             }
+        }
+
+        private Type GetEntityReferenceType(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context) 
+        {
+            if (propertyDto.DataType != DataTypes.EntityReference)
+                throw new NotSupportedException($"DataType {propertyDto.DataType} is not supported. Expected {DataTypes.EntityReference}");
+
+            if (string.IsNullOrWhiteSpace(propertyDto.EntityType))
+                return null;
+
+            var entityConfig = _entityConfigurationStore.Get(propertyDto.EntityType);
+            if (entityConfig == null)
+                return null;
+
+            return context.UseDtoForEntityReferences
+                ? typeof(EntityWithDisplayNameDto<>).MakeGenericType(entityConfig.IdType)
+                : entityConfig?.IdType;
         }
 
         private async Task<Type> BuildNestedTypeAsync(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context) 
@@ -146,7 +189,7 @@ namespace Shesha.DynamicEntities
             {
                 var className = context.CurrentPrefix.Replace('.', '_');
 
-                var tb = GetTypeBuilder(typeof(object), "DynamicModule", className, new List<Type> { typeof(IDynamicNestedObject) });
+                var tb = GetTypeBuilder(typeof(object), className, new List<Type> { typeof(IDynamicNestedObject) });
                 var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
                 foreach (var property in propertyDto.Properties)
@@ -168,7 +211,7 @@ namespace Shesha.DynamicEntities
         {
             var proxyClassName = GetProxyTypeName(context.ModelType, "Proxy");
 
-            var tb = GetTypeBuilder(context.ModelType, "DynamicModule", proxyClassName, new List<Type> { typeof(IDynamicDtoProxy) });
+            var tb = GetTypeBuilder(context.ModelType, proxyClassName, new List<Type> { typeof(IDynamicDtoProxy) });
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
             using (context.OpenNamePrefix(proxyClassName)) 
@@ -189,11 +232,12 @@ namespace Shesha.DynamicEntities
             }
         }
 
-        private static TypeBuilder GetTypeBuilder(Type baseType, string moduleName, string typeName, IEnumerable<Type> interfaces)
+        private static TypeBuilder GetTypeBuilder(Type baseType, string typeName, IEnumerable<Type> interfaces)
         {
-            var an = new AssemblyName(moduleName);
+            var assemblyName = new AssemblyName($"{typeName}Assembly");
+            var moduleName = $"{typeName}Module";
             
-            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(an, AssemblyBuilderAccess.Run);
+            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(moduleName);
             var tb = moduleBuilder.DefineType(typeName,
                     TypeAttributes.Public |
@@ -286,13 +330,30 @@ namespace Shesha.DynamicEntities
 
         public async Task<Type> BuildDtoFullProxyTypeAsync(Type baseType, DynamicDtoTypeBuildingContext context)
         {
+            var cacheKey = GetTypeCacheKey(baseType, context);
+            var cachedDtoItem = await FullProxyCache.GetOrDefaultAsync(cacheKey);
+            if (cachedDtoItem != null) 
+            {
+                context.Classes = cachedDtoItem.NestedClasses.ToDictionary(i => i.Key, i => i.Value);
+                return cachedDtoItem.DtoType;
+            }                
+
             var proxyClassName = GetProxyTypeName(baseType, "FullProxy");
             var properties = await GetDynamicPropertiesAsync(baseType, context);
             
-            if (!properties.Any(p => p.PropertyName == nameof(IHasFormFieldsList._formFields)))
+            if (context.AddFormFieldsProperty && !properties.Any(p => p.PropertyName == nameof(IHasFormFieldsList._formFields)))
                 properties.Add(new DynamicProperty { PropertyName = nameof(IHasFormFieldsList._formFields), PropertyType = typeof(List<string>) });
 
-            var type = await CompileResultTypeAsync(baseType, proxyClassName, new List<Type> { typeof(IHasFormFieldsList) }, properties, context);
+            var interfaces = new List<Type>();
+            if (context.AddFormFieldsProperty)
+                interfaces.Add(typeof(IHasFormFieldsList));
+
+            var type = await CompileResultTypeAsync(baseType, proxyClassName, interfaces, properties, context);
+
+            await FullProxyCache.SetAsync(cacheKey, new DynamicDtoProxyCacheItem { 
+                DtoType = type,
+                NestedClasses = context.Classes.ToDictionary(i => i.Key, i => i.Value)
+            });
 
             return type;
         }
@@ -303,7 +364,7 @@ namespace Shesha.DynamicEntities
             List<DynamicProperty> properties, 
             DynamicDtoTypeBuildingContext context)
         {
-            var tb = GetTypeBuilder(baseType, "DynamicModule", proxyClassName, interfaces.Union(new List<Type> { typeof(IDynamicDtoProxy) }));
+            var tb = GetTypeBuilder(baseType, proxyClassName, interfaces.Union(new List<Type> { typeof(IDynamicDtoProxy) }));
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
             foreach (var property in properties)
@@ -316,6 +377,27 @@ namespace Shesha.DynamicEntities
             context.ClassCreated(objectType);
 
             return objectType;
+        }
+
+        private string GetTypeCacheKey(Type type, DynamicDtoTypeBuildingContext context) 
+        {
+            var entityType = DynamicDtoExtensions.GetDynamicDtoEntityType(type);
+            if (entityType == null)
+                throw new NotSupportedException($"Type '{type.FullName}' is not a dynamic DTO");
+
+            return $"{entityType.FullName}|formFields:{context.AddFormFieldsProperty.ToString().ToLower()}|useEntityDtos:{context.UseDtoForEntityReferences.ToString().ToLower()}";
+        }
+
+        public void HandleEvent(EntityChangedEventData<EntityProperty> eventData)
+        {
+            var entityConfig = eventData.Entity?.EntityConfig;
+
+            if (entityConfig == null)
+                return;
+
+            var cacheKey = $"{entityConfig.Namespace}.{entityConfig.ClassName}";
+
+            FullProxyCache.Remove(cacheKey);
         }
     }
 }

@@ -28,7 +28,7 @@ namespace Shesha.Domain.Attributes
         {
             DiscriminatorColumn = "Frwk_Discriminator";
             UseDiscriminator = true;
-            FilterUnknownDiscriminators = false;
+            FilterUnknownDiscriminators = true;
         }
     }
 }

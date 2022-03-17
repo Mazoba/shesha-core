@@ -40,7 +40,7 @@ namespace Shesha.DynamicEntities
         /// <param name="dynamicDto">Dto</param>
         /// <param name="entity">Entity</param>
         /// <returns></returns>
-        Task MapDtoToEntityAsync<TId, TDynamicDto, TEntity>(TDynamicDto dynamicDto, TEntity entity)
+        Task MapDtoToEntityAsync<TDynamicDto, TEntity, TId>(TDynamicDto dynamicDto, TEntity entity)
             where TEntity : class, IEntity<TId>
             where TDynamicDto : class, IDynamicDto<TEntity, TId>;
 
@@ -53,7 +53,7 @@ namespace Shesha.DynamicEntities
         /// <param name="entity">Entity</param>
         /// <param name="dynamicDto">Dto</param>
         /// <returns></returns>
-        Task MapEntityToDtoAsync<TId, TDynamicDto, TEntity>(TEntity entity, TDynamicDto dynamicDto)
+        Task MapEntityToDtoAsync<TDynamicDto, TEntity, TId>(TEntity entity, TDynamicDto dynamicDto)
             where TEntity : class, IEntity<TId>
             where TDynamicDto : class, IDynamicDto<TEntity, TId>;
 

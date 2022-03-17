@@ -1,15 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using Abp.AspNetCore.Configuration;
+using Abp.AspNetCore.Mvc.ExceptionHandling;
+using Abp.AspNetCore.Mvc.Results;
+using Abp.Web.Models;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.Versioning;
+using Microsoft.OpenApi.Models;
+using Shesha.Reflection;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
-using Abp.AspNetCore.Configuration;
-using Abp.AspNetCore.Mvc.ExceptionHandling;
-using Abp.AspNetCore.Mvc.Results;
-using Abp.Web.Models;
-using Microsoft.OpenApi.Models;
-using Shesha.Reflection;
-using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Shesha.Swagger
 {
@@ -22,7 +26,16 @@ namespace Shesha.Swagger
             _configuration = configuration;
         }
 
-        public void Apply(OpenApiOperation operation, OperationFilterContext context)
+        public void Apply(OpenApiOperation operation, OperationFilterContext context) 
+        {
+            // Decorate wrapped responses
+            DecorateWrappedResponses(operation, context);
+
+            // Decorate operation parameters
+            DecorateOperaionParameters(operation, context);
+        }
+
+        private void DecorateWrappedResponses(OpenApiOperation operation, OperationFilterContext context)
         {
             var wrapResultAttribute =
                 GetSingleAttributeOfMemberOrDeclaringTypeOrDefault(
@@ -107,6 +120,32 @@ namespace Shesha.Swagger
             return memberInfo.GetCustomAttributes(true).OfType<TAttribute>().FirstOrDefault()
                    ?? memberInfo.ReflectedType?.GetTypeInfo().GetCustomAttributes(true).OfType<TAttribute>().FirstOrDefault()
                    ?? defaultValue;
+        }
+
+        private void DecorateOperaionParameters(OpenApiOperation operation, OperationFilterContext context)
+        {
+            var apiDescription = context.ApiDescription;
+            var apiVersion = apiDescription.GetApiVersion();
+            var model = apiDescription.ActionDescriptor.GetApiVersionModel(ApiVersionMapping.Explicit | ApiVersionMapping.Implicit);
+
+            operation.Deprecated = model.DeprecatedApiVersions.Contains(apiVersion);
+
+            if (operation.Parameters == null) return;
+
+            foreach (var parameter in operation.Parameters)
+            {
+                var description = apiDescription.ParameterDescriptions.FirstOrDefault(p => p.Name.Equals(parameter.Name, StringComparison.InvariantCultureIgnoreCase));
+
+                if (description != null)
+                {
+                    parameter.Description ??= description?.ModelMetadata?.Description;
+
+                    parameter.Required |= description.IsRequired;
+                }
+                else
+                {
+                }
+            }
         }
     }
 }

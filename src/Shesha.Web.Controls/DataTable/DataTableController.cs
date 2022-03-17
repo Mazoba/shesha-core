@@ -325,7 +325,8 @@ namespace Shesha.Web.DataTable
                     throw new Exception("Properties not specified");
 
                 var properties = input.Properties.ToList();
-                properties.Insert(0, SheshaDatabaseConsts.IdColumn);
+                if (!properties.Contains(SheshaDatabaseConsts.IdColumn))
+                    properties.Insert(0, SheshaDatabaseConsts.IdColumn);
 
                 var columns = properties.Select(p => _helper.GetDisplayPropertyColumn(entityConfig.EntityType, p))
                     .Cast<DataTableColumn>()
