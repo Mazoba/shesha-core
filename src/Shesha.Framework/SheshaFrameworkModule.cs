@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Abp.Authorization;
 using Abp.AutoMapper;
 using Abp.Dependency;
 using Abp.Modules;
@@ -34,7 +35,6 @@ namespace Shesha
             );
 
             IocManager.Register<IShaPermissionChecker, PermissionChecker>(DependencyLifeStyle.Transient);
-            
 
             IocManager.Register<ILockFactory, NamedLockFactory>(DependencyLifeStyle.Singleton);
 

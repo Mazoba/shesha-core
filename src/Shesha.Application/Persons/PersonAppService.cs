@@ -26,7 +26,7 @@ namespace Shesha.Persons
     /// Person Application Service
     /// </summary>
     [AbpAuthorize(PermissionNames.Pages_Users)]
-    public class PersonAppService : AsyncCrudAppService<Person, PersonAccountDto, Guid, PagedAndSortedResultRequestDto, CreatePersonAccountDto, PersonAccountDto>, IPersonAppService
+    public class PersonAppService : AbpAsyncCrudAppService<Person, PersonAccountDto, Guid, PagedAndSortedResultRequestDto, CreatePersonAccountDto, PersonAccountDto>, IPersonAppService
     {
         private readonly UserManager _userManager;
         private readonly IRepository<ShaRoleAppointedPerson, Guid> _rolePersonRepository;
@@ -121,6 +121,11 @@ namespace Shesha.Persons
             };
 
             return table;
+        }
+
+        public string Shurik()
+        {
+            return "Shurik";
         }
 
         /// inheritedDoc

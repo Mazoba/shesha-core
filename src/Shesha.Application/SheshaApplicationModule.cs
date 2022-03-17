@@ -22,6 +22,7 @@ using Shesha.Sms.Configuration;
 using Shesha.Startup;
 using System.Linq;
 using System.Reflection;
+using Abp.Authorization;
 
 namespace Shesha
 {
@@ -34,6 +35,9 @@ namespace Shesha
         public override void PreInitialize()
         {
             IocManager.Register<IShaApplicationModuleConfiguration, ShaApplicationModuleConfiguration>();
+
+            IocManager.Register<IAuthorizationHelper, ApiAuthorizationHelper>(DependencyLifeStyle.Transient);
+            IocManager.Register<IPermissionManager, ShaPermissionManager>();
 
             Configuration.Settings.Providers.Add<SmsSettingProvider>();
             Configuration.Settings.Providers.Add<PushSettingProvider>();

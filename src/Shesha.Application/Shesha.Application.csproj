@@ -40,5 +40,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="ObjectMapper\" />
+    <Folder Include="Permissions\Attributes\" />
   </ItemGroup>
 </Project>

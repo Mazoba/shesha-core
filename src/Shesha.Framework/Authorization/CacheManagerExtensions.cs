@@ -9,5 +9,11 @@ namespace Shesha.Authorization
         {
             return cacheManager.GetCache<string, CustomUserPermissionCacheItem>(CustomUserPermissionCacheItem.CacheStoreName);
         }
+
+        public static ITypedCache<string, RequiredPermissionCacheItem> GetApiPermissionCache(this ICacheManager cacheManager)
+        {
+            return cacheManager.GetCache<string, RequiredPermissionCacheItem>(RequiredPermissionCacheItem.CacheStoreName);
+        }
+
     }
 }

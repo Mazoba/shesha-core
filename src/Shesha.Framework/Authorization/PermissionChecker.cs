@@ -45,8 +45,10 @@ namespace Shesha.Authorization
 
         /// inheritedDoc
         [UnitOfWork]
-        public override bool IsGranted(long userId, string permissionName) 
+        public override bool IsGranted(long userId, string permissionName)
         {
+            var manager = IocManager.Resolve<IPermissionManager>();
+
             var granted = base.IsGranted(userId, permissionName);
             if (granted)
                 return true;
