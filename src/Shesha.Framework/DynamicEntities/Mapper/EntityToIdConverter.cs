@@ -4,10 +4,10 @@ using AutoMapper;
 using Shesha.Services;
 using System;
 
-namespace Shesha.ObjectMapper
+namespace Shesha.DynamicEntities.Mapper
 {
     /// <summary>
-    /// Id to Entity cnoverter
+    /// Id to Entity converter
     /// </summary>
     public class EntityToIdConverter<TEntity, TId> : ITypeConverter<TEntity, TId> where TEntity: class, IEntity<TId>
     {

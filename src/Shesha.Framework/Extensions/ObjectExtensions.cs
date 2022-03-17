@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using Abp.Domain.Entities;
 using Shesha.Domain;
+using Shesha.Domain.Attributes;
 using Shesha.Reflection;
 
 namespace Shesha.Extensions
@@ -32,6 +33,14 @@ namespace Shesha.Extensions
                     || type.GetInterfaces().Any(x =>
                         x.IsGenericType &&
                         x.GetGenericTypeDefinition() == typeof(IEntity<>)));
+        }
+
+        /// <summary>
+        /// Indicates is the specified type a reference list type
+        /// </summary>
+        public static bool IsReferenceListType(this Type type)
+        {
+            return type != null && type.IsPublic && type.IsEnum && type.HasAttribute<ReferenceListAttribute>();
         }
 
         /// <summary>

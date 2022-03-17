@@ -135,8 +135,8 @@ namespace Shesha.AutoMapper
         private static ReferenceListItemValueDto GetRefListItemValueDto(string refListNamespace, string refListName, object value)
         {
             var intValue = value != null
-                ? Convert.ToInt32(value)
-                : (int?)null;
+                ? Convert.ToInt64(value)
+                : (Int64?)null;
 
             return intValue != null
                 ? new ReferenceListItemValueDto
@@ -147,7 +147,7 @@ namespace Shesha.AutoMapper
                 : null;
         }
 
-        private static string GetRefListItemText(string refListNamespace, string refListName, int? value)
+        private static string GetRefListItemText(string refListNamespace, string refListName, Int64? value)
         {
             if (value == null)
                 return null;

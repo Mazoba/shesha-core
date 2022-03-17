@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using Shesha.DynamicEntities;
 using Shesha.Services;
 using Shesha.Utilities;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -76,6 +78,27 @@ namespace Shesha.Swagger
                 if (File.Exists(xmlPath))
                     options.IncludeXmlComments(xmlPath, true);
             }
+        }
+
+        public static string GetSchemaId(Type modelType)
+        {
+            if (modelType.IsDynamicDto())
+            {
+                var test = modelType.IsConstructedGenericType
+                    ? "DynamicDto" + modelType.GetGenericArguments().Select(genericArg => GetSchemaId(genericArg)).Aggregate((previous, current) => previous + current)
+                    : "Proxy" + GetSchemaId(modelType.BaseType);
+                return test;
+            }
+
+            if (!modelType.IsConstructedGenericType) return modelType.Name.Replace("[]", "Array");
+
+            var prefix = modelType.GetGenericArguments()
+                .Select(genericArg => GetSchemaId(genericArg))
+                .Aggregate((previous, current) => previous + current);
+
+            var result = prefix + modelType.Name.Split('`').First();
+
+            return result;
         }
     }
 }

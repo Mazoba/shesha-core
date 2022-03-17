@@ -15,6 +15,7 @@ using Shesha.Metadata;
 using Shesha.NHibernate.UoW;
 using Xunit;
 using Shesha.Configuration.Runtime;
+using Abp.Runtime.Caching;
 
 namespace Shesha.Tests.DynamicEntities
 {
@@ -84,7 +85,8 @@ namespace Shesha.Tests.DynamicEntities
                 });
 
             var entityConfigStore = LocalIocManager.Resolve<IEntityConfigurationStore>();
-            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore);
+            var cacheManager = LocalIocManager.Resolve<ICacheManager>();
+            var builder = new DynamicDtoTypeBuilder(entityConfigCacheMock.Object, entityConfigStore, cacheManager);
             var baseDtoType = typeof(DynamicDto<Person, Guid>);
             var context = new DynamicDtoTypeBuildingContext() { ModelType = baseDtoType };
             var dtoType = await builder.BuildDtoFullProxyTypeAsync(baseDtoType, context);
@@ -156,7 +158,7 @@ namespace Shesha.Tests.DynamicEntities
                     try
                     {
                         // Save dynamic properties to DB
-                        await dynamicPropertyManager.MapDtoToEntityAsync<Guid, DynamicDto<Person, Guid>, Person>(dto,
+                        await dynamicPropertyManager.MapDtoToEntityAsync<DynamicDto<Person, Guid>, Person, Guid>(dto,
                             entity);
                         session?.Flush();
 
@@ -167,7 +169,7 @@ namespace Shesha.Tests.DynamicEntities
 
                         // Create new DTO and map values from entity to DTO
                         var newDto = Activator.CreateInstance(dtoType) as DynamicDto<Person, Guid>;
-                        await dynamicPropertyManager.MapEntityToDtoAsync<Guid, DynamicDto<Person, Guid>, Person>(newEntity,
+                        await dynamicPropertyManager.MapEntityToDtoAsync<DynamicDto<Person, Guid>, Person, Guid>(newEntity,
                             newDto);
 
                         // Check values. Values from the DB should be the same as from the test list

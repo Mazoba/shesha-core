@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain.Enums
@@ -7,6 +8,7 @@ namespace Shesha.Domain.Enums
     /// Checklist selection type (yes/no/na)
     /// </summary>
     [ReferenceList("Shesha.Core", "CheckListSelectionType")]
+    [Obsolete("Should use equivalent entity under Shesha.Enterprise")]
     public enum RefListCheckListSelectionType
     {
         /// <summary>

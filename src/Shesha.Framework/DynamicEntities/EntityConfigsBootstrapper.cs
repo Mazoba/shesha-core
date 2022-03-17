@@ -202,6 +202,11 @@ namespace Shesha.DynamicEntities
                 }
 
                 // todo: inactivate missing properties
+                var deletedProperties = dbProperties.Where(p => p.Source == Domain.Enums.MetadataSourceType.ApplicationCode && !codeProperties.Any(cp => cp.Path == p.Name)).ToList();
+                foreach (var deletedProperty in deletedProperties) 
+                {
+                    await _entityPropertyRepository.DeleteAsync(deletedProperty);
+                }
 
                 // update properties MD5 to prevent unneeded updates in future
                 entityConfig.PropertiesMD5 = propertiesMD5;

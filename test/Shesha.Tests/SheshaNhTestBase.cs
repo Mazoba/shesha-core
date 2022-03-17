@@ -80,10 +80,7 @@ namespace Shesha.Tests
             {
                 using (var session = OpenSession())
                 {
-                    /*
                     action(session);
-                    session.SaveChanges();
-                    */
                 }
             }
         }

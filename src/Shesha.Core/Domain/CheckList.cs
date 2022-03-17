@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Shesha.Domain.Attributes;
@@ -8,6 +9,7 @@ namespace Shesha.Domain
     /// <summary>
     /// 
     /// </summary>
+    [Obsolete("Should use equivalent entity under Shesha.Enterprise")]
     [Entity(TypeShortAlias = "Core.CheckList", FriendlyName = "Check List")]
     [Table("Core_CheckLists")]
     public class CheckList : FullPowerEntity
