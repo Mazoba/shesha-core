@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace Shesha.Locks
 {
@@ -25,17 +26,8 @@ namespace Shesha.Locks
                     var task = action.Invoke();
                     try
                     {
-                        if (expiryTime == TimeSpan.MinValue || expiryTime == TimeSpan.MaxValue)
-                        {
-                            task.Wait();
-                            isAcquired = true;
-                        }
-                        else
-                        {
-                            isAcquired = task.Wait(expiryTime);
-                            if (!isAcquired)
-                                throw new TimeoutException("The time allotted for a locked operation has expired.");
-                        }
+                        task.Wait();
+                        isAcquired = true;
                     }
                     finally
                     {
@@ -55,6 +47,7 @@ namespace Shesha.Locks
 
         public bool DoExclusive(string resource, TimeSpan expiryTime, TimeSpan waitTime, TimeSpan retryTime, Action action)
         {
+            if (action == null) throw new ArgumentNullException(nameof(action));
             var lockObj = _lockDict.GetOrAdd(resource, s => new object());
 
             bool lockTaken = false;
@@ -65,27 +58,8 @@ namespace Shesha.Locks
                 Monitor.TryEnter(lockObj, waitTime, ref lockTaken);
                 if (lockTaken)
                 {
-                    // using separate task to monitor expiry time
-                    var task = Task.Factory.StartNew(action.Invoke);
-                    try
-                    {
-                        if (expiryTime == TimeSpan.MinValue || expiryTime == TimeSpan.MaxValue)
-                        {
-                            task.Wait();
-                            isAcquired = true;
-                        }
-                        else
-                        {
-                            isAcquired = task.Wait(expiryTime);
-                            if (!isAcquired)
-                                throw new TimeoutException("The time allotted for a locked operation has expired.");
-                        }
-                    }
-                    finally
-                    {
-                        if (task.IsCompleted)
-                            task.Dispose();
-                    }
+                    action.Invoke();
+                    isAcquired = true;
                 }
             }
             finally
