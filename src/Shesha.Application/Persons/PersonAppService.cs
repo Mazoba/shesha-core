@@ -17,6 +17,7 @@ using Shesha.Authorization.Users;
 using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
+using Shesha.Permissions.Attributes;
 using Shesha.Web.DataTable;
 
 namespace Shesha.Persons
@@ -26,6 +27,7 @@ namespace Shesha.Persons
     /// Person Application Service
     /// </summary>
     [AbpAuthorize(PermissionNames.Pages_Users)]
+    [Protected("", "")]
     public class PersonAppService : AbpAsyncCrudAppService<Person, PersonAccountDto, Guid, PagedAndSortedResultRequestDto, CreatePersonAccountDto, PersonAccountDto>, IPersonAppService
     {
         private readonly UserManager _userManager;

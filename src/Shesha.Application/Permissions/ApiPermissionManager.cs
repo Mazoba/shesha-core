@@ -22,11 +22,11 @@ namespace Shesha.Permissions
 
         private List<string> IgnoredMethods = new List<string>() {"ToString", "GetType", "Equals", "GetHashCode"};
 
-        public List<ApiPermission> GetAllApi()
+        public List<ProtectedObject> GetAllApi()
         {
             var assemblies = _assembleFinder.GetAllAssemblies().Distinct(new AssemblyFullNameComparer()).Where(a => !a.IsDynamic).ToList();
-            var apiPermissions = new List<ApiPermission>();
-            var allApiPermissions = new List<ApiPermission>();
+            var apiPermissions = new List<ProtectedObject>();
+            var allApiPermissions = new List<ProtectedObject>();
 
             var shaServiceType = typeof(SheshaAppServiceBase);
 
@@ -35,7 +35,7 @@ namespace Shesha.Permissions
                 var services = assembly.GetTypes().Where(x => x.IsPublic && !x.IsAbstract && shaServiceType.IsAssignableFrom(x)).ToList();
                 foreach (var service in services)
                 {
-                    var parent = new ApiPermission() {Class = service.FullName};
+                    var parent = new ProtectedObject() {Object = service.FullName};
                     apiPermissions.Add(parent);
                     allApiPermissions.Add(parent);
 
@@ -51,7 +51,7 @@ namespace Shesha.Permissions
 
                     foreach (var methodInfo in methods)
                     {
-                        var child = new ApiPermission() { Class = service.FullName, Method = methodInfo.Name, Parent = parent};
+                        var child = new ProtectedObject() { Object = service.FullName, Action = methodInfo.Name, Parent = parent};
                         parent.Child.Add(child);
                         allApiPermissions.Add(child);
                     }
