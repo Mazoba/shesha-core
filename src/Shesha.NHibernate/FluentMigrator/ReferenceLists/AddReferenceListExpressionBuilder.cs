@@ -33,9 +33,15 @@ namespace Shesha.FluentMigrator.ReferenceLists
             return this;
         }
 
-        public IAddReferenceListSyntax Description(string description)
+        public IAddReferenceListSyntax SetDescription(string description)
         {
             Expression.Description = description;
+            return this;
+        }
+
+        public IAddReferenceListSyntax SetNoSelectionValue(long? value)
+        {
+            Expression.NoSelectionValue.Set(value);
             return this;
         }
     }

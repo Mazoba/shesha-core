@@ -13,6 +13,8 @@ namespace Shesha.FluentMigrator.ReferenceLists
     {
         public string Name { get; set; }
         public string Namespace { get; set; }
+        public PropertyUpdateDefinition<string> Description { get; set; } = new PropertyUpdateDefinition<string>();
+        public PropertyUpdateDefinition<Int64?> NoSelectionValue { get; set; } = new PropertyUpdateDefinition<Int64?>();
 
         public override void ExecuteWith(IMigrationProcessor processor)
         {
@@ -22,6 +24,11 @@ namespace Shesha.FluentMigrator.ReferenceLists
                     var id = helper.GetReferenceListId(Namespace, Name);
                     if (id == null)
                         return;
+
+                    if (Description.IsSet)
+                        helper.UpdateReferenceListDescription(id, Description.Value);
+                    if (NoSelectionValue.IsSet)
+                        helper.UpdateReferenceListNoSelectionValue(id, NoSelectionValue.Value);
                 } 
             };
             processor.Process(exp);

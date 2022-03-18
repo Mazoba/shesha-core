@@ -5,6 +5,21 @@ namespace Shesha.FluentMigrator.ReferenceLists
     public interface IUpdateReferenceListSyntax
     {
         /// <summary>
+        /// Set description
+        /// </summary>
+        /// <param name="description"></param>
+        /// <returns></returns>
+        IUpdateReferenceListSyntax SetDescription(string description);
+
+        
+        /// <summary>
+        /// Set NoSelectionValue (default value is -999)
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        IUpdateReferenceListSyntax SetNoSelectionValue(Int64? value);
+
+        /// <summary>
         /// Add Item
         /// </summary>
         /// <param name="value"></param>
@@ -17,9 +32,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
         /// <summary>
         /// Update item
         /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        IUpdateReferenceListSyntax UpdateItem(long value);
+        IUpdateReferenceListSyntax UpdateItem(long itemValue, Action<IUpdateReferenceListItemSyntax> updateAction);
 
         /// <summary>
         /// Delete item

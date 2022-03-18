@@ -58,9 +58,35 @@ namespace Shesha.FluentMigrator.ReferenceLists
             return this;
         }
 
-        public IUpdateReferenceListSyntax UpdateItem(long value)
+        public IUpdateReferenceListSyntax SetDescription(string description) 
         {
-            throw new NotImplementedException();
+            Expression.Description.Set(description);
+            
+            return this;
+        }
+
+        public IUpdateReferenceListSyntax SetNoSelectionValue(Int64? value)
+        {
+            Expression.NoSelectionValue.Set(value);
+
+            return this;
+        }
+
+        public IUpdateReferenceListSyntax UpdateItem(long itemValue, Action<IUpdateReferenceListItemSyntax> updateAction)
+        {
+            var updateRefListItem = new UpdateReferenceListItemExpression
+            {
+                ItemValue = itemValue,
+                Namespace = Expression.Namespace,
+                Name = Expression.Name,
+            };
+
+            var builder = new UpdateReferenceListItemExpressionBuilder(updateRefListItem, _context);
+            updateAction.Invoke(builder);
+
+            _context.Expressions.Add(updateRefListItem);
+
+            return this;
         }
     }
 }

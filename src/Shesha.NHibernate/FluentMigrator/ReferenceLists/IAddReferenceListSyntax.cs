@@ -8,7 +8,20 @@ namespace Shesha.FluentMigrator.ReferenceLists
 {
     public interface IAddReferenceListSyntax
     {
-        IAddReferenceListSyntax Description(string description);
+        /// <summary>
+        /// Set description
+        /// </summary>
+        /// <param name="description"></param>
+        /// <returns></returns>
+        IAddReferenceListSyntax SetDescription(string description);
+
+
+        /// <summary>
+        /// Set NoSelectionValue (default value is -999)
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        IAddReferenceListSyntax SetNoSelectionValue(Int64? value);
 
         /// <summary>
         /// Add item
