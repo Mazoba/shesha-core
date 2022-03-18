@@ -48,5 +48,7 @@ namespace Shesha.Web.FormsDesigner.Services
 
         Task<List<FormDto>> GetAllAsync();
 
+        Task<string> DeleteAsync(Guid id);
+
     }
 }

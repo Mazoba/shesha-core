@@ -297,8 +297,6 @@ namespace Shesha.Web.FormsDesigner.Services
                         await _formStore.UpdateAsync(existingForm);
                         Logger.Info("Config added successfully!");
                     }
-
-
                                      
                 }
 
@@ -312,7 +310,43 @@ namespace Shesha.Web.FormsDesigner.Services
            
         }
 
-        private static FormDto GenerateFormDtoHelper(Dictionary<string, string> config, string formPath)
+        [HttpPost, Route("Duplicate")]
+        public async Task<FormDto> DuplicateFormAsync([FromBody]DuplicateFormDto dto)
+        {
+            FormDto form = await _formStore.GetAsync(dto.Id);
+            return await _formStore.CreateAsync(form, Guid.NewGuid());
+
+        }
+
+        [HttpDelete, Route("Delete")]
+        public async Task<List<Dictionary<string, string>>> DeleteConfigurationsAsync([FromBody]ExportConfigurationDto ids)
+        {
+            var summary = new List<Dictionary<string, string>>();
+
+            try
+            {
+                //Loop through the list of IDs
+                foreach (var id in ids.Components)
+                {
+                    var deleteOutput = new Dictionary<string, string>();
+
+                    string message = await _formStore.DeleteAsync(id);
+                    deleteOutput.Add("Id", id.ToString());
+                    deleteOutput.Add("Message", message);
+                    summary.Add(deleteOutput);
+                }
+
+                return summary;
+
+            }
+            catch (Exception e)
+            {
+                Logger.Error("An error occurred", e);
+                throw new Exception("An error occurred!");
+            }
+        }
+
+            private static FormDto GenerateFormDtoHelper(Dictionary<string, string> config, string formPath)
         {
             FormDto form = new FormDto();
             form.Id = Guid.Parse(config.GetValueOrDefault("Id"));
@@ -323,6 +357,8 @@ namespace Shesha.Web.FormsDesigner.Services
             form.Description = config.GetValueOrDefault("Description");
             return form;
         }
+
+     
     }
 
 }

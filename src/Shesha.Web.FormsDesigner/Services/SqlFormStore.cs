@@ -124,5 +124,19 @@ namespace Shesha.Web.FormsDesigner.Services
 
            
         }
+
+        public async Task<string> DeleteAsync(Guid id)
+        {
+            try
+            {
+                var form = await _formRepository.GetAsync(id);
+                await _formRepository.HardDeleteAsync(form);
+                return "Success!";
+            }catch(Exception e)
+            {
+                return "Failed! " + e.Message;
+            }
+           
+        }
     }
 }
