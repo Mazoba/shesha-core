@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using Abp.Domain.Entities;
 using Abp.Domain.Entities.Auditing;
 using Abp.MultiTenancy;
@@ -510,5 +511,19 @@ namespace Shesha.FluentMigrator
         {
             return new RegisterStoredFilterFluent(migration, filterName, hqlExpression, isExclusive: false, orderIndex);
         }
+
+        #region Add syntax
+
+        public static SheshaExpressionRoot Shesha(this MigrationBase migration)
+        {
+            var contextProp = typeof(MigrationBase).GetProperty("Context", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (contextProp == null)
+                throw new Exception("Failed to get migration context");
+            var context = contextProp.GetValue(migration) as IMigrationContext;
+                
+            return new SheshaExpressionRoot(context);
+        }
+
+        #endregion
     }
 }
