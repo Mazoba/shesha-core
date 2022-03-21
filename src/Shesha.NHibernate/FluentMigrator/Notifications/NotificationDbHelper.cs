@@ -5,14 +5,14 @@ using System.Data;
 namespace Shesha.FluentMigrator.Notifications
 {
     /// <summary>
-    /// Notification ADO provider
+    /// Notification DB helper
     /// </summary>
-    public class NotificationAdoHelper
+    internal class NotificationDbHelper
     {
         private readonly IDbConnection _connection;
         private readonly IDbTransaction _transaction;
 
-        public NotificationAdoHelper(IDbConnection connection, IDbTransaction transaction)
+        public NotificationDbHelper(IDbConnection connection, IDbTransaction transaction)
         {
             _connection = connection;
             _transaction = transaction;
@@ -52,7 +52,7 @@ namespace Shesha.FluentMigrator.Notifications
 
         #region Notifications
 
-        public Guid InsertNotification(string @namespace, string name, string description)
+        internal Guid InsertNotification(string @namespace, string name, string description)
         {
             var id = Guid.NewGuid();
             var sql = @"INSERT INTO Core_Notifications
@@ -85,7 +85,7 @@ namespace Shesha.FluentMigrator.Notifications
             });
         }
 
-        public Guid? GetNotificationId(string @namespace, string name)
+        internal Guid? GetNotificationId(string @namespace, string name)
         {
             return ExecuteScalar<Guid?>(@"select Id from Core_Notifications where Namespace = @Namespace and Name = @Name", command => {
                 command.AddParameter("@namespace", @namespace);
@@ -93,7 +93,7 @@ namespace Shesha.FluentMigrator.Notifications
             });
         }
 
-        public void DeleteNotification(string @namespace, string name)
+        internal void DeleteNotification(string @namespace, string name)
         {
             ExecuteNonQuery(@"delete from Core_Notifications where Namespace = @Namespace and Name = @Name",
                 command => {
@@ -107,7 +107,7 @@ namespace Shesha.FluentMigrator.Notifications
 
         #region Templates
 
-        public Guid InsertNotificationTemplate(Guid notificationId, NotificationTemplateDefinition notification)
+        internal Guid InsertNotificationTemplate(Guid notificationId, NotificationTemplateDefinition notification)
         {
             var id = notification.Id.IsSet
                 ? notification.Id.Value
@@ -133,7 +133,7 @@ namespace Shesha.FluentMigrator.Notifications
             return id;
         }
 
-        public void DeleteNotificationTemplates(string @namespace, string name)
+        internal void DeleteNotificationTemplates(string @namespace, string name)
         {
             var id = GetNotificationId(@namespace, name);
             if (id == null)
@@ -146,7 +146,7 @@ namespace Shesha.FluentMigrator.Notifications
             );
         }
 
-        public void DeleteNotificationTemplate(Guid id)
+        internal void DeleteNotificationTemplate(Guid id)
         {
             ExecuteNonQuery(@"delete from Core_NotificationTemplates where Id = @Id",
                 command => {

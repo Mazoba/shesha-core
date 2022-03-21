@@ -17,7 +17,7 @@ namespace Shesha.FluentMigrator.Notifications
         {
             var exp = new PerformDBOperationExpression() { Operation = (connection, transaction) => 
                 {
-                    var helper = new NotificationAdoHelper(connection, transaction);
+                    var helper = new NotificationDbHelper(connection, transaction);
                     
                     var notificationId = helper.GetNotificationId(Namespace, Name);
                     if (notificationId == null)

@@ -4,14 +4,14 @@ using System.Data;
 namespace Shesha.FluentMigrator.ReferenceLists
 {
     /// <summary>
-    /// ReferenceList ADO provider
+    /// ReferenceList DB provider
     /// </summary>
-    public class ReferenceListAdoHelper
+    internal class ReferenceListDbHelper
     {
         private readonly IDbConnection _connection;
         private readonly IDbTransaction _transaction;
 
-        public ReferenceListAdoHelper(IDbConnection connection, IDbTransaction transaction)
+        public ReferenceListDbHelper(IDbConnection connection, IDbTransaction transaction)
         {
             _connection = connection;
             _transaction = transaction;
@@ -51,7 +51,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
 
         #region list
 
-        public Guid InsertReferenceList(string @namespace, string name, string description)
+        internal Guid InsertReferenceList(string @namespace, string name, string description)
         {
             var id = Guid.NewGuid();
             var sql = @"INSERT INTO Frwk_ReferenceLists
@@ -99,7 +99,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
             });
         }
 
-        public Guid? GetReferenceListId(string @namespace, string name)
+        internal Guid? GetReferenceListId(string @namespace, string name)
         {
             return ExecuteScalar<Guid?>(@"select Id from Frwk_ReferenceLists where Namespace = @Namespace and Name = @Name", command => {
                 command.AddParameter("@namespace", @namespace);
@@ -107,7 +107,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
             });
         }
 
-        public void DeleteReferenceList(string @namespace, string name)
+        internal void DeleteReferenceList(string @namespace, string name)
         {
             ExecuteNonQuery(@"delete from Frwk_ReferenceLists where Namespace = @Namespace and Name = @Name",
                 command => {
@@ -121,7 +121,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
 
         #region list items
 
-        public Guid InsertReferenceListItem(Guid refListId, ReferenceListItemDefinition item)
+        internal Guid InsertReferenceListItem(Guid refListId, ReferenceListItemDefinition item)
         {
             var id = Guid.NewGuid();
             var sql = @"INSERT INTO Frwk_ReferenceListItems
@@ -160,7 +160,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
             return id;
         }
 
-        public void DeleteReferenceListItems(string @namespace, string name)
+        internal void DeleteReferenceListItems(string @namespace, string name)
         {
             var id = GetReferenceListId(@namespace, name);
             if (id == null)
@@ -173,7 +173,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
             );
         }
 
-        public void DeleteReferenceListItem(string @namespace, string name, Int64 itemValue)
+        internal void DeleteReferenceListItem(string @namespace, string name, Int64 itemValue)
         {
             var id = GetReferenceListId(@namespace, name);
             if (id == null)
@@ -187,7 +187,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
             );
         }
 
-        public Guid? GetReferenceListItemId(Guid listId, Int64 itemValue)
+        internal Guid? GetReferenceListItemId(Guid listId, Int64 itemValue)
         {
             return ExecuteScalar<Guid?>(@"select Id from Frwk_ReferenceListItems where ReferenceListId = @Id and ItemValue = @ItemValue", command => {
                 command.AddParameter("@Id", listId);

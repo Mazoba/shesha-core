@@ -22,7 +22,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
         {
             var exp = new PerformDBOperationExpression() { Operation = (connection, transaction) => 
                 {
-                    var helper = new ReferenceListAdoHelper(connection, transaction);
+                    var helper = new ReferenceListDbHelper(connection, transaction);
                     var listId = helper.GetReferenceListId(Namespace, Name);
                     if (listId == null)
                         throw new Exception($"ReferenceList '{Namespace}.{Name}' not found");

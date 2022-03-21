@@ -15,7 +15,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
         {
             var exp = new PerformDBOperationExpression() { Operation = (connection, transaction) => 
                 {
-                    var helper = new ReferenceListAdoHelper(connection, transaction);
+                    var helper = new ReferenceListDbHelper(connection, transaction);
                     helper.DeleteReferenceListItems(Namespace, Name);
                     helper.DeleteReferenceList(Namespace, Name);
                 } 

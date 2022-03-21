@@ -15,7 +15,7 @@ namespace Shesha.FluentMigrator.Notifications
         {
             var exp = new PerformDBOperationExpression() { Operation = (connection, transaction) => 
                 {
-                    var helper = new NotificationAdoHelper(connection, transaction);
+                    var helper = new NotificationDbHelper(connection, transaction);
                     helper.DeleteNotificationTemplates(Namespace, Name);
                     helper.DeleteNotification(Namespace, Name);
                 } 

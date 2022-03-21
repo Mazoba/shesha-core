@@ -9,17 +9,15 @@ namespace Shesha.FluentMigrator.Notifications
     /// <summary>
     /// Notification update expression
     /// </summary>
-    public class UpdateNotificationExpression : MigrationExpressionBase
+    public class UpdateNotificationExpression : NotificationExpressionBase
     {
-        public string Name { get; set; }
-        public string Namespace { get; set; }
         public PropertyUpdateDefinition<string> Description { get; set; } = new PropertyUpdateDefinition<string>();
 
         public override void ExecuteWith(IMigrationProcessor processor)
         {
             var exp = new PerformDBOperationExpression() { Operation = (connection, transaction) => 
                 {
-                    var helper = new NotificationAdoHelper(connection, transaction);
+                    var helper = new NotificationDbHelper(connection, transaction);
                     var id = helper.GetNotificationId(Namespace, Name);
                     if (id == null)
                         return;

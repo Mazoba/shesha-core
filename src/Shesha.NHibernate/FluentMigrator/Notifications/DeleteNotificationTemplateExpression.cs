@@ -20,7 +20,7 @@ namespace Shesha.FluentMigrator.Notifications
             {
                 Operation = (connection, transaction) =>
                 {
-                    var helper = new NotificationAdoHelper(connection, transaction);
+                    var helper = new NotificationDbHelper(connection, transaction);
 
                     if (TemplateId.HasValue)
                     {

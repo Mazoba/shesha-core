@@ -12,14 +12,21 @@ namespace Shesha.FluentMigrator.Notifications
     /// </summary>
     public class UpdateNotificationTemplateExpression : MigrationExpressionBase
     {
+        /// <summary>
+        /// Template Id
+        /// </summary>
         public Guid Id { get; set; }
+
+        /// <summary>
+        /// Template settings
+        /// </summary>
         public NotificationTemplateDefinition Template { get; set; } = new NotificationTemplateDefinition();
 
         public override void ExecuteWith(IMigrationProcessor processor)
         {
             var exp = new PerformDBOperationExpression() { Operation = (connection, transaction) => 
                 {
-                    var helper = new NotificationAdoHelper(connection, transaction);
+                    var helper = new NotificationDbHelper(connection, transaction);
 
                     if (Template.Name.IsSet)
                         helper.UpdateTemplateName(Id, Template.Name.Value);
