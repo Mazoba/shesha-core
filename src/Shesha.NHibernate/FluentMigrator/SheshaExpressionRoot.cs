@@ -1,5 +1,6 @@
 ﻿using FluentMigrator;
 using FluentMigrator.Infrastructure;
+using Shesha.FluentMigrator.Notifications;
 using Shesha.FluentMigrator.ReferenceLists;
 using System;
 using System.Collections.Generic;
@@ -24,6 +25,8 @@ namespace Shesha.FluentMigrator
         {
             _context = context;
         }
+
+        #region Reference Lists
 
         public IAddReferenceListSyntax ReferenceListCreate(string @namespace, string name) 
         {
@@ -51,5 +54,67 @@ namespace Shesha.FluentMigrator
 
             return new UpdateReferenceListExpressionBuilder(expression, _context);
         }
+
+        #endregion
+
+
+        #region Notifications and templates
+
+        public IAddNotificationSyntax NotificationCreate(string @namespace, string name)
+        {
+            var expression = new AddNotificationExpression { Namespace = @namespace, Name = name };
+
+            _context.Expressions.Add(expression);
+
+            return new AddNotificationExpressionBuilder(expression, _context);
+        }
+
+        public IDeleteNotificationSyntax NotificationDelete(string @namespace, string name)
+        {
+            var expression = new DeleteNotificationExpression { Namespace = @namespace, Name = name };
+
+            _context.Expressions.Add(expression);
+
+            return new DeleteNotificationExpressionBuilder(expression, _context);
+        }
+
+        public IUpdateNotificationSyntax NotificationUpdate(string @namespace, string name)
+        {
+            var expression = new UpdateNotificationExpression { Namespace = @namespace, Name = name };
+
+            _context.Expressions.Add(expression);
+
+            return new UpdateNotificationExpressionBuilder(expression, _context);
+        }
+
+        
+        public IAddNotificationTemplateSyntax NotificationTemplateCreate(string @namespace, string name)
+        {
+            var expression = new AddNotificationTemplateExpression { Namespace = @namespace, Name = name };
+
+            _context.Expressions.Add(expression);
+
+            return new AddNotificationTemplateExpressionBuilder(expression, _context);
+        }
+
+        public IDeleteNotificationTemplateSyntax NotificationTemplateDelete(Guid id)
+        {
+            var expression = new DeleteNotificationTemplateExpression { TemplateId = id };
+
+            _context.Expressions.Add(expression);
+
+            return new DeleteNotificationTemplateExpressionBuilder(expression, _context);
+        }
+
+        public IUpdateNotificationTemplateSyntax NotificationTemplateUpdate(Guid id)
+        {
+            var expression = new UpdateNotificationTemplateExpression { Id = id };
+
+            _context.Expressions.Add(expression);
+
+            return new UpdateNotificationTemplateExpressionBuilder(expression, _context);
+        }
+
+        #endregion
     }
 }

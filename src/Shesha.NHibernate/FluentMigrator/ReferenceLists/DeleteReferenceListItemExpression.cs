@@ -24,7 +24,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
             {
                 Operation = (connection, transaction) =>
                 {
-                    var helper = new ReferenceListAdoHelper(connection, transaction);
+                    var helper = new ReferenceListDbHelper(connection, transaction);
 
                     var refListId = helper.GetReferenceListId(Namespace, Name);
                     if (refListId == null)

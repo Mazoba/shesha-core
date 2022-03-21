@@ -1,12 +1,12 @@
 ﻿using FluentMigrator;
 using FluentMigrator.Expressions;
 
-namespace Shesha.FluentMigrator.ReferenceLists
+namespace Shesha.FluentMigrator.Notifications
 {
     /// <summary>
-    /// ReferenceList delete expression
+    /// Notification delete expression
     /// </summary>
-    public class DeleteReferenceListExpression : MigrationExpressionBase
+    public class DeleteNotificationExpression : MigrationExpressionBase
     {
         public string Name { get; set; }
         public string Namespace { get; set; }
@@ -15,9 +15,9 @@ namespace Shesha.FluentMigrator.ReferenceLists
         {
             var exp = new PerformDBOperationExpression() { Operation = (connection, transaction) => 
                 {
-                    var helper = new ReferenceListDbHelper(connection, transaction);
-                    helper.DeleteReferenceListItems(Namespace, Name);
-                    helper.DeleteReferenceList(Namespace, Name);
+                    var helper = new NotificationDbHelper(connection, transaction);
+                    helper.DeleteNotificationTemplates(Namespace, Name);
+                    helper.DeleteNotification(Namespace, Name);
                 } 
             };
             processor.Process(exp);

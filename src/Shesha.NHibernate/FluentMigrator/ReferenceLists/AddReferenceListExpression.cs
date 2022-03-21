@@ -18,7 +18,7 @@ namespace Shesha.FluentMigrator.ReferenceLists
         public override void ExecuteWith(IMigrationProcessor processor)
         {
             var exp = new PerformDBOperationExpression() { Operation = (connection, transaction) => {
-                var helper = new ReferenceListAdoHelper(connection, transaction);
+                var helper = new ReferenceListDbHelper(connection, transaction);
                 var refListId = helper.InsertReferenceList(Namespace, Name, Description);
 
                 if (NoSelectionValue.IsSet)
