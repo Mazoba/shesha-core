@@ -106,57 +106,9 @@ namespace Shesha.Notifications
         }
 
         /// inheritedDoc
-        public void SendNotifications(UserNotification[] userNotifications)
-        {
-            try
-            {
-                if (!userNotifications.Any())
-                    return;
-
-                foreach (var userNotification in userNotifications)
-                {
-                    var template = GetTemplate(userNotification.Notification.NotificationName, RefListNotificationType.Push);
-                    if (template == null || !template.IsEnabled)
-                        continue;
-
-                    if (template.SendType != RefListNotificationType.Push)
-                        throw new Exception($"Wrong type of template. Expected `{RefListNotificationType.Push}`, actual `{template.SendType}`");
-
-                    var person = GetRecipient(userNotification);
-                    if (person == null)
-                        continue;
-
-                    var title = GenerateContent(template.Subject, userNotification.Notification.Data, true);
-                    var body = GenerateContent(template.Body, userNotification.Notification.Data, true);
-
-                    if (string.IsNullOrWhiteSpace(body))
-                        continue;
-
-                    AsyncHelper.RunSync(() => _pushNotifier.SendNotificationToPersonAsync(new SendNotificationToPersonInput()
-                    {
-                        Title = title,
-                        Body = body,
-                        Data = new Dictionary<string, string>(), // todo: copy data
-                        PersonId = person.Id
-                    }));
-                }
-            }
-            catch (Exception e)
-            {
-                throw;
-            }
-        }
-
-        /// inheritedDoc
         public async Task SendNotificationsAsync(List<NotificationMessageDto> notificationMessages)
         {
             await SendNotificationsAsync(notificationMessages, RefListNotificationType.Push);
-        }
-
-        /// inheritedDoc
-        public void SendNotifications(List<NotificationMessageDto> notificationMessages)
-        {
-            SendNotifications(notificationMessages, RefListNotificationType.Push);
         }
 
         public Task ResendMessageAsync(Guid notificationMessageId)
