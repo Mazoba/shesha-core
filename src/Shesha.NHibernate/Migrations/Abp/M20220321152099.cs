@@ -212,13 +212,6 @@ namespace Shesha.Migrations.Abp
 
             #endregion
 
-            #region Upgrade_To_ABP_6_1_1
-
-            Delete.PrimaryKey("PK_AbpDynamicPropertyValues").FromTable("AbpDynamicPropertyValues");
-            Delete.Column("Id").FromTable("AbpDynamicPropertyValues");
-
-            #endregion
-
             #region Upgrade_To_ABP_6_3
 
             Alter.Column("ExceptionMessage").OnTable("AbpAuditLogs").AsString(1024).Nullable();
