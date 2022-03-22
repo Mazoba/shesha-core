@@ -1,11 +1,13 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using Abp.Auditing;
 using Abp.Domain.Entities.Auditing;
 using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain
 {
     [Entity(TypeShortAlias = "Shesha.Core.PublicHoliday")]
+    [Audited]
     public class PublicHoliday : FullAuditedEntity<Guid>
     {
         [DataType(DataType.Date)]
