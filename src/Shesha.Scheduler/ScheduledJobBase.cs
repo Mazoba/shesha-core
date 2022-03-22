@@ -34,7 +34,6 @@ namespace Shesha.Scheduler
     {
         private IHubContext<SignalrAppenderHub> _signalrHub;
 
-        //public IAbpSession AbpSession { get; set; } = NullAbpSession.Instance;
         public IRepository<User, Int64> UserRepository { get; set; }
 
         internal IHubContext<SignalrAppenderHub> SignalrHub => _signalrHub ??= IocManager?.Resolve<IHubContext<SignalrAppenderHub>>();
@@ -167,8 +166,9 @@ namespace Shesha.Scheduler
                     JobExecutionId = execution.Id;
                     LogFileName = PathHelper.MapVirtualPath(
                             $"~/App_Data/logs/jobs/{Name}/{DateTime.Now:yyyy-MM-dd_HHmmss}_{JobExecutionId}.log");
-                    
+
                     // save path to execution
+                    execution.Status = ExecutionStatus.InProgress;
                     execution.LogFilePath = LogFileName;
                     execution.StartedBy = startedById.HasValue
                         ? UserRepository.Get(startedById.Value)
@@ -333,7 +333,7 @@ namespace Shesha.Scheduler
         /// <summary>
         /// Create execution record
         /// </summary>
-        protected async Task<Guid> CreateExecutionRecordAsync(Guid executionId, Action<ScheduledJobExecution> prepare)
+        public async Task<Guid> CreateExecutionRecordAsync(Guid executionId, Action<ScheduledJobExecution> prepare)
         {
             try
             {
@@ -343,22 +343,29 @@ namespace Shesha.Scheduler
                 using (var unitOfWork = UnitOfWorkManager.Begin(TransactionScopeOption.RequiresNew))
                 {
                     var existingExecution = await JobExecutionRepository.GetAll().FirstOrDefaultAsync(ex => ex.Id == executionId);
+                    ScheduledJobExecution jobExecution = null;
 
-                    var job = await JobRepository.GetAsync(Id);
-                    var trigger = GetTrigger();
-                    var jobExecution = new ScheduledJobExecution()
+                    if (existingExecution != null && existingExecution.Status == ExecutionStatus.Enqueued)
                     {
-                        Id = existingExecution != null
-                            ? Guid.NewGuid()
-                            : executionId,
-                        Job = job,
-                        StartedOn = DateTime.Now,
-                        //StartedBy = startedById,
-                        Status = ExecutionStatus.InProgress,
-                        //LogFilePath = logFileName,
-                        Trigger = trigger,
-                        ParentExecution = existingExecution
-                    };
+                        jobExecution = existingExecution;
+                        jobExecution.Status = ExecutionStatus.InProgress;
+                    }
+                    else 
+                    {
+                        var job = await JobRepository.GetAsync(Id);
+                        var trigger = GetTrigger();
+                        jobExecution = new ScheduledJobExecution()
+                        {
+                            Id = existingExecution != null
+                                ? Guid.NewGuid()
+                                : executionId,
+                            Job = job,
+                            StartedOn = DateTime.Now,
+                            Status = ExecutionStatus.Enqueued,
+                            Trigger = trigger,
+                            ParentExecution = existingExecution
+                        };
+                    }
 
                     prepare?.Invoke(jobExecution);
 
