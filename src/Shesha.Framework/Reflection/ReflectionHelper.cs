@@ -585,6 +585,15 @@ namespace Shesha.Reflection
         }
 
         /// <summary>
+        /// Indicates is the specified property is a multivalue Reference List property
+        /// </summary>
+        /// <returns></returns>
+        public static bool IsMultiValueReferenceListProperty(this MemberInfo memberInfo)
+        {
+            return memberInfo.HasAttribute<MultiValueReferenceListAttribute>();
+        }
+
+        /// <summary>
         /// Indicates is the specified property uses a Reference List values
         /// </summary>
         /// <returns></returns>

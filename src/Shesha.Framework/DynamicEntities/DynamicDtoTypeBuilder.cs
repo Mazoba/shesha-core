@@ -1,13 +1,8 @@
 ﻿using Abp.Dependency;
-using Abp.Domain.Entities;
-using Abp.Domain.Repositories;
-using Abp.Domain.Uow;
 using Abp.Events.Bus.Entities;
 using Abp.Events.Bus.Handlers;
-using Abp.ObjectMapping;
 using Abp.Runtime.Caching;
 using Castle.Core.Logging;
-using NHibernate.Linq;
 using Shesha.AutoMapper.Dto;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
@@ -153,8 +148,15 @@ namespace Shesha.DynamicEntities
 
                 case DataTypes.EntityReference:
                     return GetEntityReferenceType(propertyDto, context);
-                case DataTypes.Array:
-                    return null;
+                case DataTypes.Array: 
+                {
+                    if (propertyDto.ItemsType == null) 
+                        return null;
+                    
+                    var nestedType = await GetDtoPropertyTypeAsync(propertyDto.ItemsType, context);
+                    var arrayType = typeof(List<>).MakeGenericType(nestedType);
+                    return arrayType;
+                }
                 case DataTypes.Object:
                     return await BuildNestedTypeAsync(propertyDto, context); // JSON content
                 default:

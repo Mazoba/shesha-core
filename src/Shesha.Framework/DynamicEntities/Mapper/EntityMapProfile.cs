@@ -4,7 +4,6 @@ using Shesha.AutoMapper;
 using Shesha.AutoMapper.Dto;
 using Shesha.Extensions;
 using Shesha.Services;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,11 +14,11 @@ namespace Shesha.DynamicEntities.Mapper
     /// </summary>
     public class EntityMapProfile: ShaProfile, ITransientDependency
     {
-        private static List<ConverterInfo> Converters;
+        private static List<ConverterDefinition> Converters;
 
         static EntityMapProfile() 
         {
-            Converters = new List<ConverterInfo>();
+            Converters = new List<ConverterDefinition>();
 
             var typeFinder = StaticContext.IocManager.Resolve<ITypeFinder>();
 
@@ -28,12 +27,12 @@ namespace Shesha.DynamicEntities.Mapper
             {
                 var idType = entityType.GetEntityIdType();
 
-                Converters.Add(new ConverterInfo(idType, entityType, typeof(IdToEntityConverter<,>).MakeGenericType(entityType, idType)));
-                Converters.Add(new ConverterInfo(entityType, idType, typeof(EntityToIdConverter<,>).MakeGenericType(entityType, idType)));
+                Converters.Add(new ConverterDefinition(idType, entityType, typeof(IdToEntityConverter<,>).MakeGenericType(entityType, idType)));
+                Converters.Add(new ConverterDefinition(entityType, idType, typeof(EntityToIdConverter<,>).MakeGenericType(entityType, idType)));
 
                 var dtoType = typeof(EntityWithDisplayNameDto<>).MakeGenericType(idType);
-                Converters.Add(new ConverterInfo(dtoType, entityType, typeof(EntityWithDisplayNameDtoToEntityConverter<,>).MakeGenericType(entityType, idType)));
-                Converters.Add(new ConverterInfo(entityType, dtoType, typeof(EntityToEntityWithDisplayNameDtoConverter<,>).MakeGenericType(entityType, idType)));
+                Converters.Add(new ConverterDefinition(dtoType, entityType, typeof(EntityWithDisplayNameDtoToEntityConverter<,>).MakeGenericType(entityType, idType)));
+                Converters.Add(new ConverterDefinition(entityType, dtoType, typeof(EntityToEntityWithDisplayNameDtoConverter<,>).MakeGenericType(entityType, idType)));
             }
         }
 
@@ -42,20 +41,6 @@ namespace Shesha.DynamicEntities.Mapper
             foreach (var converterInfo in Converters) 
             {
                 CreateMap(converterInfo.SrcType, converterInfo.DstType).ConvertUsing(converterInfo.ConverterType);
-            }
-        }
-
-        public class ConverterInfo 
-        {
-            public Type SrcType { get; set; }
-            public Type DstType { get; set; }
-            public Type ConverterType { get; set; }
-
-            public ConverterInfo(Type srcType, Type dstType, Type converterType)
-            {
-                SrcType = srcType;
-                DstType = dstType;
-                ConverterType = converterType;
             }
         }
     }

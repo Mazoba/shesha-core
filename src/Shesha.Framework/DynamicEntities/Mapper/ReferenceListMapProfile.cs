@@ -14,11 +14,11 @@ namespace Shesha.DynamicEntities.Mapper
     /// </summary>
     public class ReferenceListMapProfile : ShaProfile, ITransientDependency
     {
-        private static List<ConverterInfo> Converters;
+        private static List<ConverterDefinition> Converters;
 
         static ReferenceListMapProfile() 
         {
-            Converters = new List<ConverterInfo>();
+            Converters = new List<ConverterDefinition>();
 
             var typeFinder = StaticContext.IocManager.Resolve<ITypeFinder>();
 
@@ -28,31 +28,22 @@ namespace Shesha.DynamicEntities.Mapper
                 //var numericType = Enum.GetUnderlyingType(reflistType);
                 var numericType = typeof(Int64);
 
-                Converters.Add(new ConverterInfo
-                {
-                    RefListType = reflistType,
-                    NumericType = numericType,
-                    NumericToEnumConverter = typeof(NumericToEnumTypeConverter<,>).MakeGenericType(numericType, reflistType),
-                    EnumToNumericConverter = typeof(EnumToNumericTypeConverter<,>).MakeGenericType(reflistType, numericType),
-                });
+                Converters.Add(new ConverterDefinition(reflistType, numericType, typeof(EnumToNumericTypeConverter<,>).MakeGenericType(reflistType, numericType)));
+                Converters.Add(new ConverterDefinition(numericType, reflistType, typeof(NumericToEnumTypeConverter<,>).MakeGenericType(numericType, reflistType)));
+
+                /*
+                var listType = typeof(List<Int64?>);
+                Converters.Add(new ConverterDefinition(listType, reflistType, typeof(NumericToEnumTypeConverter<,>).MakeGenericType(numericType, reflistType)));
+                */
             }
         }
 
         public ReferenceListMapProfile()
         {
-            foreach (var converterInfo in Converters)
+            foreach (var converter in Converters)
             {
-                CreateMap(converterInfo.NumericType, converterInfo.RefListType).ConvertUsing(converterInfo.NumericToEnumConverter);
-                CreateMap(converterInfo.RefListType, converterInfo.NumericType).ConvertUsing(converterInfo.EnumToNumericConverter);
+                CreateMap(converter.SrcType, converter.DstType).ConvertUsing(converter.ConverterType);
             }
-        }
-
-        public class ConverterInfo 
-        { 
-            public Type RefListType { get; set; }
-            public Type NumericType { get; set; }
-            public Type NumericToEnumConverter { get; set; }
-            public Type EnumToNumericConverter { get; set; }
         }
     }
 }

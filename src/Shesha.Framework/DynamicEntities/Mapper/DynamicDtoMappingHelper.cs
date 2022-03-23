@@ -5,6 +5,7 @@ using Abp.Events.Bus.Entities;
 using Abp.Events.Bus.Handlers;
 using Abp.Runtime.Caching;
 using AutoMapper;
+using Shesha.AutoMapper;
 using Shesha.Domain;
 using Shesha.Extensions;
 using System;
@@ -76,6 +77,11 @@ namespace Shesha.DynamicEntities.Mapper
             var modelConfigMapperConfig = new MapperConfiguration(cfg =>
             {
                 var mapExpression = cfg.CreateMap(srcType, dstType);
+
+                if (srcType.IsEntityType())
+                    mapExpression.MapMultiValueReferenceListValuesToDto(srcType, dstType);
+                if (dstType.IsEntityType())
+                    mapExpression.MapMultiValueReferenceListValuesFromDto(srcType, dstType);
 
                 var entityMapProfile = _iocManager.Resolve<EntityMapProfile>();
                 cfg.AddProfile(entityMapProfile);
