@@ -11,7 +11,7 @@ namespace Shesha.Roles.Dto
         public RoleMapProfile()
         {
             // Role and permission
-            CreateMap<Permission, string>().ConvertUsing(r => r.Name);
+            CreateMap<Abp.Authorization.Permission, string>().ConvertUsing(r => r.Name);
             CreateMap<RolePermissionSetting, string>().ConvertUsing(r => r.Name);
 
             CreateMap<CreateRoleDto, Role>();
@@ -23,7 +23,7 @@ namespace Shesha.Roles.Dto
 
             CreateMap<Role, RoleListDto>();
             CreateMap<Role, RoleEditDto>();
-            CreateMap<Permission, FlatPermissionDto>();
+            CreateMap<Abp.Authorization.Permission, FlatPermissionDto>();
         }
     }
 }

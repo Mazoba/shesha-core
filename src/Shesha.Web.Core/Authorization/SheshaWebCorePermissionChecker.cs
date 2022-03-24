@@ -35,8 +35,6 @@ namespace Boxfusion.Authorization
             if (person == null)
                 return false;
 
-            return true;
-
             // system administrator has all rights
             if (await IsInAnyOfRoles(person, RoleNames.DataAdministrator))
                 return true;

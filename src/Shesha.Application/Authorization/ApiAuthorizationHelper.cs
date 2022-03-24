@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Abp;
 using Abp.Application.Features;
+using Abp.Application.Services;
 using Abp.Authorization;
 using Abp.Configuration.Startup;
 using Abp.Dependency;
@@ -11,6 +12,8 @@ using Abp.Localization;
 using Abp.Runtime.Caching;
 using ConcurrentCollections;
 using Shesha.Authorization.Dtos;
+using Shesha.Permission;
+using Shesha.Permissions;
 
 namespace Shesha.Authorization
 {
@@ -18,17 +21,17 @@ namespace Shesha.Authorization
     {
 
         private readonly IAuthorizationConfiguration _authConfiguration;
-        private readonly ICacheManager _cacheManager;
+        private readonly ProtectedObjectManager _protectedObjectManager;
 
 
         public ApiAuthorizationHelper(
             IFeatureChecker featureChecker,
             IAuthorizationConfiguration authConfiguration,
-            ICacheManager cacheManager
+            ProtectedObjectManager protectedObjectManager
             ) : base(featureChecker, authConfiguration)
         {
             _authConfiguration = authConfiguration;
-            _cacheManager = cacheManager;
+            _protectedObjectManager = protectedObjectManager;
         }
 
         public override async Task AuthorizeAsync(MethodInfo methodInfo, Type type)
@@ -49,7 +52,8 @@ namespace Shesha.Authorization
                 return;
             }
 
-            if (type == null || !typeof(SheshaAppServiceBase).IsAssignableFrom(type))
+            var shaServiceType = typeof(SheshaAppServiceBase);
+            if (type == null || !shaServiceType.IsAssignableFrom(type))
                 return;
 
             /*if (!AbpSession.UserId.HasValue)
@@ -59,23 +63,14 @@ namespace Shesha.Authorization
                 );
             }*/
 
-            var cacheKey = type.FullName + "@" + methodInfo.Name;
-            var customPermissionsItem = await _cacheManager.GetApiPermissionCache().GetOrDefaultAsync(cacheKey);
+            var permission = await _protectedObjectManager.GetAsync($"{type.FullName}@{methodInfo.Name}");
 
-            if (customPermissionsItem == null)
-            {
-                // ToDo: get data from the storage (DB)
-                // temporary
-                customPermissionsItem = new RequiredPermissionCacheItem() 
-                {
-                    RequiredPermissions = new ConcurrentHashSet<string> {"test:permission"}
-                };
-
-                await _cacheManager.GetApiPermissionCache().SetAsync(cacheKey, customPermissionsItem, slidingExpireTime: TimeSpan.FromMinutes(5));
-            }
+            if (permission?.Permissions == null
+                || !permission.Permissions.Any() 
+                || permission.Inherited) return;
 
             // ToDo: add RequireAll flag
-            PermissionChecker.Authorize(false , customPermissionsItem.RequiredPermissions.ToArray());
+            PermissionChecker.Authorize(false , permission.Permissions.ToArray());
         }
     }
 }

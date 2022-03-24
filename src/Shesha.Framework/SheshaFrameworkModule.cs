@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Shesha.Authorization;
 using Shesha.Configuration;
 using Shesha.Locks;
+using Shesha.Permissions;
 using Shesha.Services;
 using Shesha.Services.StoredFiles;
 
@@ -23,6 +24,7 @@ namespace Shesha
         public override void PreInitialize()
         {
             Configuration.Settings.Providers.Add<SheshaSettingProvider>();
+            //IocManager.Register<IPermissionManager, ShaPermissionManager>();
         }
 
         public override void Initialize()
@@ -55,6 +57,7 @@ namespace Shesha
             
             IocManager.RegisterAssemblyByConvention(thisAssembly);
         }
+
         public override void PostInitialize()
         {
         }

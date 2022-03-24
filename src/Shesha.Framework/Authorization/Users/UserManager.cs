@@ -159,8 +159,9 @@ namespace Shesha.Authorization.Users
         }
 
         // permissions
-        public override Task<bool> IsGrantedAsync(User user, Permission permission)
+        public override Task<bool> IsGrantedAsync(User user, Abp.Authorization.Permission permission)
         {
+            var fdc = FeatureDependencyContext;
             return base.IsGrantedAsync(user, permission);
         }
     }

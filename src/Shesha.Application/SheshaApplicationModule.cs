@@ -37,7 +37,6 @@ namespace Shesha
             IocManager.Register<IShaApplicationModuleConfiguration, ShaApplicationModuleConfiguration>();
 
             IocManager.Register<IAuthorizationHelper, ApiAuthorizationHelper>(DependencyLifeStyle.Transient);
-            IocManager.Register<IPermissionManager, ShaPermissionManager>();
 
             Configuration.Settings.Providers.Add<SmsSettingProvider>();
             Configuration.Settings.Providers.Add<PushSettingProvider>();
@@ -48,7 +47,8 @@ namespace Shesha
             Configuration.Notifications.Notifiers.Add<PushRealTimeNotifier>();
 
             Configuration.Authorization.Providers.Add<SheshaAuthorizationProvider>();
-            
+            Configuration.Authorization.Providers.Add<DBAuthorizationProvider>();
+
             // replace email sender
             Configuration.ReplaceService<ISmtpEmailSenderConfiguration, SmtpEmailSenderSettings>(DependencyLifeStyle.Transient);
 
