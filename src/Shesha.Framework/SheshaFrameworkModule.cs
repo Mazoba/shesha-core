@@ -7,6 +7,7 @@ using Castle.MicroKernel.Registration;
 using Microsoft.Extensions.Configuration;
 using Shesha.Authorization;
 using Shesha.Configuration;
+using Shesha.Extensions;
 using Shesha.Locks;
 using Shesha.Permissions;
 using Shesha.Services;
@@ -24,7 +25,7 @@ namespace Shesha
         public override void PreInitialize()
         {
             Configuration.Settings.Providers.Add<SheshaSettingProvider>();
-            //IocManager.Register<IPermissionManager, ShaPermissionManager>();
+            IocManager.Register<IPermissionManager, IPermissionDefinitionContext, ShaPermissionManager>();
         }
 
         public override void Initialize()
@@ -60,6 +61,9 @@ namespace Shesha
 
         public override void PostInitialize()
         {
+            IocManager.Resolve<ShaPermissionManager>().Initialize();
+
+            var def = IocManager.Resolve<IPermissionDefinitionContext>();
         }
     }
 }

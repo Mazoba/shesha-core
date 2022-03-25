@@ -150,6 +150,7 @@ namespace Shesha.Permissions
         [UnitOfWork]
         public virtual async Task<ProtectedObjectDto> SetAsync(ProtectedObjectDto protectedObject)
         {
+            // ToDo: AS - check permission names exist
             var obj = await _protectedObjectRepository.GetAll().FirstOrDefaultAsync(x =>
                           x.Object == protectedObject.Object
                           && x.Category == protectedObject.Category) 
@@ -176,6 +177,7 @@ namespace Shesha.Permissions
         [UnitOfWork]
         public virtual async Task<ProtectedObjectDto> SetPermissionsAsync(string objectName, bool inherited, List<string> permissions)
         {
+            // ToDo: AS - check permission names exist
             var obj = await _protectedObjectRepository.GetAll().FirstOrDefaultAsync(x => x.Object == objectName);
 
             if (obj == null) return null;

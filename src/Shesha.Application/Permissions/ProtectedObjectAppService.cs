@@ -118,12 +118,5 @@ namespace Shesha.Permissions
         {
             await _protectedObjectManager.ClearCacheAsync();
         }
-
-        public async Task<string> GetLocalize()
-        {
-            LocalizationSourceName = SheshaConsts.LocalizationSourceName;
-            return L("Shurik Жмурик");
-        }
-
     }
 }

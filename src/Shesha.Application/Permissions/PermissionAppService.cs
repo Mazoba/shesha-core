@@ -38,6 +38,8 @@ namespace Shesha.Permissions
 
         public async Task<PermissionDto> CreatePermission(PermissionDto permission)
         {
+
+            // ToDo: AS - Move to the Permission manager or extension
             var dbp = new PermissionDefinition()
             {
                 Name = permission.Name,
