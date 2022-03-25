@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Abp.Application.Services;
+using Abp.Configuration;
 using Abp.Domain.Entities.Auditing;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
@@ -42,7 +43,9 @@ namespace Shesha.EntityHistory
         private readonly IRepository<EntityChange, long> EntityChangeRepository;
         private readonly IRepository<EntityPropertyChange, long> EntityPropertyChangeRepository;
         private readonly IRepository<EntityHistoryItem, long> EntityHistoryItemRepository;
-        
+
+        private readonly IRepository<Setting, long> _settingRepository;
+
         private readonly IObjectMapper Mapper;
         private readonly ISessionFactory SessionFactory;
         private readonly ITypeFinder TypeFinder;
@@ -55,6 +58,7 @@ namespace Shesha.EntityHistory
             IRepository<EntityChange, long> entityChangeRepository,
             IRepository<EntityPropertyChange, long> entityPropertyChangeRepository,
             IRepository<EntityHistoryItem, long> entityHistoryItemRepository,
+            IRepository<Setting, long> settingRepository,
             IObjectMapper mapper,
             ITypeFinder typeFinder,
             ISessionFactory sessionFactory)
@@ -66,6 +70,7 @@ namespace Shesha.EntityHistory
             EntityPropertyChangeRepository = entityPropertyChangeRepository;
             EntityChangeRepository = entityChangeRepository;
             EntityHistoryItemRepository = entityHistoryItemRepository;
+            _settingRepository = settingRepository;
             Mapper = mapper;
             TypeFinder = typeFinder;
             SessionFactory = sessionFactory;
@@ -101,6 +106,16 @@ namespace Shesha.EntityHistory
             var entityId = input.Filter.FirstOrDefault(f => f.RealPropertyName == "EntityId")?.Filter.ToString();
             var entityTypeFullName =
                 input.Filter.FirstOrDefault(f => f.RealPropertyName == "EntityTypeFullName")?.Filter.ToString();
+
+            // fix for Settings audit
+            if (entityTypeFullName == typeof(Setting).FullName)
+            {
+                if (entityId.ToLong(0) == 0)
+                {
+                    // convert from Name to Id
+                    entityId = _settingRepository.GetAll().FirstOrDefault(x => x.Name == entityId)?.Id.ToString();
+                }
+            }
 
             var itemType = TypeFinder.Find(t => t.FullName == entityTypeFullName)?.FirstOrDefault();
 
