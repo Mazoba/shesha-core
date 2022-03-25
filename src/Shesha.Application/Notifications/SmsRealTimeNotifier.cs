@@ -88,51 +88,9 @@ namespace Shesha.Notifications
         }
 
         /// inheritedDoc
-        public void SendNotifications(UserNotification[] userNotifications)
-        {
-            try
-            {
-                if (!userNotifications.Any())
-                    return;
-
-                foreach (var userNotification in userNotifications)
-                {
-                    var template = GetTemplate(userNotification.Notification.NotificationName, RefListNotificationType.SMS);
-                    if (template == null || !template.IsEnabled)
-                        continue;
-
-                    if (template.SendType != RefListNotificationType.SMS)
-                        throw new Exception($"Wrong type of template. Expected `{RefListNotificationType.SMS}`, actual `{template.SendType}`");
-
-                    var person = GetRecipient(userNotification);
-                    var mobileNumber = person?.MobileNumber;
-                    if (string.IsNullOrWhiteSpace(mobileNumber))
-                        continue;
-
-                    var body = GenerateContent(template.Body, userNotification.Notification.Data, true);
-
-                    if (string.IsNullOrWhiteSpace(body))
-                        continue;
-
-                    AsyncHelper.RunSync(() => _smsGateway.SendSmsAsync(mobileNumber, body));
-                }
-            }
-            catch (Exception e)
-            {
-                throw;
-            }
-        }
-
-        /// inheritedDoc
         public async Task SendNotificationsAsync(List<NotificationMessageDto> notificationMessages)
         {
             await SendNotificationsAsync(notificationMessages, RefListNotificationType.SMS);
-        }
-
-        /// inheritedDoc
-        public void SendNotifications(List<NotificationMessageDto> notificationMessages)
-        {
-            SendNotifications(notificationMessages, RefListNotificationType.SMS);
         }
 
         public Task ResendMessageAsync(Guid notificationMessageId)

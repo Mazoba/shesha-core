@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Abp;
+﻿using Abp;
 using Abp.BackgroundJobs;
 using Abp.Collections.Extensions;
 using Abp.Dependency;
@@ -14,6 +9,9 @@ using Abp.Json;
 using Abp.Notifications;
 using Abp.Runtime.Session;
 using Shesha.Notifications.Dto;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Shesha.Notifications
 {
@@ -23,6 +21,8 @@ namespace Shesha.Notifications
     public class ShaNotificationPublisher : AbpServiceBase, INotificationPublisher, ITransientDependency
     {
         public const int MaxUserCountToDirectlyDistributeANotification = 5;
+
+        private readonly INotificationDistributer _notificationDistributer;
 
         /// <summary>
         /// Indicates all tenants.
@@ -54,7 +54,8 @@ namespace Shesha.Notifications
             IBackgroundJobManager backgroundJobManager,
             INotificationConfiguration notificationConfiguration,
             IGuidGenerator guidGenerator,
-            IIocResolver iocResolver)
+            IIocResolver iocResolver,
+            INotificationDistributer notificationDistributer)
         {
             _store = store;
             _backgroundJobManager = backgroundJobManager;
@@ -62,6 +63,7 @@ namespace Shesha.Notifications
             _guidGenerator = guidGenerator;
             _iocResolver = iocResolver;
             AbpSession = NullAbpSession.Instance;
+            _notificationDistributer = notificationDistributer;
         }
 
         //Create EntityIdentifier includes entityType and entityId.
@@ -111,16 +113,7 @@ namespace Shesha.Notifications
             var isShaNotification = data != null && data is ShaNotificationData;
             if (isShaNotification || userIds != null && userIds.Length <= MaxUserCountToDirectlyDistributeANotification)
             {
-                //We can directly distribute the notification since there are not much receivers
-                // ToDo: ABP662
-                /*foreach (var notificationDistributorType in _notificationConfiguration.Distributers)
-                {
-                    using (var notificationDistributer = _iocResolver.ResolveAsDisposable<INotificationDistributer>(notificationDistributorType))
-                    {
-                        var distributer = notificationDistributer.Object;
-                        await distributer.DistributeAsync(notificationInfo.Id);
-                    }
-                }*/
+                await _notificationDistributer.DistributeAsync(notificationInfo.Id);
             }
             else
             {
@@ -130,74 +123,6 @@ namespace Shesha.Notifications
                         notificationInfo.Id
                         )
                     );
-            }
-        }
-
-        //Create EntityIdentifier includes entityType and entityId.
-        [UnitOfWork]
-        public virtual void Publish(
-            string notificationName,
-            NotificationData data = null,
-            EntityIdentifier entityIdentifier = null,
-            NotificationSeverity severity = NotificationSeverity.Info,
-            UserIdentifier[] userIds = null,
-            UserIdentifier[] excludedUserIds = null,
-            int?[] tenantIds = null)
-        {
-            if (notificationName.IsNullOrEmpty())
-            {
-                throw new ArgumentException("NotificationName can not be null or whitespace!", "notificationName");
-            }
-
-            if (!tenantIds.IsNullOrEmpty() && !userIds.IsNullOrEmpty())
-            {
-                throw new ArgumentException("tenantIds can be set only if userIds is not set!", "tenantIds");
-            }
-
-            if (tenantIds.IsNullOrEmpty() && userIds.IsNullOrEmpty())
-            {
-                tenantIds = new[] { AbpSession.TenantId };
-            }
-
-            var notificationInfo = new NotificationInfo(_guidGenerator.Create())
-            {
-                NotificationName = notificationName,
-                EntityTypeName = entityIdentifier == null ? null : entityIdentifier.Type.FullName,
-                EntityTypeAssemblyQualifiedName = entityIdentifier == null ? null : entityIdentifier.Type.AssemblyQualifiedName,
-                EntityId = entityIdentifier == null ? null : entityIdentifier.Id.ToJsonString(),
-                Severity = severity,
-                UserIds = userIds.IsNullOrEmpty() ? null : userIds.Select(uid => uid.ToUserIdentifierString()).JoinAsString(","),
-                ExcludedUserIds = excludedUserIds.IsNullOrEmpty() ? null : excludedUserIds.Select(uid => uid.ToUserIdentifierString()).JoinAsString(","),
-                TenantIds = tenantIds.IsNullOrEmpty() ? null : tenantIds.JoinAsString(","),
-                Data = data == null ? null : data.ToJsonString(),
-                DataTypeName = data == null ? null : data.GetType().AssemblyQualifiedName
-            };
-
-            _store.InsertNotification(notificationInfo);
-
-            CurrentUnitOfWork.SaveChanges(); //To get Id of the notification
-
-            var isShaNotification = data != null && data is ShaNotificationData;
-            if (isShaNotification || userIds != null && userIds.Length <= MaxUserCountToDirectlyDistributeANotification)
-            {
-                //We can directly distribute the notification since there are not much receivers
-                // ToDo: ABP662
-                /*foreach (var notificationDistributorType in _notificationConfiguration.Distributers)
-                {
-                    using (var notificationDistributer = _iocResolver.ResolveAsDisposable<INotificationDistributer>(notificationDistributorType))
-                    {
-                        notificationDistributer.Object.Distribute(notificationInfo.Id);
-                    }
-                }*/
-            }
-            else
-            {
-                //We enqueue a background job since distributing may get a long time
-                _backgroundJobManager.Enqueue<NotificationDistributionJob, NotificationDistributionJobArgs>(
-                   new NotificationDistributionJobArgs(
-                       notificationInfo.Id
-                       )
-                   );
             }
         }
     }

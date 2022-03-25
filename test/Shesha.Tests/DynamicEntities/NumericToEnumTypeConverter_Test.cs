@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Moq;
 using Shesha.Domain.Enums;
 using Shesha.DynamicEntities.Mapper;
 using System;
@@ -12,25 +11,32 @@ namespace Shesha.Tests.DynamicEntities
         [Fact]
         public void ConvertInt64ToPersonTitle_Test()
         {
-            RefListPersonTitle destination = 0;
             Int64 source = 1;
 
-            var converter = new NumericToEnumTypeConverter<Int64, RefListPersonTitle>();
-
-            destination = converter.Convert(source, destination, GetMockResolutionContext());
+            var mapper = GetMapper<Int64, RefListPersonTitle>();
+            var destination = mapper.Map<RefListPersonTitle>(source);
 
             Assert.Equal(RefListPersonTitle.Mr, destination);
         }
 
+        #region
+
+        private IMapper GetMapper<TSrc, TDst>() where TDst: Enum
+        {
+            var mapperConfiguration = new MapperConfiguration(c => {
+                c.CreateMap(typeof(TSrc), typeof(TDst)).ConvertUsing(typeof(NumericToEnumTypeConverter<TSrc, TDst>));
+            });
+            return new Mapper(mapperConfiguration);
+        }
+
+        #endregion
+
         [Fact]
         public void ConvertInt64ToIntEnum_Test()
         {
-            IntItems destination = 0;
             Int64 source = 1;
-
-            var converter = new NumericToEnumTypeConverter<Int64, IntItems>();
-
-            destination = converter.Convert(source, destination, GetMockResolutionContext());
+            var mapper = GetMapper<Int64, IntItems>();
+            var destination  = mapper.Map<IntItems>(source);
 
             Assert.Equal(IntItems.Value1, destination);
         }
@@ -38,12 +44,10 @@ namespace Shesha.Tests.DynamicEntities
         [Fact]
         public void ConvertInt64ToInt64Enum_Test()
         {
-            Int64Items destination = 0;
             Int64 source = 1;
 
-            var converter = new NumericToEnumTypeConverter<Int64, Int64Items>();
-
-            destination = converter.Convert(source, destination, GetMockResolutionContext());
+            var mapper = GetMapper<Int64, Int64Items>();
+            var destination = mapper.Map<Int64Items>(source);
 
             Assert.Equal(Int64Items.Value1, destination);
         }
@@ -51,23 +55,12 @@ namespace Shesha.Tests.DynamicEntities
         [Fact]
         public void ConvertInt64ToByteEnum_Test()
         {
-            ByteItems destination = 0;
             Int64 source = 1;
 
-            var converter = new NumericToEnumTypeConverter<Int64, ByteItems>();
-
-            destination = converter.Convert(source, destination, GetMockResolutionContext());
+            var mapper = GetMapper<Int64, ByteItems>();
+            var destination = mapper.Map<ByteItems>(source);
 
             Assert.Equal(ByteItems.Value1, destination);
-        }
-
-        private ResolutionContext GetMockResolutionContext() 
-        {
-            var options = new Mock<IMappingOperationOptions>();
-            var mapper = new Mock<IRuntimeMapper>();
-
-            // ToDo: ABP662
-            return null;//new ResolutionContext(options.Object, mapper.Object);
         }
 
         public enum IntItems : int 
