@@ -20,8 +20,9 @@ namespace Shesha.Notifications
         /// <param name="notificationName">Name of the notification</param>
         /// <param name="data">Notification data (is used in templates)</param>
         /// <param name="recipients">list of recipients</param>
+        /// <param name="sourceEntity">Optional parameter. If notification is an Entity level notification, specifies the entity the notification relates to.</param>
         /// <returns></returns>
-        Task PublishAsync(string notificationName, NotificationData data, List<Person> recipients);
+        Task PublishAsync(string notificationName, NotificationData data, List<Person> recipients, object sourceEntity = null);
 
         /// <summary>
         /// Publish email notification
@@ -29,8 +30,9 @@ namespace Shesha.Notifications
         /// <param name="notificationName">Name of the notification. Default email template of the specified notification will be used</param>
         /// <param name="data">Data that is used to fill template</param>
         /// <param name="emailAddress">Recipient email address</param>
+        /// <param name="sourceEntity">Optional parameter. If notification is an Entity level notification, specifies the entity the notification relates to.</param>
         /// <returns></returns>
-        Task PublishEmailNotificationAsync<TData>(string notificationName, TData data, string emailAddress, List<NotificationAttachmentDto> attachments) where TData : NotificationData;
+        Task PublishEmailNotificationAsync<TData>(string notificationName, TData data, string emailAddress, List<NotificationAttachmentDto> attachments, object sourceEntity = null) where TData : NotificationData;
 
         /// <summary>
         /// Publish email notification using explicitly specified template
@@ -38,8 +40,9 @@ namespace Shesha.Notifications
         /// <param name="templateId">Id of the template</param>
         /// <param name="data">Data that is used to fill template</param>
         /// <param name="emailAddress">Recipient email address</param>
+        /// <param name="sourceEntity">Optional parameter. If notification is an Entity level notification, specifies the entity the notification relates to.</param>
         /// <returns></returns>
-        Task PublishEmailNotificationAsync<TData>(Guid templateId, TData data, string emailAddress, List<NotificationAttachmentDto> attachments) where TData : NotificationData;
+        Task PublishEmailNotificationAsync<TData>(Guid templateId, TData data, string emailAddress, List<NotificationAttachmentDto> attachments, object sourceEntity = null) where TData : NotificationData;
 
         /// <summary>
         /// Publish sms notification
@@ -47,8 +50,9 @@ namespace Shesha.Notifications
         /// <param name="notificationName">Name of the notification. Default email template of the specified notification will be used</param>
         /// <param name="data">Data that is used to fill template</param>
         /// <param name="mobileNo">Recipient mobile number</param>
+        /// <param name="sourceEntity">Optional parameter. If notification is an Entity level notification, specifies the entity the notification relates to.</param>
         /// <returns></returns>
-        Task PublishSmsNotificationAsync<TData>(string notificationName, TData data, string mobileNo) where TData : NotificationData;
+        Task PublishSmsNotificationAsync<TData>(string notificationName, TData data, string mobileNo, object sourceEntity = null) where TData : NotificationData;
 
         /// <summary>
         /// Publish sms notification using explicitly specified template
@@ -56,8 +60,9 @@ namespace Shesha.Notifications
         /// <param name="templateId">Id of the template</param>
         /// <param name="data">Data that is used to fill template</param>
         /// <param name="mobileNo">Recipient mobile number</param>
+        /// <param name="sourceEntity">Optional parameter. If notification is an Entity level notification, specifies the entity the notification relates to.</param>
         /// <returns></returns>
-        Task PublishSmsNotificationAsync<TData>(Guid templateId, TData data, string mobileNo) where TData : NotificationData;
+        Task PublishSmsNotificationAsync<TData>(Guid templateId, TData data, string mobileNo, object sourceEntity = null) where TData : NotificationData;
 
         /// <summary>
         /// Save notification attachment
