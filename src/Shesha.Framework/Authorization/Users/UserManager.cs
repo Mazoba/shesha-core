@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Abp.Authorization;
@@ -7,12 +8,15 @@ using Abp.Authorization.Users;
 using Abp.Configuration;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
+using Abp.IdentityFramework;
 using Abp.Organizations;
 using Abp.Runtime.Caching;
+using Abp.Runtime.Validation;
 using Abp.UI;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NHibernate.Linq;
 using Shesha.Authorization.Roles;
 
 namespace Shesha.Authorization.Users
@@ -162,6 +166,89 @@ namespace Shesha.Authorization.Users
         public override Task<bool> IsGrantedAsync(User user, Permission permission)
         {
             return base.IsGrantedAsync(user, permission);
+        }
+
+        /// <summary>
+        /// Creates a User Account with basic user details and default roles.
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="createLocalPassword"></param>
+        /// <param name="password"></param>
+        /// <param name="passwordConfirmation"></param>
+        /// <param name="firstname"></param>
+        /// <param name="lastname"></param>
+        /// <param name="mobileNumber"></param>
+        /// <param name="emailAddress"></param>
+        /// <returns>Returns the User object representing the newly created User Account. If parameters were incorrect will through 
+        /// a AbpValidationException exception that can be allowed through to the calling web app.</returns>
+        public async Task<User> CreateUser(string username, bool createLocalPassword, string password, string passwordConfirmation, string firstname, string lastname, string mobileNumber, string emailAddress)
+        {
+            var validationResults = new List<ValidationResult>();
+
+            if (string.IsNullOrWhiteSpace(username))
+                validationResults.Add(new ValidationResult("Username is mandatory"));
+            else
+            // check duplicate usernames
+            if (await UserNameAlreadyInUse(username))
+                validationResults.Add(new ValidationResult("User with the same username already exists"));
+
+            if (createLocalPassword)
+            {
+                if (string.IsNullOrWhiteSpace(password))
+                    validationResults.Add(new ValidationResult("Password is mandatory"));
+
+                if (string.IsNullOrWhiteSpace(passwordConfirmation))
+                    validationResults.Add(new ValidationResult("Password Confirmation is mandatory"));
+
+                if (!string.IsNullOrWhiteSpace(password) &&
+                    !string.IsNullOrWhiteSpace(passwordConfirmation) &&
+                    password != passwordConfirmation)
+                    validationResults.Add(new ValidationResult("Password Confirmation must be the same as Password"));
+            }
+
+            if (validationResults.Any())
+                throw new AbpValidationException("Please correct the errors and try again", validationResults);
+
+            // 1. create user
+            var user = new User()
+            {
+                EmailAddress = emailAddress ?? "",
+                PhoneNumber = mobileNumber ?? "",
+                TenantId = AbpSession.TenantId,
+                IsEmailConfirmed = true,
+                UserName = username,
+                //UserName ??= "", // just to prevent crash in the ABP layer, it should be validated before
+                Name = firstname, // todo: make a decision how to handle duplicated properties in the User and Person classes (option 1 - use Person as a source and sync onw way, option 2 - remove duplicates from User, but in some cases we needn't Person for a user)
+                Surname = lastname,
+            };
+
+            user.SetNormalizedNames();
+            await this.InitializeOptionsAsync(AbpSession.TenantId);
+
+            var newPassword = createLocalPassword
+                ? password 
+                : Guid.NewGuid().ToString();
+            CheckErrors(await CreateAsync(user, newPassword));
+
+            return user;
+        }
+
+        protected virtual void CheckErrors(IdentityResult identityResult)
+        {
+            identityResult.CheckErrors(LocalizationManager);
+        }
+
+        /// <summary>
+        /// Checks is specified username already used by another person
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool> UserNameAlreadyInUse(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return false;
+
+            var normalizedUsername = NormalizeName(username);
+            return await Users.AnyAsync(u => u.NormalizedUserName == normalizedUsername);
         }
     }
 }
