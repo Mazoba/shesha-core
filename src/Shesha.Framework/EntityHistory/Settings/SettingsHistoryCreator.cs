@@ -34,7 +34,7 @@ namespace Shesha.EntityHistory.Settings
                 ChangeType = EntityChangeType.Updated,
                 ChangeTime = DateTime.Now,
                 EntityEntry = entity, // [NotMapped]
-                EntityId = setting.Name,
+                EntityId = setting.Name + (setting.UserId != null ? "@" + setting.UserId : ""),
                 EntityTypeFullName = typeof(Setting).FullName,
                 TenantId = abpSession.TenantId,
             };
