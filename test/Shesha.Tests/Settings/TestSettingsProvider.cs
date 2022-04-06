@@ -8,7 +8,7 @@ namespace Shesha.Tests.DynamicEntities
     {
         public override IEnumerable<SettingDefinition> GetSettingDefinitions(SettingDefinitionProviderContext context)
         {
-            return new[] { new SettingDefinition("TestSetting", "Default Test setting value" ) };
+            return new[] { new SettingDefinition("TestSetting", "1" ) };
         }
     }
 }

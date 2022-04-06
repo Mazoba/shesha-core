@@ -27,38 +27,105 @@ namespace Shesha.Tests.Settings
         public async Task Save_Test()
         {
             LoginAsHostAdmin();
-
-            using (var uow = _unitOfWorkManager.Begin())
+            try
             {
-                var nhuow = uow as NhUnitOfWork;
-                var session = nhuow?.GetSession();
-
-                var testSetting = _settingManager.GetSettingValue("TestSetting");
-                testSetting.ShouldNotBeNull();
-
-                _settingManager.ChangeSettingForApplication("TestSetting", "test 1");
-                _settingManager.ChangeSettingForApplication("TestSetting", "test 2");
-                try
+                using (var uow = _unitOfWorkManager.Begin())
                 {
+                    var nhuow = uow as NhUnitOfWork;
+                    var session = nhuow?.GetSession();
+
+                    var testSetting = _settingManager.GetSettingValue("TestSetting");
+                    testSetting.ShouldNotBeNull();
+
+                    _settingManager.ChangeSettingForApplication("TestSetting", "2");
+                    session.Flush();
+
                     session.CreateSQLQuery("select count(1) from AbpSettings where Name = 'TestSetting'")
                         .UniqueResult<int>().ShouldBe(1);
-                    session.CreateSQLQuery("select count(1) from AbpEntityPropertyChanges where EntityChangeId in (select id from AbpEntityChanges where EntityId = (select cast(id as nvarchar(max)) from AbpSettings where Name = 'TestSetting'))")
+                    session.CreateSQLQuery(
+                            "select count(1) from AbpEntityPropertyChanges where EntityChangeId in (select id from AbpEntityChanges where EntityId = 'TestSetting')")
                         .UniqueResult<int>().ShouldBe(1);
-                    session.CreateSQLQuery("select count(1) from AbpEntityChanges where EntityId in (select cast(id as nvarchar(max)) from AbpSettings where Name = 'TestSetting')")
+                    session.CreateSQLQuery("select count(1) from AbpEntityChanges where EntityId = 'TestSetting'")
+                        .UniqueResult<int>().ShouldBe(1);
+                    session.CreateSQLQuery("select count(1) from AbpEntityChangeSets where id in (select EntityChangeSetId from AbpEntityChanges where EntityId = 'TestSetting')")
+                        .UniqueResult<int>().ShouldBe(1);
+                }
+                using (var uow = _unitOfWorkManager.Begin())
+                {
+                    var nhuow = uow as NhUnitOfWork;
+                    var session = nhuow?.GetSession();
+
+                    var testSetting = _settingManager.GetSettingValue("TestSetting");
+                    testSetting.ShouldNotBeNull();
+
+                    _settingManager.ChangeSettingForApplication("TestSetting", "3");
+                    session.Flush();
+                    session.CreateSQLQuery("select count(1) from AbpSettings where Name = 'TestSetting'")
+                        .UniqueResult<int>().ShouldBe(1);
+                    session.CreateSQLQuery(
+                            "select count(1) from AbpEntityPropertyChanges where EntityChangeId in (select id from AbpEntityChanges where EntityId = 'TestSetting')")
                         .UniqueResult<int>().ShouldBe(2);
-                    session.CreateSQLQuery("select count(1) from AbpEntityChangeSets where id in (select EntityChangeSetId from AbpEntityChanges where EntityId in (select cast(id as nvarchar(max)) from AbpSettings where Name = 'TestSetting'))")
+                    session.CreateSQLQuery("select count(1) from AbpEntityChanges where EntityId = 'TestSetting'")
+                        .UniqueResult<int>().ShouldBe(2);
+                    session.CreateSQLQuery("select count(1) from AbpEntityChangeSets where id in (select EntityChangeSetId from AbpEntityChanges where EntityId = 'TestSetting')")
                         .UniqueResult<int>().ShouldBe(2);
                 }
-                finally
+                using (var uow = _unitOfWorkManager.Begin())
                 {
+                    var nhuow = uow as NhUnitOfWork;
+                    var session = nhuow?.GetSession();
+
+                    var testSetting = _settingManager.GetSettingValue("TestSetting");
+                    testSetting.ShouldNotBeNull();
+
+                    _settingManager.ChangeSettingForApplication("TestSetting", "1");
+                    session.Flush();
+                    session.CreateSQLQuery("select count(1) from AbpSettings where Name = 'TestSetting'")
+                        .UniqueResult<int>().ShouldBe(0);
+                    session.CreateSQLQuery(
+                            "select count(1) from AbpEntityPropertyChanges where EntityChangeId in (select id from AbpEntityChanges where EntityId = 'TestSetting')")
+                        .UniqueResult<int>().ShouldBe(3);
+                    session.CreateSQLQuery("select count(1) from AbpEntityChanges where EntityId = 'TestSetting'")
+                        .UniqueResult<int>().ShouldBe(3);
+                    session.CreateSQLQuery("select count(1) from AbpEntityChangeSets where id in (select EntityChangeSetId from AbpEntityChanges where EntityId = 'TestSetting')")
+                        .UniqueResult<int>().ShouldBe(3);
+                }
+                using (var uow = _unitOfWorkManager.Begin())
+                {
+                    var nhuow = uow as NhUnitOfWork;
+                    var session = nhuow?.GetSession();
+
+                    var testSetting = _settingManager.GetSettingValue("TestSetting");
+                    testSetting.ShouldNotBeNull();
+
+                    _settingManager.ChangeSettingForApplication("TestSetting", "2");
+                    session.Flush();
+                    session.CreateSQLQuery("select count(1) from AbpSettings where Name = 'TestSetting'")
+                        .UniqueResult<int>().ShouldBe(1);
+                    session.CreateSQLQuery(
+                            "select count(1) from AbpEntityPropertyChanges where EntityChangeId in (select id from AbpEntityChanges where EntityId = 'TestSetting')")
+                        .UniqueResult<int>().ShouldBe(4);
+                    session.CreateSQLQuery("select count(1) from AbpEntityChanges where EntityId = 'TestSetting'")
+                        .UniqueResult<int>().ShouldBe(4);
+                    session.CreateSQLQuery("select count(1) from AbpEntityChangeSets where id in (select EntityChangeSetId from AbpEntityChanges where EntityId = 'TestSetting')")
+                        .UniqueResult<int>().ShouldBe(4);
+                }
+            }
+            finally
+            {
+                using (var uow = _unitOfWorkManager.Begin())
+                {
+                    var nhuow = uow as NhUnitOfWork;
+                    var session = nhuow?.GetSession();
+
                     // delete temporary values
                     var entityChangeSetId = 
-                        session.CreateSQLQuery("select EntityChangeSetId from AbpEntityChanges where EntityId in (select cast(id as nvarchar(max)) from AbpSettings where Name = 'TestSetting')")
+                        session.CreateSQLQuery("select EntityChangeSetId from AbpEntityChanges where EntityId = 'TestSetting'")
                             .List<Int64>();
 
-                    session.CreateSQLQuery($"delete from AbpEntityPropertyChanges where EntityChangeId in (select id from AbpEntityChanges where EntityId in (select cast(id as nvarchar(max)) from AbpSettings where Name = 'TestSetting'))")
+                    session.CreateSQLQuery("delete from AbpEntityPropertyChanges where EntityChangeId in (select id from AbpEntityChanges where EntityId = 'TestSetting')")
                         .ExecuteUpdate();
-                    session.CreateSQLQuery($"delete from AbpEntityChanges where EntityId in (select cast(id as nvarchar(max)) from AbpSettings where Name = 'TestSetting')")
+                    session.CreateSQLQuery("delete from AbpEntityChanges where EntityId = 'TestSetting'")
                         .ExecuteUpdate();
                     foreach (var id in entityChangeSetId)
                     {

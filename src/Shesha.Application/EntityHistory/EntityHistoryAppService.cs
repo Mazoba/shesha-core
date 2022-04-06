@@ -107,16 +107,6 @@ namespace Shesha.EntityHistory
             var entityTypeFullName =
                 input.Filter.FirstOrDefault(f => f.RealPropertyName == "EntityTypeFullName")?.Filter.ToString();
 
-            // fix for Settings audit
-            if (entityTypeFullName == typeof(Setting).FullName)
-            {
-                if (entityId.ToLong(0) == 0)
-                {
-                    // convert from Name to Id
-                    entityId = _settingRepository.GetAll().FirstOrDefault(x => x.Name == entityId)?.Id.ToString();
-                }
-            }
-
             var itemType = TypeFinder.Find(t => t.FullName == entityTypeFullName)?.FirstOrDefault();
 
             var history = new List<EntityHistoryItemDto>();
@@ -405,7 +395,7 @@ namespace Shesha.EntityHistory
                 // If there is no Created record then get the create date stored in ICreationAudited entity
                 if (list.All(x => x.HistoryItemType != (int?)EntityHistoryItemType.Created))
                 {
-                    if (DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
+                    if (Parser.CanParseId(entityId, entityType) && DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
                     {
                         var createdBy = GetPersonByUserId(obj.CreatorUserId);
                         list.Add(new EntityHistoryItemDto()
