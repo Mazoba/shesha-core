@@ -18,6 +18,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Shesha.Configuration;
 using Shesha.DynamicEntities;
+using Shesha.DynamicEntities.Swagger;
 using Shesha.Identity;
 using Shesha.Scheduler.Extensions;
 using Shesha.Swagger;
@@ -84,8 +85,9 @@ namespace Shesha.Web.Host.Startup
                 options.AddXmlDocuments();
 
                 options.OperationFilter<SwaggerOperationFilter>();
-                options.OperationFilter<SwaggerDefaultValues>();
-
+                
+                options.CustomSchemaIds(type => SwaggerHelper.GetSchemaId(type));
+                
                 options.CustomOperationIds(desc => desc.ActionDescriptor is ControllerActionDescriptor d 
                     ? d.ControllerName.ToCamelCase() + d.ActionName.ToPascalCase()
                     : null);
@@ -102,7 +104,22 @@ namespace Shesha.Web.Host.Startup
                     In = ParameterLocation.Header,
                     Type = SecuritySchemeType.ApiKey
                 });
+
+                options.SchemaFilter<DynamicDtoSchemaFilter>();
             });
+
+            //services.AddApiVersioning(options =>
+            //{
+            //    options.AssumeDefaultVersionWhenUnspecified = true;
+            //    options.DefaultApiVersion = ApiVersion.Default;
+            //    options.ReportApiVersions = true;
+            //});
+
+            //services.AddVersionedApiExplorer(options =>
+            //{
+            //    options.GroupNameFormat = "'v'VVV";
+            //    options.SubstituteApiVersionInUrl = true;
+            //});
 
             services.AddHttpContextAccessor();
             services.AddHangfire(config =>

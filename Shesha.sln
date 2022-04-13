@@ -54,7 +54,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "solution-items", "solution-
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shesha.MongoRepository", "src\Shesha.MongoRepository\Shesha.MongoRepository.csproj", "{6A20EB25-A7AC-45D4-8965-67EB190F862A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shesha.RestSharp", "src\Shesha.RestSharp\Shesha.RestSharp.csproj", "{9B1081F8-9C48-4F2B-9944-E8B2BC231461}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shesha.RestSharp", "src\Shesha.RestSharp\Shesha.RestSharp.csproj", "{9B1081F8-9C48-4F2B-9944-E8B2BC231461}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

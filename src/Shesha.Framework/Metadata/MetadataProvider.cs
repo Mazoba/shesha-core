@@ -38,7 +38,11 @@ namespace Shesha.Metadata
 
             var allProps = containerType.GetProperties(flags).OrderBy(p => p.Name).ToList();
             if (containerType.IsEntityType())
-                allProps = allProps.Where(p => MappingHelper.IsPersistentProperty(p)).ToList();
+                allProps = allProps.Where(p => MappingHelper.IsPersistentProperty(p) || p.CanRead && p.HasAttribute<NotMappedAttribute>()).ToList();
+
+            if (containerType.IsEntityType()) {
+                var allPropsOld = allProps.Where(p => MappingHelper.IsPersistentProperty(p)).ToList();
+            }                
 
             var allPropsMetadata = allProps.Select(p => GetPropertyMetadata(p)).ToList();
 
@@ -68,7 +72,7 @@ namespace Shesha.Metadata
                 Description = ReflectionHelper.GetDescription(property),
                 IsVisible = property.GetAttribute<BrowsableAttribute>()?.Browsable ?? true,
                 Required = property.HasAttribute<RequiredAttribute>(),
-                Readonly = property.GetAttribute<ReadOnlyAttribute>()?.IsReadOnly ?? false,
+                Readonly = !property.CanWrite || (property.GetAttribute<ReadOnlyAttribute>()?.IsReadOnly ?? false),
                 DataType = dataType.DataType,
                 DataFormat = dataType.DataFormat,
                 EntityTypeShortAlias = property.PropertyType.IsEntityType()
@@ -82,8 +86,27 @@ namespace Shesha.Metadata
                 //ConfigurableByUser = property.GetAttribute<BindableAttribute>()?.Bindable ?? true,
                 //GroupName = ReflectionHelper.get(declaredProperty ?? property),
             };
+            if (dataType.DataType == DataTypes.Array)
+            {
+                result.ItemsType = GetItemsType(property);
+            }
 
             return result;
+        }
+
+        private PropertyMetadataDto GetItemsType(PropertyInfo property)
+        {
+            if (property.IsMultiValueReferenceListProperty()) 
+            {
+                return new PropertyMetadataDto
+                {
+                    Path = "value",
+                    DataType = DataTypes.Number,
+                    DataFormat = NumberFormats.Int64,
+                };
+            }
+            
+            return null;
         }
 
         private bool IsFrameworkRelatedProperty(PropertyInfo property)
@@ -175,6 +198,9 @@ namespace Shesha.Metadata
 
             if (propType == typeof(bool))
                 return new DataTypeInfo(DataTypes.Boolean);
+
+            if (propInfo.IsMultiValueReferenceListProperty())
+                return new DataTypeInfo(DataTypes.Array);
 
             if (propInfo.IsReferenceListProperty())
                 return new DataTypeInfo(DataTypes.ReferenceListItem);

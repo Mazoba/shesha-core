@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Abp.Application.Services;
+using Abp.Configuration;
 using Abp.Domain.Entities.Auditing;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
@@ -42,7 +43,9 @@ namespace Shesha.EntityHistory
         private readonly IRepository<EntityChange, long> EntityChangeRepository;
         private readonly IRepository<EntityPropertyChange, long> EntityPropertyChangeRepository;
         private readonly IRepository<EntityHistoryItem, long> EntityHistoryItemRepository;
-        
+
+        private readonly IRepository<Setting, long> _settingRepository;
+
         private readonly IObjectMapper Mapper;
         private readonly ISessionFactory SessionFactory;
         private readonly ITypeFinder TypeFinder;
@@ -55,6 +58,7 @@ namespace Shesha.EntityHistory
             IRepository<EntityChange, long> entityChangeRepository,
             IRepository<EntityPropertyChange, long> entityPropertyChangeRepository,
             IRepository<EntityHistoryItem, long> entityHistoryItemRepository,
+            IRepository<Setting, long> settingRepository,
             IObjectMapper mapper,
             ITypeFinder typeFinder,
             ISessionFactory sessionFactory)
@@ -66,6 +70,7 @@ namespace Shesha.EntityHistory
             EntityPropertyChangeRepository = entityPropertyChangeRepository;
             EntityChangeRepository = entityChangeRepository;
             EntityHistoryItemRepository = entityHistoryItemRepository;
+            _settingRepository = settingRepository;
             Mapper = mapper;
             TypeFinder = typeFinder;
             SessionFactory = sessionFactory;
@@ -390,7 +395,7 @@ namespace Shesha.EntityHistory
                 // If there is no Created record then get the create date stored in ICreationAudited entity
                 if (list.All(x => x.HistoryItemType != (int?)EntityHistoryItemType.Created))
                 {
-                    if (DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
+                    if (Parser.CanParseId(entityId, entityType) && DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
                     {
                         var createdBy = GetPersonByUserId(obj.CreatorUserId);
                         list.Add(new EntityHistoryItemDto()

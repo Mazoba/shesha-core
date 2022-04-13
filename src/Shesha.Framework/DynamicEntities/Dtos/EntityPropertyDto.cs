@@ -60,5 +60,10 @@ namespace Shesha.DynamicEntities.Dtos
         /// Child properties, applicable for complex data types (e.g. object, array)
         /// </summary>
         public List<EntityPropertyDto> Properties { get; set; } = new List<EntityPropertyDto>();
+
+        /// <summary>
+        /// Items type (applicable for arrays)
+        /// </summary>
+        public EntityPropertyDto ItemsType { get; set; }
     }
 }

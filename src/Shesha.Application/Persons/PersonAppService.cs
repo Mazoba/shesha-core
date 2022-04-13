@@ -124,35 +124,18 @@ namespace Shesha.Persons
         }
 
         /// inheritedDoc
+        [Obsolete(@"This override should be removed in future version as it creates a User account with each Person entity.
+            this may not always be desired behaviour and it is not transparent in naming e.g. should rather create a spearate `CreateWithUesrAccount`
+            method. Requirements are also quite application specific in that it requires both mobile and email to be mandatory and unique (may come form GDE).")]
         public override async Task<PersonAccountDto> CreateAsync(CreatePersonAccountDto input)
         {
             CheckCreatePermission();
 
+            // Performing additional validations
             var validationResults = new List<ValidationResult>();
-
-            if (string.IsNullOrWhiteSpace(input.UserName))
-                validationResults.Add(new ValidationResult("Username is mandatory"));
-            else
-            // check duplicate usernames
-            if (await UserNameAlreadyInUse(input.UserName))
-                validationResults.Add(new ValidationResult("User with the same username already exists"));
 
             if (input.TypeOfAccount == null)
                 validationResults.Add(new ValidationResult("Type of account is mandatory"));
-
-            if (input.TypeOfAccount?.ItemValue == (int)RefListTypeOfAccount.SQL)
-            {
-                if (string.IsNullOrWhiteSpace(input.Password))
-                    validationResults.Add(new ValidationResult("Password is mandatory"));
-                
-                if (string.IsNullOrWhiteSpace(input.PasswordConfirmation))
-                    validationResults.Add(new ValidationResult("Password Confirmation is mandatory"));
-
-                if (!string.IsNullOrWhiteSpace(input.Password) &&
-                    !string.IsNullOrWhiteSpace(input.PasswordConfirmation) &&
-                    input.Password != input.PasswordConfirmation)
-                    validationResults.Add(new ValidationResult("Password Confirmation must be the same as Password"));
-            }
 
             if (string.IsNullOrWhiteSpace(input.FirstName))
                 validationResults.Add(new ValidationResult("First Name is mandatory"));
@@ -160,43 +143,30 @@ namespace Shesha.Persons
                 validationResults.Add(new ValidationResult("Last Name is mandatory"));
 
             // email and mobile number must be unique
-            if (await EmailAlreadyInUse(input.EmailAddress, null))
-                validationResults.Add(new ValidationResult("Specified email already used by another person"));
-
             if (await MobileNoAlreadyInUse(input.MobileNumber, null))
                 validationResults.Add(new ValidationResult("Specified mobile number already used by another person"));
+            if (await EmailAlreadyInUse(input.EmailAddress, null))
+                validationResults.Add(new ValidationResult("Specified email already used by another person"));
 
             if (validationResults.Any())
                 throw new AbpValidationException("Please correct the errors and try again", validationResults);
 
-            Person person;
-            // 1. create user
-            var user = ObjectMapper.Map<User>(input);
-            user.EmailAddress = input.EmailAddress ?? "";
-            user.PhoneNumber = input.MobileNumber ?? "";
+            // Creating User Account to enable login into the application
+            User user = await _userManager.CreateUser(
+                input.UserName,
+                input.TypeOfAccount?.ItemValue == (long)RefListTypeOfAccount.SQL,
+                input.Password,
+                input.PasswordConfirmation,
+                input.FirstName,
+                input.LastName,
+                input.MobileNumber,
+                input.EmailAddress);
 
-            user.TenantId = AbpSession.TenantId;
-            user.IsEmailConfirmed = true;
-
-            user.UserName ??= ""; // just to prevent crash in the ABP layer, it should be validated before
-            user.Name = input
-                .FirstName; // todo: make a decision how to handle duplicated properties in the User and Person classes (option 1 - use Person as a source and sync onw way, option 2 - remove duplicates from User, but in some cases we needn't Person for a user)
-            user.Surname = input.LastName;
-            user.SetNormalizedNames();
-
-            await _userManager.InitializeOptionsAsync(AbpSession.TenantId);
-
-            var password = input.TypeOfAccount?.ItemValue == (int)RefListTypeOfAccount.AD
-                ? Guid.NewGuid().ToString()
-                : input.Password;
-            CheckErrors(await _userManager.CreateAsync(user, password));
-
-            // 2. create person
-            person = ObjectMapper.Map<Person>(input);
+            // Creating Person entity
+            var person = ObjectMapper.Map<Person>(input);
             // manual map for now
             person.EmailAddress1 = input.EmailAddress;
             person.MobileNumber1 = input.MobileNumber;
-
             person.User = user;
 
             await Repository.InsertAsync(person);
@@ -206,31 +176,6 @@ namespace Shesha.Persons
             return ObjectMapper.Map<PersonAccountDto>(person);
         }
 
-        /// <summary>
-        /// Checks is specified email already used by another person
-        /// </summary>
-        /// <returns></returns>
-        private async Task<bool> EmailAlreadyInUse(string email, Guid? id)
-        {
-            if (string.IsNullOrWhiteSpace(email))
-                return false;
-
-            return await Repository.GetAll().AnyAsync(e =>
-                e.EmailAddress1.Trim().ToLower() == email.Trim().ToLower() && (id == null || e.Id != id));
-        }
-
-        /// <summary>
-        /// Checks is specified username already used by another person
-        /// </summary>
-        /// <returns></returns>
-        private async Task<bool> UserNameAlreadyInUse(string username)
-        {
-            if (string.IsNullOrWhiteSpace(username))
-                return false;
-
-            var normalizedUsername = _userManager.NormalizeName(username);
-            return await _userManager.Users.AnyAsync(u => u.NormalizedUserName == normalizedUsername);
-        }
 
         /// <summary>
         /// Checks is specified mobile number already used by another person
@@ -245,9 +190,17 @@ namespace Shesha.Persons
                 e.MobileNumber1.Trim().ToLower() == mobileNo.Trim().ToLower() && (id == null || e.Id != id));
         }
 
-        protected virtual void CheckErrors(IdentityResult identityResult)
+        /// <summary>
+        /// Checks is specified email already used by another person
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool> EmailAlreadyInUse(string email, Guid? id)
         {
-            identityResult.CheckErrors(LocalizationManager);
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            return await Repository.GetAll().AnyAsync(e =>
+                e.EmailAddress1.Trim().ToLower() == email.Trim().ToLower() && (id == null || e.Id != id));
         }
 
         [HttpGet]

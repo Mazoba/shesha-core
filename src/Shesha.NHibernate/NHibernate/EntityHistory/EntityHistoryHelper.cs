@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using Abp.Configuration;
 using Abp.Dependency;
 using Abp.Domain.Entities;
+using Abp.Domain.Entities.Auditing;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
 using Abp.EntityHistory;
 using Abp.Events.Bus.Entities;
 using Abp.Extensions;
 using Abp.Json;
+using Abp.Reflection;
 using Abp.Timing;
 using Castle.Core.Logging;
 using NHibernate;
@@ -34,9 +37,11 @@ namespace Shesha.NHibernate.EntityHistory
     public class EntityHistoryHelper : EntityHistoryHelperBase, IEntityHistoryHelper, ITransientDependency
     {
         public ILogger Logger = new NullLogger();
+        private ITypeFinder _typeFinder;
 
         [DebuggerStepThrough]
         public EntityHistoryHelper(
+            ITypeFinder typeFinder,
             IEntityHistoryConfiguration configuration,
             IUnitOfWorkManager unitOfWorkManager)
             : base(configuration, unitOfWorkManager)
@@ -44,6 +49,8 @@ namespace Shesha.NHibernate.EntityHistory
             EntityChanges = new List<EntityChange>();
             EntityHistoryEvents = new List<EntityHistoryEvent>();
             Id = Guid.NewGuid();
+
+            _typeFinder = typeFinder;
         }
 
         public Guid Id { get; set; }
@@ -83,13 +90,13 @@ namespace Shesha.NHibernate.EntityHistory
                 typeOfEntity = typeOfEntity.BaseType;
             }
 
-            var isTracked = IsTypeOfTrackedEntity(typeOfEntity);
-            if (isTracked != null && !isTracked.Value) return null;
-
             if (!IsTypeOfEntity(typeOfEntity))
             {
                 return null;
             }
+
+            var isTracked = IsTypeOfTrackedEntity(typeOfEntity);
+            if (isTracked != null && !isTracked.Value) return null;
 
             var isAudited = IsTypeOfAuditedEntity(typeOfEntity);
             if (isAudited != null && !isAudited.Value) return null;
@@ -117,20 +124,25 @@ namespace Shesha.NHibernate.EntityHistory
             else if (entityEntry.LoadedState == null) changeType = EntityChangeType.Created;
             else changeType = EntityChangeType.Updated;
 
-            if (id == null && changeType != EntityChangeType.Created)
-            {
-                Logger.Error($"EntityChangeType {changeType} must have non-empty entity id");
-                return null;
-            }
-
             var className = NHibernateProxyHelper.GuessClass(entity).FullName;
             var sessionImpl = Session.GetSessionImplementation();
             var persister = sessionImpl.Factory.GetEntityPersister(className);
 
             Object[] currentState = persister.GetPropertyValues(entity);
-            Int32[] dirtyP = changeType != EntityChangeType.Created
+            Int32[] dirtyP = changeType != EntityChangeType.Created && entityEntry.LoadedState != null
                 ? persister.FindDirty(currentState, entityEntry.LoadedState, entity, sessionImpl) // changed properties
                 : Enumerable.Range(0, currentState.Length - 1).ToArray(); // all properties for new entity
+
+            var ioc = StaticContext.IocManager;
+            var creatorTypes = _typeFinder.Find(t => typeof(IEntityHistoryCreator).IsAssignableFrom(t) && t.IsClass).ToList();
+
+            foreach (var creatorType in creatorTypes)
+            {
+                if (ioc.Resolve(creatorType) is IEntityHistoryCreator creator && creator.TypeAllowed(entity.GetType()))
+                {
+                    return creator.GetEntityChange(entity, AbpSession, persister.PropertyNames, entityEntry.LoadedState, currentState, dirtyP);
+                }
+            }
 
             var dirtyProps = dirtyP.Select(i => new SessionExtensions.DirtyPropertyInfo
                     { Name = persister.PropertyNames[i], OldValue = entityEntry.LoadedState?[i], NewValue = currentState[i] })
@@ -160,6 +172,20 @@ namespace Shesha.NHibernate.EntityHistory
             entityChange.PropertyChanges = propertyChanges;
 
             return entityChange;
+        }
+
+        protected override bool? IsAuditedPropertyInfo(PropertyInfo propertyInfo)
+        {
+            // do not save properties of audition
+            return
+                propertyInfo.Name == nameof(FullAuditedEntity.CreatorUserId)
+                || propertyInfo.Name == nameof(FullAuditedEntity.CreationTime)
+                || propertyInfo.Name == nameof(FullAuditedEntity.DeleterUserId)
+                || propertyInfo.Name == nameof(FullAuditedEntity.DeletionTime)
+                || propertyInfo.Name == nameof(FullAuditedEntity.LastModifierUserId)
+                || propertyInfo.Name == nameof(FullAuditedEntity.LastModificationTime)
+                ? false
+                : base.IsAuditedPropertyInfo(propertyInfo);
         }
 
         /// <summary>
@@ -248,7 +274,7 @@ namespace Shesha.NHibernate.EntityHistory
 
                         var oldValue = property.OldValue;
                         var newValue = property.NewValue;
-                        
+
                         EntityPropertyChange propchange = null;
                         // skip creating property changes
                         if (propInfo.GetCustomAttribute<AuditedAsEventAttribute>()?.SaveFullInfo ?? true)
@@ -260,15 +286,15 @@ namespace Shesha.NHibernate.EntityHistory
                                 oldValue = property.OldValue != null
                                     ? StaticContext.IocManager.Resolve<IReferenceListHelper>()
                                         .GetItemDisplayText(refListProperty.Namespace, refListProperty.Name,
-                                            property.OldValue.GetType().IsEnum 
-                                                ? (int?) Convert.ChangeType(property.OldValue, Enum.GetUnderlyingType(property.OldValue.GetType()))
-                                                : (int?) property.OldValue)
+                                            property.OldValue.GetType().IsEnum
+                                                ? (int?)Convert.ChangeType(property.OldValue, Enum.GetUnderlyingType(property.OldValue.GetType()))
+                                                : (int?)property.OldValue)
                                     : null;
                                 newValue = property.NewValue != null
                                     ? StaticContext.IocManager.Resolve<IReferenceListHelper>()
                                         .GetItemDisplayText(refListProperty.Namespace, refListProperty.Name,
                                             property.NewValue.GetType().IsEnum
-                                                ? (int?) Convert.ChangeType(property.NewValue, Enum.GetUnderlyingType(property.NewValue.GetType()))
+                                                ? (int?)Convert.ChangeType(property.NewValue, Enum.GetUnderlyingType(property.NewValue.GetType()))
                                                 : (int?)property.NewValue)
                                     : null;
                             }
@@ -287,7 +313,7 @@ namespace Shesha.NHibernate.EntityHistory
                             var attr = propInfo.GetCustomAttribute<AuditedBooleanAttribute>();
                             if (attr != null)
                             {
-                                var description = (bool) newValue ? attr.TrueText : attr.FalseText;
+                                var description = (bool)newValue ? attr.TrueText : attr.FalseText;
                                 // Add extended (friendly) description for Reference types
                                 EntityHistoryEvents.Add(new EntityHistoryEvent()
                                 {
@@ -372,8 +398,8 @@ namespace Shesha.NHibernate.EntityHistory
             };
 
             // Add description for property change
-            foreach (var entityHistoryEvent in EntityHistoryEvents.Where(x => 
-                !string.IsNullOrEmpty(x.PropertyName) 
+            foreach (var entityHistoryEvent in EntityHistoryEvents.Where(x =>
+                !string.IsNullOrEmpty(x.PropertyName)
                 && x.EntityChange != null
                 && x.EventType != EntityHistoryCommonEventTypes.PROPERTY_CHANGE_AS_EVENT))
             {

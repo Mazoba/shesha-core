@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Shesha.Domain.Attributes;
 using Shesha.Domain.Enums;
@@ -8,6 +9,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Check list item
     /// </summary>
+    [Obsolete("Should use equivalent entity under Shesha.Enterprise")]
     [Entity(TypeShortAlias = "Core.CheckListItem")]
     [Discriminator(UseDiscriminator = false)]
     [Table("Core_CheckListItems")]

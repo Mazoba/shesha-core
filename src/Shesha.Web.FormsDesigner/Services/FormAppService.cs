@@ -1,12 +1,17 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Shesha.AutoMapper.Dto;
 using Shesha.Web.DataTable;
 using Shesha.Web.FormsDesigner.Domain;
 using Shesha.Web.FormsDesigner.Dtos;
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Shesha.Web.FormsDesigner.Services
@@ -16,7 +21,7 @@ namespace Shesha.Web.FormsDesigner.Services
     /// </summary>
     //[AbpAuthorize]
     [Route("api/services/Forms")]
-    public class FormAppService: SheshaAppServiceBase, IFormAppService
+    public class FormAppService : SheshaAppServiceBase, IFormAppService
     {
         private readonly IFormStore _formStore;
 
@@ -140,7 +145,7 @@ namespace Shesha.Web.FormsDesigner.Services
         public async Task<List<AutocompleteItemDto>> AutocompleteAsync(string term, string selectedValue)
         {
             var items = await _formStore.AutocompleteAsync(term, selectedValue);
-            
+
             var result = items
                 .Select(i => new AutocompleteItemDto
                 {
@@ -148,8 +153,212 @@ namespace Shesha.Web.FormsDesigner.Services
                     DisplayText = $"{i.Name} ({i.Path})"
                 })
                 .ToList();
-            
+
             return result;
         }
+
+        [HttpPost, Route("Export/Default")]
+        public async Task<FileContentResult> ExportConfigurationsAsyncDefault()
+        {
+            var fileName = "formConfigExport_" + DateTime.Now;
+            var mimeType = "application/json";
+
+            try
+            {
+                //Loop through the list of IDs, 
+                // for each ID get form configs from DB, then append to JSON
+                var configList = new List<Dictionary<string, string>>();
+                var forms = await _formStore.GetAllAsync();
+
+                foreach (var config in forms)
+                {
+
+                    var configDictionary = new Dictionary<string, string>();
+                    configDictionary.Add("Path", config.Path);
+                    configDictionary.Add("Name", config.Name);
+                    configDictionary.Add("Description", config.Description);
+                    configDictionary.Add("Markup", config.Markup);
+                    configDictionary.Add("ModelType", config.ModelType);
+                    configDictionary.Add("Type", config.Type);
+                    configList.Add(configDictionary);
+
+                }
+
+                byte[] fileBytes = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(configList));
+
+
+                return new FileContentResult(fileBytes, mimeType)
+                {
+                    FileDownloadName = fileName
+                };
+
+            }
+            catch (Exception e)
+            {
+                Logger.Error("An error occurred", e);
+                throw new Exception("An error occurred!");
+            }
+
+        }
+
+        [HttpPost, Route("Export")]
+        public async Task<FileContentResult> ExportConfigurationsAsync(ExportConfigurationDto ids)
+        {
+            var fileName = "formConfigExport_" + DateTime.Now;
+            var mimeType = "application/json";
+
+            try
+            {
+                //Loop through the list of IDs, 
+                // for each ID get form configs from DB, then append to JSON
+                var configList = new List<Dictionary<string, string>>();
+
+                foreach (var id in ids.Components)
+                {
+                    var forms = await _formStore.GetAsync(id);
+
+                    var configDictionary = new Dictionary<string, string>();
+                    configDictionary.Add("Id", forms.Id.ToString());
+                    configDictionary.Add("Path", forms.Path);
+                    configDictionary.Add("Name", forms.Name);
+                    configDictionary.Add("Description", forms.Description);
+                    configDictionary.Add("Markup", forms.Markup);
+                    configDictionary.Add("ModelType", forms.ModelType);
+                    configDictionary.Add("Type", forms.Type);
+                    configList.Add(configDictionary);
+
+                }
+
+                byte[] fileBytes = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(configList));
+
+
+                return new FileContentResult(fileBytes, mimeType)
+                {
+                    FileDownloadName = fileName
+                };
+
+            }
+            catch (Exception e)
+            {
+                Logger.Error("An error occurred", e);
+                throw new Exception("An error occurred!");
+            }
+
+        }
+
+        [HttpPost, Route("Import")]
+        [Consumes("multipart/form-data")]
+        public async Task<string> ImportConfigurationAsync([FromForm] ImportConfigDto importConfig)
+        {
+            IFormFile formFile = importConfig.File;
+
+            if (formFile.Length > 0)
+            {
+                var result = new StringBuilder();
+                using (var reader = new StreamReader(formFile.OpenReadStream()))
+                {
+                    while (reader.Peek() >= 0)
+                        result.AppendLine(await reader.ReadLineAsync());
+                }
+  
+
+               var deserialisedJson = JsonSerializer.Deserialize<List<Dictionary<string, string>>>(result.ToString());
+
+                foreach(var config in deserialisedJson)
+                {
+                    //Create FormDTO and validate
+                    string formId = config.GetValueOrDefault("Id");
+
+                    var existingForm = await _formStore.GetAsyncOrDefault(Guid.Parse(formId));
+
+                    if (existingForm == null)
+                    {
+                        FormDto form = GenerateFormDtoHelper(config, formId);
+
+                        await _formStore.CreateAsync(form, Guid.Parse(formId));
+                        Logger.Info("Config added successfully!");
+
+                    }
+                    else
+                    {
+                        //Handle scenario that the path already exists
+                        Logger.Info("Duplicate config!");
+                        //Overide the config
+                        Logger.Info("Overwriting them");
+                        FormDto form = GenerateFormDtoHelper(config, formId);
+
+                        existingForm.Markup = form.Markup;
+                        existingForm.Name = form.Name;
+                        existingForm.Path = form.Path;
+                        existingForm.ModelType = form.ModelType;
+                        existingForm.Type = form.Type;
+                        existingForm.Description = form.Description;
+
+                        await _formStore.UpdateAsync(existingForm);
+                        Logger.Info("Config added successfully!");
+                    }
+                                     
+                }
+
+                return "Import success!";
+
+            }
+            else
+            {
+                return "File Import Failed. An error occured!";
+            }
+           
+        }
+
+        [HttpPost, Route("Duplicate")]
+        public async Task<FormDto> DuplicateFormAsync([FromBody]DuplicateFormDto dto)
+        {
+            FormDto form = await _formStore.GetAsync(dto.Id);
+            return await _formStore.CreateAsync(form, Guid.NewGuid());
+
+        }
+
+        [HttpDelete, Route("Delete")]
+        public async Task<List<Dictionary<string, string>>> DeleteConfigurationsAsync([FromBody]ExportConfigurationDto ids)
+        {
+            var summary = new List<Dictionary<string, string>>();
+
+            try
+            {
+                //Loop through the list of IDs
+                foreach (var id in ids.Components)
+                {
+                    var deleteOutput = new Dictionary<string, string>();
+
+                    string message = await _formStore.DeleteAsync(id);
+                    deleteOutput.Add("Id", id.ToString());
+                    deleteOutput.Add("Message", message);
+                    summary.Add(deleteOutput);
+                }
+
+                return summary;
+
+            }
+            catch (Exception e)
+            {
+                Logger.Error("An error occurred", e);
+                throw new Exception("An error occurred!");
+            }
+        }
+
+            private static FormDto GenerateFormDtoHelper(Dictionary<string, string> config, string formPath)
+        {
+            FormDto form = new FormDto();
+            form.Id = Guid.Parse(config.GetValueOrDefault("Id"));
+            form.Markup = config.GetValueOrDefault("Markup");
+            form.Name = config.GetValueOrDefault("Name");
+            form.ModelType = config.GetValueOrDefault("ModelType");
+            form.Path = config.GetValueOrDefault("Path");
+            form.Description = config.GetValueOrDefault("Description");
+            return form;
+        }
+
+     
     }
+
 }

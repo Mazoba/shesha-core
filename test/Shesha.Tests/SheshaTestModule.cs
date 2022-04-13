@@ -3,6 +3,7 @@ using System.Reflection;
 using Abp;
 using Abp.AutoMapper;
 using Abp.Castle.Logging.Log4Net;
+using Abp.Configuration;
 using Abp.Configuration.Startup;
 using Abp.Dependency;
 using Abp.Domain.Uow;
@@ -14,12 +15,14 @@ using Abp.Zero.Configuration;
 using Castle.Facilities.Logging;
 using Castle.MicroKernel.Registration;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using NSubstitute;
 using Shesha.NHibernate;
 using Shesha.Services;
 using Shesha.Tests.DependencyInjection;
+using Shesha.Tests.DynamicEntities;
 using Shesha.Web;
 
 namespace Shesha.Tests
@@ -44,7 +47,7 @@ namespace Shesha.Tests
             nhModule.SkipDbSeed = true;
             */
         }
-        
+
         public override void PreInitialize()
         {
             Configuration.UnitOfWork.Timeout = TimeSpan.FromMinutes(30);
@@ -84,6 +87,13 @@ namespace Shesha.Tests
             Configuration.ReplaceService<IDbPerTenantConnectionStringResolver, TestConnectionStringResolver>(DependencyLifeStyle.Transient);
 
             Configuration.ReplaceService<ICurrentUnitOfWorkProvider, AsyncLocalCurrentUnitOfWorkProvider>(DependencyLifeStyle.Singleton);
+
+            Configuration.Settings.Providers.Add<TestSettingsProvider>();
+
+            Configuration.EntityHistory.Selectors.Add("Settings", typeof(Setting));
+
+            if (!IocManager.IsRegistered<ApplicationPartManager>())
+                IocManager.IocContainer.Register(Component.For<ApplicationPartManager>().ImplementedBy<ApplicationPartManager>());
         }
 
         public override void Initialize()

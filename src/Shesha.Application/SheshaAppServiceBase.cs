@@ -1,21 +1,25 @@
-﻿using System;
-using System.Globalization;
-using System.Threading.Tasks;
-using Abp.Application.Services;
+﻿using Abp.Application.Services;
 using Abp.Dependency;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Abp.IdentityFramework;
 using Abp.Runtime.Session;
 using Abp.UI;
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
 using NHibernate.Linq;
 using Shesha.Authorization.Users;
+using Shesha.DynamicEntities;
+using Shesha.DynamicEntities.Dtos;
+using Shesha.DynamicEntities.Mapper;
 using Shesha.MultiTenancy;
 using Shesha.Services;
+using System;
+using System.Globalization;
+using System.Threading.Tasks;
 
 namespace Shesha
 {
@@ -44,6 +48,20 @@ namespace Shesha
         /// </summary>
         public UserManager UserManager { get; set; }
 
+        /// <summary>
+        /// Dynamic DTO builder
+        /// </summary>
+        public IDynamicDtoTypeBuilder DtoBuilder { get; set; }
+
+        /// <summary>
+        /// Dynamic property manager
+        /// </summary>
+        public IDynamicPropertyManager DynamicPropertyManager { get; set; }
+
+        /// <summary>
+        /// Dynamic DTO mapping helper
+        /// </summary>
+        public IDynamicDtoMappingHelper DynamicDtoMappingHelper { get; set; }
 
         private IUrlHelper _url;
 
@@ -219,6 +237,106 @@ namespace Shesha
             {
                 return await SettingManager.GetSettingValueForApplicationAsync(name);
             }
+        }
+
+        #endregion
+
+        #region Dynamic DTOs
+
+        /// <summary>
+        /// Map entity to a <see cref="DynamicDto{TEntity, TPrimaryKey}"/>
+        /// </summary>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <typeparam name="TPrimaryKey">Type of entity primary key</typeparam>
+        /// <param name="entity">entity to map</param>
+        /// <param name="settings">mapping settings</param>
+        /// <returns></returns>
+        protected async Task<DynamicDto<TEntity, TPrimaryKey>> MapToDynamicDtoAsync<TEntity, TPrimaryKey>(TEntity entity, IDynamicMappingSettings settings = null) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            return await MapToCustomDynamicDtoAsync<DynamicDto<TEntity, TPrimaryKey>, TEntity, TPrimaryKey>(entity, settings);
+        }
+
+        /// <summary>
+        /// Map entity to a custom <see cref="DynamicDto{TEntity, TPrimaryKey}"/>
+        /// </summary>
+        /// <typeparam name="TDynamicDto">Type of dynamic DTO</typeparam>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <typeparam name="TPrimaryKey">Type of entity primary key</typeparam>
+        /// <param name="entity">entity to map</param>
+        /// <param name="settings">mapping settings</param>
+        /// <returns></returns>
+        protected async Task<TDynamicDto> MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(TEntity entity, IDynamicMappingSettings settings = null) 
+            where TEntity : class, IEntity<TPrimaryKey>
+            where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
+        {
+            // build dto type
+            var context = new DynamicDtoTypeBuildingContext() { 
+                ModelType = typeof(TDynamicDto),
+                UseDtoForEntityReferences = settings?.UseDtoForEntityReferences ?? false
+            };
+            var dtoType = await DtoBuilder.BuildDtoFullProxyTypeAsync(typeof(TDynamicDto), context);
+            var dto = Activator.CreateInstance(dtoType) as TDynamicDto;
+
+            // create mapper
+            var mapper = await DynamicDtoMappingHelper.GetEntityToDtoMapperAsync(typeof(TEntity), dtoType);
+
+            // map entity to DTO
+            mapper.Map(entity, dto);
+            // map dynamic fields
+            await DynamicPropertyManager.MapEntityToDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(entity, dto);
+
+            return dto;
+        }
+
+        /// <summary>
+        /// Map static properties (defined in the entity class) of dynamic DTO to a specified entity
+        /// </summary>
+        /// <typeparam name="TDynamicDto">Type of Dynamic DTO</typeparam>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <typeparam name="TPrimaryKey">Type of primary key</typeparam>
+        /// <param name="dto">Source DTO</param>
+        /// <param name="entity">Destination entity</param>
+        /// <returns></returns>
+        protected async Task MapStaticPropertiesToEntityDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(TDynamicDto dto, TEntity entity)
+            where TEntity : class, IEntity<TPrimaryKey>
+            where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
+        {
+            var mapper = await DynamicDtoMappingHelper.GetDtoToEntityMapperAsync(entity.GetType(), dto.GetType());
+
+            mapper.Map(dto, entity);
+        }
+
+        /// <summary>
+        /// Map dynamic properties (defined using entity configurator) of dynamic DTO to a specified entity
+        /// </summary>
+        /// <typeparam name="TDynamicDto">Type of Dynamic DTO</typeparam>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <typeparam name="TPrimaryKey">Type of primary key</typeparam>
+        /// <param name="dto">Source DTO</param>
+        /// <param name="entity">Destination entity</param>
+        /// <returns></returns>
+        protected async Task MapDynamicPropertiesToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(TDynamicDto dto, TEntity entity)
+            where TEntity : class, IEntity<TPrimaryKey>
+            where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
+        {
+            await DynamicPropertyManager.MapDtoToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(dto, entity);
+        }
+
+        /// <summary>
+        /// Map all properties (dynamic and static) of dynamic DTO to a specified entity
+        /// </summary>
+        /// <typeparam name="TDynamicDto">Type of Dynamic DTO</typeparam>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <typeparam name="TPrimaryKey">Type of primary key</typeparam>
+        /// <param name="dto">Source DTO</param>
+        /// <param name="entity">Destination entity</param>
+        /// <returns></returns>
+        protected async Task MapDynamicDtoToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(TDynamicDto dto, TEntity entity)
+            where TEntity : class, IEntity<TPrimaryKey>
+            where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
+        {
+            await MapStaticPropertiesToEntityDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(dto, entity);
+            await MapDynamicPropertiesToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(dto, entity);
         }
 
         #endregion

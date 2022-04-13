@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Abp.Dependency;
-using Abp.Reflection;
+﻿using Abp.Reflection;
 using Shesha.Extensions;
 using Shesha.Services;
 using Shouldly;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace Shesha.Tests.DomainModel
@@ -22,7 +21,7 @@ namespace Shesha.Tests.DomainModel
         {
             var typeFinder = StaticContext.IocManager.Resolve<ITypeFinder>();
             
-            var types = typeFinder.FindAll().Where(t => t.IsEntityType()).ToList();
+            var types = typeFinder.FindAll().Where(t => t.IsEntityType() && !t.Assembly.FullName.StartsWith("Abp")).ToList();
 
             var errors = new Dictionary<Type, Exception>();
 

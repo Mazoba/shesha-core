@@ -5,6 +5,7 @@ using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain
 {
+    //[Obsolete("Should use equivalent entity under Shesha.Enterprise")]
     [Entity(TypeShortAlias = "Shesha.Core.PublicHoliday")]
     public class PublicHoliday : FullAuditedEntity<Guid>
     {

@@ -84,6 +84,10 @@ namespace Shesha.Tests.Users
                     UserName = userName
                 });
 
+            // try to login using current password
+            var firstLoginAttempt = await ValidateCredentials(userName, oldPassword);
+            firstLoginAttempt.ShouldBeTrue("Failed to login as a new user");
+
             using (var uow = _unitOfWorkManager.Begin())
             {
                 var user = await _userRepository.GetAll().FirstOrDefaultAsync(u => u.UserName == userName);
@@ -147,13 +151,18 @@ namespace Shesha.Tests.Users
         {
             try
             {
-                var controller = Resolve<TokenAuthController>();
-                var response = await controller.Authenticate(new AuthenticateModel()
+                using (var uow = _unitOfWorkManager.Begin())
                 {
-                    UserNameOrEmailAddress = username,
-                    Password = password
-                });
-                return !string.IsNullOrWhiteSpace(response.AccessToken);
+                    var controller = Resolve<TokenAuthController>();
+                    var response = await controller.Authenticate(new AuthenticateModel()
+                    {
+                        UserNameOrEmailAddress = username,
+                        Password = password
+                    });
+                    await uow.CompleteAsync();
+
+                    return !string.IsNullOrWhiteSpace(response.AccessToken);
+                }
             }
             catch
             {

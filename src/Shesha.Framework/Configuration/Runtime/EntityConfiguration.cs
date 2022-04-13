@@ -8,6 +8,7 @@ using NHibernate;
 using NHibernate.Persister.Entity;
 using Shesha.Domain;
 using Shesha.Domain.Attributes;
+using Shesha.Extensions;
 using Shesha.Reflection;
 using Shesha.Services;
 
@@ -160,6 +161,7 @@ namespace Shesha.Configuration.Runtime
         }
 
         public Type EntityType { get; set; }
+        public Type IdType => EntityType?.GetEntityIdType();
 
         /// <summary>
         /// Gets whether the repository supports the inactivation of objects. When an

@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Abp.Dependency;
+using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Abp.EntityHistory;
 using Castle.Core.Logging;
@@ -77,6 +78,11 @@ namespace Shesha.NHibernate.EntityHistory
                     var propChanges = x.PropertyChanges;
                     x.PropertyChanges = null;
                     x.EntityChangeSetId = csId;
+                    if (string.IsNullOrEmpty(x.EntityId))
+                    {
+                        // update id for inserted entity
+                        x.EntityId = x.EntityEntry.GetType().GetProperty(nameof(IEntity.Id))?.GetValue(x.EntityEntry)?.ToString();
+                    }
                     var cId = _changesRepository.InsertAndGetId(x);
                     propChanges.ForEach(p =>
                     {

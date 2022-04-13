@@ -45,8 +45,13 @@ namespace Shesha.Metadata.Dtos
         public bool IsFrameworkRelated { get; set; }
 
         /// <summary>
-        /// Child properties, applicable for complex data types (e.g. object, array)
+        /// Child properties (applicable for complex objects)
         /// </summary>
         public List<PropertyMetadataDto> Properties { get; set; } = new List<PropertyMetadataDto>();
+
+        /// <summary>
+        /// Items type (applicable for arrays)
+        /// </summary>
+        public PropertyMetadataDto ItemsType { get; set; }
     }
 }

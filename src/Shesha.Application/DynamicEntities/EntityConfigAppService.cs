@@ -23,11 +23,11 @@ namespace Shesha.DynamicEntities
         {
             var table = new DataTableConfig<EntityConfig, Guid>("EntityConfigs_Index");
 
+            table.AddProperty(e => e.Namespace);
+            table.AddProperty(e => e.ClassName);
             table.AddProperty(e => e.FriendlyName);
             table.AddProperty(e => e.TypeShortAlias);
             table.AddProperty(e => e.TableName);
-            table.AddProperty(e => e.Namespace);
-            table.AddProperty(e => e.ClassName);
             table.AddProperty(e => e.DiscriminatorValue);
             table.AddProperty(e => e.Source);
 

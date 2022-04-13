@@ -79,7 +79,7 @@ namespace Shesha.Web.DataTable.Columns
                                 ? displayProperty.GetValue(val)?.ToString()
                                 : val.ToString();
 
-                            if (isExport)
+                            if (DataTableConfig != null && !DataTableConfig.UseDtos || isExport)
                                 return displayText;
 
                             var dto = new EntityWithDisplayNameDto<string>(val.GetId().ToString(), displayText);

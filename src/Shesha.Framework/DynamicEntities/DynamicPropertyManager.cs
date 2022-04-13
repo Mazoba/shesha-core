@@ -69,7 +69,7 @@ namespace Shesha.DynamicEntities
             await _entityPropertyValueRepository.InsertOrUpdateAsync(prop);
         }
 
-        public async Task MapDtoToEntityAsync<TId, TDynamicDto, TEntity>(TDynamicDto dynamicDto, TEntity entity)
+        public async Task MapDtoToEntityAsync<TDynamicDto, TEntity, TId>(TDynamicDto dynamicDto, TEntity entity)
             where TEntity : class, IEntity<TId>
             where TDynamicDto : class, IDynamicDto<TEntity, TId>
         {
@@ -81,7 +81,7 @@ namespace Shesha.DynamicEntities
             });
         }
 
-        public async Task MapEntityToDtoAsync<TId, TDynamicDto, TEntity>(TEntity entity, TDynamicDto dynamicDto)
+        public async Task MapEntityToDtoAsync<TDynamicDto, TEntity, TId>(TEntity entity, TDynamicDto dynamicDto)
             where TEntity : class, IEntity<TId>
             where TDynamicDto : class, IDynamicDto<TEntity, TId>
         {

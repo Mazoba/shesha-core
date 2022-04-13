@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Abp;
 using Abp.BackgroundJobs;
+using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Abp.Notifications;
 using Microsoft.AspNetCore.Mvc;
@@ -56,10 +57,13 @@ namespace Shesha.Notifications
         /// inheritedDoc
         public async Task PublishAsync(string notificationName,
             NotificationData data,
-            List<Person> recipients)
+            List<Person> recipients,
+            object sourceEntity = null)
         {
             if (recipients == null)
                 throw new Exception($"{nameof(recipients)} must not be null");
+
+            var entityIdentifier = GetEntityIdentifier(sourceEntity);
 
             var userIds = recipients.Where(p => p.User != null)
                 .Select(p => new UserIdentifier(AbpSession.TenantId, p.User.Id))
@@ -69,7 +73,8 @@ namespace Shesha.Notifications
 
             await _notificationPublisher.PublishAsync(notificationName,
                 data,
-                userIds: userIds
+                userIds: userIds,
+                entityIdentifier: entityIdentifier
             );
         }
 
@@ -105,14 +110,18 @@ namespace Shesha.Notifications
         /// <param name="notificationName">Name of the notification. Default email template of the specified notification will be used</param>
         /// <param name="data">Data that is used to fill template</param>
         /// <param name="emailAddress">Recipient email address</param>
+        /// <param name="sourceEntity">Optional parameter. If notification is an Entity level notification, specifies the entity the notification relates to.</param>
         /// <returns></returns>
         public async Task PublishEmailNotificationAsync<TData>(string notificationName,
             TData data,
             string emailAddress,
-            List<NotificationAttachmentDto> attachments = null) where TData: NotificationData
+            List<NotificationAttachmentDto> attachments = null,
+            object sourceEntity = null) where TData: NotificationData
         {
             if (string.IsNullOrWhiteSpace(emailAddress))
                 throw new Exception($"{nameof(emailAddress)} must not be null");
+
+            var entityIdentifier = GetEntityIdentifier(sourceEntity);
 
             var wrappedData = new ShaNotificationData(data)
             {
@@ -120,7 +129,7 @@ namespace Shesha.Notifications
                 RecipientText = emailAddress,
                 Attachments = attachments
             };
-            await _notificationPublisher.PublishAsync(notificationName, wrappedData);
+            await _notificationPublisher.PublishAsync(notificationName, wrappedData, entityIdentifier);
         }
 
         /// <summary>
@@ -130,14 +139,18 @@ namespace Shesha.Notifications
         /// <param name="data">Data that is used to fill template</param>
         /// <param name="emailAddress">Recipient email address</param>
         /// <param name="attachments">Attachments</param>
+        /// <param name="sourceEntity">Optional parameter. If notification is an Entity level notification, specifies the entity the notification relates to.</param>
         /// <returns></returns>
         public async Task PublishEmailNotificationAsync<TData>(Guid templateId,
             TData data,
             string emailAddress,
-            List<NotificationAttachmentDto> attachments = null) where TData : NotificationData
+            List<NotificationAttachmentDto> attachments = null,
+            object sourceEntity = null) where TData : NotificationData
         {
             if (string.IsNullOrWhiteSpace(emailAddress))
                 throw new Exception($"{nameof(emailAddress)} must not be null");
+
+            var entityIdentifier = GetEntityIdentifier(sourceEntity);
 
             var wrappedData = new ShaNotificationData(data)
             {
@@ -146,7 +159,7 @@ namespace Shesha.Notifications
                 TemplateId = templateId,
                 Attachments = attachments
             };
-            await _notificationPublisher.PublishAsync("DirectEmail", wrappedData);
+            await _notificationPublisher.PublishAsync("DirectEmail", wrappedData, entityIdentifier);
         }
 
         #endregion
@@ -159,20 +172,24 @@ namespace Shesha.Notifications
         /// <param name="notificationName">Name of the notification. Default email template of the specified notification will be used</param>
         /// <param name="data">Data that is used to fill template</param>
         /// <param name="mobileNo">Recipient mobile number</param>
+        /// <param name="sourceEntity">Optional parameter. If notification is an Entity level notification, specifies the entity the notification relates to.</param>
         /// <returns></returns>
         public async Task PublishSmsNotificationAsync<TData>(string notificationName,
             TData data,
-            string mobileNo) where TData : NotificationData
+            string mobileNo,
+            object sourceEntity = null) where TData : NotificationData
         {
             if (string.IsNullOrWhiteSpace(mobileNo))
                 throw new Exception($"{nameof(mobileNo)} must not be null");
+
+            var entityIdentifier = GetEntityIdentifier(sourceEntity);
 
             var wrappedData = new ShaNotificationData(data)
             {
                 SendType = RefListNotificationType.SMS,
                 RecipientText = mobileNo
             };
-            await _notificationPublisher.PublishAsync(notificationName, wrappedData);
+            await _notificationPublisher.PublishAsync(notificationName, wrappedData, entityIdentifier);
         }
 
         /// <summary>
@@ -181,13 +198,18 @@ namespace Shesha.Notifications
         /// <param name="templateId">Id of the template</param>
         /// <param name="data">Data that is used to fill template</param>
         /// <param name="mobileNo">Recipient mobile number</param>
+        /// <param name="sourceEntity">Optional parameter. If notification is an Entity level notification, specifies the entity the notification relates to.</param>
         /// <returns></returns>
         public async Task PublishSmsNotificationAsync<TData>(Guid templateId,
             TData data,
-            string mobileNo) where TData : NotificationData
+            string mobileNo, 
+            object sourceEntity = null
+            ) where TData : NotificationData
         {
             if (string.IsNullOrWhiteSpace(mobileNo))
                 throw new Exception($"{nameof(mobileNo)} must not be null");
+
+            var entityIdentifier = GetEntityIdentifier(sourceEntity);
 
             var wrappedData = new ShaNotificationData(data)
             {
@@ -195,7 +217,23 @@ namespace Shesha.Notifications
                 RecipientText = mobileNo,
                 TemplateId = templateId
             };
-            await _notificationPublisher.PublishAsync("DirectSms", wrappedData);
+            await _notificationPublisher.PublishAsync(templateId.ToString(), wrappedData, entityIdentifier);
+        }
+
+        private static EntityIdentifier GetEntityIdentifier(object entity)
+        {
+            EntityIdentifier entityIdentifier = null;
+            if (entity is not null)
+            {
+                if (entity is Entity<Guid>)
+                    entityIdentifier = new EntityIdentifier(entity.GetType(), ((Entity<Guid>)entity).Id);
+                else if (entity is Entity<long>)
+                    entityIdentifier = new EntityIdentifier(entity.GetType(), ((Entity<long>)entity).Id);
+                else if (entity is Entity<int>)
+                    entityIdentifier = new EntityIdentifier(entity.GetType(), ((Entity<int>)entity).Id);
+            }
+
+            return entityIdentifier;
         }
 
         #endregion

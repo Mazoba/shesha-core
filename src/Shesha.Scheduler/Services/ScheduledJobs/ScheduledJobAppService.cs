@@ -11,6 +11,7 @@ using Castle.Core.Internal;
 using Hangfire;
 using Microsoft.AspNetCore.Mvc;
 using NHibernate.Linq;
+using Shesha.Authorization.Users;
 using Shesha.Scheduler.Attributes;
 using Shesha.Scheduler.Bootstrappers;
 using Shesha.Scheduler.Domain;
@@ -26,7 +27,9 @@ namespace Shesha.Scheduler.Services.ScheduledJobs
     {
         private readonly IScheduledJobManager _jobManager;
         private readonly IRepository<ScheduledJob, Guid> _jobRepo;
-        
+
+        public IRepository<User, Int64> UserRepository { get; set; }
+
         /// <summary>
         /// Default constructor
         /// </summary>
@@ -53,6 +56,16 @@ namespace Shesha.Scheduler.Services.ScheduledJobs
 
             var job = GetJobInstanceById(id);
             var executionId = Guid.NewGuid();
+            await job.CreateExecutionRecordAsync(executionId,
+                execution =>
+                {
+                    execution.Status = Domain.Enums.ExecutionStatus.Enqueued;
+                    execution.StartedBy = AbpSession.UserId.HasValue
+                        ? UserRepository.Get(AbpSession.UserId.Value)
+                        : null;
+                }
+            );
+
             var jobId = BackgroundJob.Enqueue(() => job.ExecuteAsync(executionId, AbpSession.UserId, cancellationToken));
             return executionId;
         }
