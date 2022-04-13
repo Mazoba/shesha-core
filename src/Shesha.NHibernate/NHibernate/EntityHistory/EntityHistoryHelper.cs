@@ -470,9 +470,9 @@ namespace Shesha.NHibernate.EntityHistory
         {
             var entityType = entity.GetType();
             return
-                entityType.IsAssignableFrom(typeof(EntityChangeSet))
-                || entityType.IsAssignableFrom(typeof(EntityChange))
-                || entityType.IsAssignableFrom(typeof(EntityPropertyChange));
+                typeof(EntityChangeSet).IsAssignableFrom(entityType)
+                || typeof(EntityChange).IsAssignableFrom(entityType)
+                || typeof(EntityPropertyChange).IsAssignableFrom(entityType);
         }
 
         protected virtual bool? IsAditedBooleanPropertyInfo(PropertyInfo propertyInfo)

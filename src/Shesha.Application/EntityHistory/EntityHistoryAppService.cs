@@ -395,18 +395,26 @@ namespace Shesha.EntityHistory
                 // If there is no Created record then get the create date stored in ICreationAudited entity
                 if (list.All(x => x.HistoryItemType != (int?)EntityHistoryItemType.Created))
                 {
-                    if (Parser.CanParseId(entityId, entityType) && DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
+                    try
                     {
-                        var createdBy = GetPersonByUserId(obj.CreatorUserId);
-                        list.Add(new EntityHistoryItemDto()
+                        if (Parser.CanParseId(entityId, entityType) &&
+                            DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
                         {
-                            HistoryItemType = (int?)EntityHistoryItemType.Created,
-                            CreationTime = obj.CreationTime,
-                            EntityTypeFullName = entityType?.FullName,
-                            EntityId = entityId,
-                            EventText = string.IsNullOrEmpty(childName) ? "Created" : "Added",
-                            UserFullName = createdBy?.FullName ?? $"UserId: {obj.CreatorUserId}"
-                        });
+                            var createdBy = GetPersonByUserId(obj.CreatorUserId);
+                            list.Add(new EntityHistoryItemDto()
+                            {
+                                HistoryItemType = (int?) EntityHistoryItemType.Created,
+                                CreationTime = obj.CreationTime,
+                                EntityTypeFullName = entityType?.FullName,
+                                EntityId = entityId,
+                                EventText = string.IsNullOrEmpty(childName) ? "Created" : "Added",
+                                UserFullName = createdBy?.FullName ?? $"UserId: {obj.CreatorUserId}"
+                            });
+                        }
+                    }
+                    catch
+                    {
+                        // hide exception
                     }
                 }
             }
@@ -431,7 +439,7 @@ namespace Shesha.EntityHistory
 
                 if (ownField == null)
                 {
-                    var ownFields = manyToManyType.GetProperties().Where(x => x.PropertyType.IsAssignableFrom(itemType)).ToList();
+                    var ownFields = manyToManyType.GetProperties().Where(x => itemType.IsAssignableFrom(x.PropertyType)).ToList();
                     if (ownFields.Count() > 1)
                         throw new Exception($"Found more then 1 field with parent type {itemType.FullName}");
                     ownField = ownFields.FirstOrDefault();
@@ -563,7 +571,7 @@ namespace Shesha.EntityHistory
 
                 if (ownField == null)
                 {
-                    var ownFields = manyToOneType.GetProperties().Where(x => x.PropertyType.IsAssignableFrom(itemType)).ToList();
+                    var ownFields = manyToOneType.GetProperties().Where(x => itemType.IsAssignableFrom(x.PropertyType)).ToList();
                     if (ownFields.Count() > 1)
                         throw new Exception($"Found more then 1 field with parent type {itemType.FullName}");
                     ownField = ownFields.FirstOrDefault();
