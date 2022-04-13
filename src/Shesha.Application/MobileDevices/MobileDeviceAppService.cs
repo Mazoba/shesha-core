@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Abp.Domain.Repositories;
 using Shesha.Domain;
 using Shesha.Web.DataTable;
@@ -26,6 +28,11 @@ namespace Shesha.MobileDevices
             table.AddProperty(e => e.IsLocked);
 
             return table;
+        }
+        public async Task<MobileDeviceDto> GetDeviceByEmei(string imei)
+        {
+            var device = await Repository.FirstOrDefaultAsync(r => r.IMEI == imei);
+            return ObjectMapper.Map<MobileDeviceDto>(device);
         }
     }
 }
