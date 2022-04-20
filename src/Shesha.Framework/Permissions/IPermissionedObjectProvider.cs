@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 namespace Shesha.Permissions
 {
-    public interface IProtectedObjectProvider
+    public interface IPermissionedObjectProvider
     {
         string GetCategory();
         string GetCategoryByType(Type type);
-        List<ProtectedObjectDto> GetAll();
+        List<PermissionedObjectDto> GetAll();
     }
 }

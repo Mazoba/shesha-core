@@ -8,7 +8,7 @@ namespace Shesha.Permissions
     /// <summary>
     /// Person Application Service
     /// </summary>
-    public interface IProtectedObjectAppService
+    public interface IPermissionedObjectAppService
     {
     }
 }

@@ -17,21 +17,21 @@ using Shesha.Permissions.Enum;
 
 namespace Shesha.Permissions
 {
-    public class ProtectedObjectManager : IProtectedObjectManager, ITransientDependency
+    public class PermissionedObjectManager : IPermissionedObjectManager, ITransientDependency
     {
-        private IRepository<ProtectedObject, Guid> _protectedObjectRepository;
+        private IRepository<PermissionedObject, Guid> _permissionedObjectRepository;
         private IUnitOfWorkManager _unitOfWorkManager;
         private ICacheManager _cacheManager;
         private IObjectMapper _objectMapper;
 
-        public ProtectedObjectManager(
-            IRepository<ProtectedObject, Guid> protectedObjectRepository,
+        public PermissionedObjectManager(
+            IRepository<PermissionedObject, Guid> permissionedObjectRepository,
             IUnitOfWorkManager unitOfWorkManager,
             ICacheManager cacheManager,
             IObjectMapper objectMapper
         )
         {
-            _protectedObjectRepository = protectedObjectRepository;
+            _permissionedObjectRepository = permissionedObjectRepository;
             _unitOfWorkManager = unitOfWorkManager;
             _cacheManager = cacheManager;
             _objectMapper = objectMapper;
@@ -39,10 +39,10 @@ namespace Shesha.Permissions
 
         public virtual string GetCategoryByType(Type type)
         {
-            var providers = IocManager.Instance.ResolveAll<IProtectedObjectProvider>();
-            foreach (var protectedObjectProvider in providers)
+            var providers = IocManager.Instance.ResolveAll<IPermissionedObjectProvider>();
+            foreach (var permissionedObjectProvider in providers)
             {
-                var category = protectedObjectProvider.GetCategoryByType(type);
+                var category = permissionedObjectProvider.GetCategoryByType(type);
                 if (!string.IsNullOrEmpty(category))
                     return category;
             }
@@ -51,20 +51,20 @@ namespace Shesha.Permissions
         }
 
         [UnitOfWork]
-        public virtual async Task<List<ProtectedObjectDto>> GetAllFlatAsync(string category = null, bool showHidden = false)
+        public virtual async Task<List<PermissionedObjectDto>> GetAllFlatAsync(string category = null, bool showHidden = false)
         {
-            return (await _protectedObjectRepository.GetAll()
+            return (await _permissionedObjectRepository.GetAll()
                 .WhereIf(!string.IsNullOrEmpty(category?.Trim()), x => x.Category == category)
                 .WhereIf(!showHidden, x => !x.Hidden)
                 .ToListAsync())
-                .Select(x => _objectMapper.Map<ProtectedObjectDto>(x))
+                .Select(x => _objectMapper.Map<PermissionedObjectDto>(x))
                 .ToList();
         }
 
         [UnitOfWork]
-        public virtual async Task<List<ProtectedObjectDto>> GetAllTreeAsync(string category = null, bool showHidden = false)
+        public virtual async Task<List<PermissionedObjectDto>> GetAllTreeAsync(string category = null, bool showHidden = false)
         {
-            return (await _protectedObjectRepository.GetAll()
+            return (await _permissionedObjectRepository.GetAll()
                 .WhereIf(!string.IsNullOrEmpty(category?.Trim()), x => x.Category == category)
                 .WhereIf(!showHidden, x => !x.Hidden)
                 .Where(x => x.Parent == null || x.Parent == "")
@@ -74,41 +74,41 @@ namespace Shesha.Permissions
         }
 
         [UnitOfWork]
-        public virtual async Task<ProtectedObjectDto> GetObjectWithChild(string objectName, bool showHidden = false)
+        public virtual async Task<PermissionedObjectDto> GetObjectWithChild(string objectName, bool showHidden = false)
         {
-            var obj = await _protectedObjectRepository.GetAll()
+            var obj = await _permissionedObjectRepository.GetAll()
                 .WhereIf(!showHidden, x => !x.Hidden)
                 .FirstOrDefaultAsync(x => x.Parent == null || x.Parent == "");
             return GetObjectWithChild(obj, showHidden);
         }
 
-        private ProtectedObjectDto GetObjectWithChild(ProtectedObject obj, bool showHidden = false)
+        private PermissionedObjectDto GetObjectWithChild(PermissionedObject obj, bool showHidden = false)
         {
-            var dto = _objectMapper.Map<ProtectedObjectDto>(obj);
-            var child = _protectedObjectRepository.GetAll()
+            var dto = _objectMapper.Map<PermissionedObjectDto>(obj);
+            var child = _permissionedObjectRepository.GetAll()
                 .WhereIf(!showHidden, x => !x.Hidden)
                 .Where(x => x.Parent == obj.Object)
                 .ToList();
-            foreach (var protectedObject in child)
+            foreach (var permissionedObject in child)
             {
-                dto.Child.Add(GetObjectWithChild(protectedObject, showHidden));
+                dto.Child.Add(GetObjectWithChild(permissionedObject, showHidden));
             }
             return dto;
         }
 
-        public virtual async Task<ProtectedObjectDto> GetAsync(string objectName, bool useInherited = true,
+        public virtual async Task<PermissionedObjectDto> GetAsync(string objectName, bool useInherited = true,
             UseDependencyType useDependency = UseDependencyType.Before, bool useHidden = false)
         {
-            var obj = await _cacheManager.GetProtectedObjectCache().GetOrDefaultAsync(objectName);
+            var obj = await _cacheManager.GetPermissionedObjectCache().GetOrDefaultAsync(objectName);
 
             if (obj == null)
             {
                 using var unitOfWork = _unitOfWorkManager.Begin();
-                var dbObj = await _protectedObjectRepository.GetAll().FirstOrDefaultAsync(x => x.Object == objectName);
+                var dbObj = await _permissionedObjectRepository.GetAll().FirstOrDefaultAsync(x => x.Object == objectName);
                 if (dbObj != null)
                 {
-                    obj = _objectMapper.Map<ProtectedObjectDto>(dbObj);
-                    _cacheManager.GetProtectedObjectCache().Set(objectName, obj);
+                    obj = _objectMapper.Map<PermissionedObjectDto>(dbObj);
+                    _cacheManager.GetPermissionedObjectCache().Set(objectName, obj);
                 }
                 unitOfWork.Complete();
             }
@@ -148,53 +148,53 @@ namespace Shesha.Permissions
         }
 
         [UnitOfWork]
-        public virtual async Task<ProtectedObjectDto> SetAsync(ProtectedObjectDto protectedObject)
+        public virtual async Task<PermissionedObjectDto> SetAsync(PermissionedObjectDto permissionedObject)
         {
             // ToDo: AS - check permission names exist
-            var obj = await _protectedObjectRepository.GetAll().FirstOrDefaultAsync(x =>
-                          x.Object == protectedObject.Object
-                          && x.Category == protectedObject.Category) 
+            var obj = await _permissionedObjectRepository.GetAll().FirstOrDefaultAsync(x =>
+                          x.Object == permissionedObject.Object
+                          && x.Category == permissionedObject.Category) 
                       ??
-                      new ProtectedObject()
+                      new PermissionedObject()
                       {
-                          Object = protectedObject.Object,
-                          Category = protectedObject.Category,
-                          Parent = protectedObject.Parent,
+                          Object = permissionedObject.Object,
+                          Category = permissionedObject.Category,
+                          Parent = permissionedObject.Parent,
                       };
 
-            obj.Description = protectedObject.Description;
-            obj.Permissions = string.Join(",", protectedObject.Permissions ?? new ConcurrentHashSet<string>());
-            obj.Inherited = protectedObject.Inherited;
-            obj.Hidden = protectedObject.Hidden;
+            obj.Description = permissionedObject.Description;
+            obj.Permissions = string.Join(",", permissionedObject.Permissions ?? new ConcurrentHashSet<string>());
+            obj.Inherited = permissionedObject.Inherited;
+            obj.Hidden = permissionedObject.Hidden;
 
-            await _protectedObjectRepository.InsertOrUpdateAsync(obj);
+            await _permissionedObjectRepository.InsertOrUpdateAsync(obj);
 
-            await _cacheManager.GetProtectedObjectCache().SetAsync(protectedObject.Object, protectedObject);
+            await _cacheManager.GetPermissionedObjectCache().SetAsync(permissionedObject.Object, permissionedObject);
 
-            return protectedObject;
+            return permissionedObject;
         }
 
         [UnitOfWork]
-        public virtual async Task<ProtectedObjectDto> SetPermissionsAsync(string objectName, bool inherited, List<string> permissions)
+        public virtual async Task<PermissionedObjectDto> SetPermissionsAsync(string objectName, bool inherited, List<string> permissions)
         {
             // ToDo: AS - check permission names exist
-            var obj = await _protectedObjectRepository.GetAll().FirstOrDefaultAsync(x => x.Object == objectName);
+            var obj = await _permissionedObjectRepository.GetAll().FirstOrDefaultAsync(x => x.Object == objectName);
 
             if (obj == null) return null;
 
             obj.Permissions = string.Join(",", permissions ?? new List<string>());
             obj.Inherited = inherited;
-            await _protectedObjectRepository.InsertOrUpdateAsync(obj);
+            await _permissionedObjectRepository.InsertOrUpdateAsync(obj);
 
-            var dto = _objectMapper.Map<ProtectedObjectDto>(obj);
-            await _cacheManager.GetProtectedObjectCache().SetAsync(objectName, dto);
+            var dto = _objectMapper.Map<PermissionedObjectDto>(obj);
+            await _cacheManager.GetPermissionedObjectCache().SetAsync(objectName, dto);
 
             return dto;
         }
 
         public virtual async Task ClearCacheAsync()
         {
-            await _cacheManager.GetProtectedObjectCache().ClearAsync();
+            await _cacheManager.GetPermissionedObjectCache().ClearAsync();
         }
 
     }

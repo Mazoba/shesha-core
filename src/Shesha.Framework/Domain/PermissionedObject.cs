@@ -5,8 +5,8 @@ using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain
 {
-    [Entity(TypeShortAlias = "Shesha.Framework.ProtectedObject")]
-    public class ProtectedObject : FullAuditedEntity<Guid>
+    [Entity(TypeShortAlias = "Shesha.Framework.PermissionedObject")]
+    public class PermissionedObject : FullAuditedEntity<Guid>
     {
         [NotNull]
         public virtual string Object { get; set; }

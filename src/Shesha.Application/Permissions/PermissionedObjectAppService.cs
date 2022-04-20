@@ -8,24 +8,24 @@ using Shesha.Domain;
 namespace Shesha.Permissions
 {
     [AbpAuthorize()]
-    public class ProtectedObjectAppService : SheshaCrudServiceBase<ProtectedObject, ProtectedObjectDto, Guid>, IProtectedObjectAppService
+    public class PermissionedObjectAppService : SheshaCrudServiceBase<PermissionedObject, PermissionedObjectDto, Guid>, IPermissionedObjectAppService
     {
-        private readonly ProtectedObjectManager _protectedObjectManager;
+        private readonly PermissionedObjectManager _permissionedObjectManager;
 
-        public ProtectedObjectAppService(
-            IRepository<ProtectedObject, Guid> repository,
-            ProtectedObjectManager protectedObjectManager
+        public PermissionedObjectAppService(
+            IRepository<PermissionedObject, Guid> repository,
+            PermissionedObjectManager permissionedObjectManager
             ) : base(repository)
         {
-            _protectedObjectManager = protectedObjectManager;
+            _permissionedObjectManager = permissionedObjectManager;
         }
         
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="repository"></param>
-        public ProtectedObjectAppService(
-            IRepository<ProtectedObject, Guid> repository
+        public PermissionedObjectAppService(
+            IRepository<PermissionedObject, Guid> repository
             ) : base(repository)
         {
         }
@@ -36,9 +36,9 @@ namespace Shesha.Permissions
         /// <param name="category"></param>
         /// <param name="showHidden"></param>
         /// <returns></returns>
-        public async Task<List<ProtectedObjectDto>> GetAllFlatAsync(string category, bool showHidden = false)
+        public async Task<List<PermissionedObjectDto>> GetAllFlatAsync(string category, bool showHidden = false)
         {
-            return await _protectedObjectManager.GetAllFlatAsync(category, showHidden);
+            return await _permissionedObjectManager.GetAllFlatAsync(category, showHidden);
         }
 
         /// <summary>
@@ -47,9 +47,9 @@ namespace Shesha.Permissions
         /// <param name="category"></param>
         /// <param name="showHidden"></param>
         /// <returns></returns>
-        public async Task<List<ProtectedObjectDto>> GetAllTreeAsync(string category, bool showHidden = false)
+        public async Task<List<PermissionedObjectDto>> GetAllTreeAsync(string category, bool showHidden = false)
         {
-            return await _protectedObjectManager.GetAllTreeAsync(category, showHidden);
+            return await _permissionedObjectManager.GetAllTreeAsync(category, showHidden);
         }
 
         /// <summary>
@@ -57,9 +57,9 @@ namespace Shesha.Permissions
         /// </summary>
         /// <param name="objectName"></param>
         /// <returns></returns>
-        public async Task<ProtectedObjectDto> GetByObjectNameAsync(string objectName)
+        public async Task<PermissionedObjectDto> GetByObjectNameAsync(string objectName)
         {
-            return await _protectedObjectManager.GetAsync(objectName);
+            return await _permissionedObjectManager.GetAsync(objectName);
         }
 
         /// <summary>
@@ -69,9 +69,9 @@ namespace Shesha.Permissions
         /// <param name="inherited"></param>
         /// <param name="permissions"></param>
         /// <returns></returns>
-        public async Task<ProtectedObjectDto> SetPermissionsAsync(string objectName, bool inherited, List<string> permissions)
+        public async Task<PermissionedObjectDto> SetPermissionsAsync(string objectName, bool inherited, List<string> permissions)
         {
-            return await _protectedObjectManager.SetPermissionsAsync(objectName, inherited, permissions);
+            return await _permissionedObjectManager.SetPermissionsAsync(objectName, inherited, permissions);
         }
 
         /// <summary>
@@ -80,10 +80,10 @@ namespace Shesha.Permissions
         /// <param name="serviceName"></param>
         /// <param name="actionName"></param>
         /// <returns></returns>
-        public async Task<ProtectedObjectDto> GetApiPermissionsAsync(string serviceName, string actionName)
+        public async Task<PermissionedObjectDto> GetApiPermissionsAsync(string serviceName, string actionName)
         {
             var action = string.IsNullOrEmpty(actionName) ? "" : "@" + actionName;
-            return await _protectedObjectManager.GetAsync($"{serviceName}{action}");
+            return await _permissionedObjectManager.GetAsync($"{serviceName}{action}");
         }
 
         /// <summary>
@@ -91,9 +91,9 @@ namespace Shesha.Permissions
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public override async Task<ProtectedObjectDto> UpdateAsync(ProtectedObjectDto input)
+        public override async Task<PermissionedObjectDto> UpdateAsync(PermissionedObjectDto input)
         {
-            return await _protectedObjectManager.SetAsync(input);
+            return await _permissionedObjectManager.SetAsync(input);
         }
 
         /// <summary>
@@ -104,10 +104,10 @@ namespace Shesha.Permissions
         /// <param name="inherited"></param>
         /// <param name="permissions"></param>
         /// <returns></returns>
-        public async Task<ProtectedObjectDto> SetApiPermissionsAsync(string serviceName, string actionName, bool inherited, List<string> permissions)
+        public async Task<PermissionedObjectDto> SetApiPermissionsAsync(string serviceName, string actionName, bool inherited, List<string> permissions)
         {
             var action = string.IsNullOrEmpty(actionName) ? "" : "@" + actionName;
-            return await _protectedObjectManager.SetPermissionsAsync($"{serviceName}{action}", inherited, permissions);
+            return await _permissionedObjectManager.SetPermissionsAsync($"{serviceName}{action}", inherited, permissions);
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace Shesha.Permissions
         /// <returns></returns>
         public async Task ClearCacheAsync()
         {
-            await _protectedObjectManager.ClearCacheAsync();
+            await _permissionedObjectManager.ClearCacheAsync();
         }
     }
 }

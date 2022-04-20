@@ -9,11 +9,11 @@ using Shesha.Utilities;
 
 namespace Shesha.Permissions
 {
-    public class ProtectedObjectProviderBase: ITransientDependency
+    public class PermissionedObjectProviderBase: ITransientDependency
     {
         protected readonly IAssemblyFinder _assembleFinder;
 
-        public ProtectedObjectProviderBase(IAssemblyFinder assembleFinder)
+        public PermissionedObjectProviderBase(IAssemblyFinder assembleFinder)
         {
             _assembleFinder = assembleFinder;
         }

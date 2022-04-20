@@ -11,10 +11,10 @@ using Shesha.Reflection;
 
 namespace Shesha.Permission
 {
-    public class EntityProtectedObjectProvider : ProtectedObjectProviderBase, IProtectedObjectProvider
+    public class EntityPermissionedObjectProvider : PermissionedObjectProviderBase, IPermissionedObjectProvider
     {
 
-        public EntityProtectedObjectProvider(IAssemblyFinder assembleFinder) : base(assembleFinder)
+        public EntityPermissionedObjectProvider(IAssemblyFinder assembleFinder) : base(assembleFinder)
         {
         }
 
@@ -37,13 +37,13 @@ namespace Shesha.Permission
                 : null;
         }
 
-        public List<ProtectedObjectDto> GetAll()
+        public List<PermissionedObjectDto> GetAll()
         {
             // ToDo: add Entities to configured permissions
-            return new List<ProtectedObjectDto>();
+            return new List<PermissionedObjectDto>();
 
             var assemblies = _assembleFinder.GetAllAssemblies().Distinct(new AssemblyFullNameComparer()).Where(a => !a.IsDynamic).ToList();
-            var allPermissions = new List<ProtectedObjectDto>();
+            var allPermissions = new List<PermissionedObjectDto>();
 
             var entityType = typeof(IEntity<>);
 
@@ -56,7 +56,7 @@ namespace Shesha.Permission
                     .ToList();
                 foreach (var service in services)
                 {
-                    var parent = new ProtectedObjectDto()
+                    var parent = new PermissionedObjectDto()
                     {
                         Object = service.FullName, 
                         Category = ObjectCategory, 
@@ -65,7 +65,7 @@ namespace Shesha.Permission
                     allPermissions.Add(parent);
 
 
-                    var child = new ProtectedObjectDto()
+                    var child = new PermissionedObjectDto()
                     {
                         Object = service.FullName + "@Create", 
                         Category = ObjectCategory, 
@@ -74,7 +74,7 @@ namespace Shesha.Permission
                     };
                     allPermissions.Add(child);
 
-                    child = new ProtectedObjectDto()
+                    child = new PermissionedObjectDto()
                     {
                         Object = service.FullName + "@Update",
                         Category = ObjectCategory,
@@ -83,7 +83,7 @@ namespace Shesha.Permission
                     };
                     allPermissions.Add(child);
 
-                    child = new ProtectedObjectDto()
+                    child = new PermissionedObjectDto()
                     {
                         Object = service.FullName + "@Delete",
                         Category = ObjectCategory,
@@ -92,7 +92,7 @@ namespace Shesha.Permission
                     };
                     allPermissions.Add(child);
 
-                    child = new ProtectedObjectDto()
+                    child = new PermissionedObjectDto()
                     {
                         Object = service.FullName + "@Get",
                         Category = ObjectCategory,

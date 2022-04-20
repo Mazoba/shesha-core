@@ -28,8 +28,8 @@ namespace Shesha.Tests.Permissions
         [Fact]
         public async Task GetAllApi_Test()
         {
-            var protectedObjectManager = Resolve<ProtectedObjectManager>();
-            var api = protectedObjectManager.GetAllTree();
+            var permissionedObjectManager = Resolve<PermissionedObjectManager>();
+            var api = await permissionedObjectManager.GetAllTreeAsync();
         }
 
         [Fact]

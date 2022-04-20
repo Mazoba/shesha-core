@@ -22,26 +22,26 @@ using Shesha.Permissions;
 
 namespace Shesha.Permission
 {
-    public class ProtectedObjectsBootstrapper : IBootstrapper, ITransientDependency
+    public class PermissionedObjectsBootstrapper : IBootstrapper, ITransientDependency
     {
-        private readonly IRepository<ProtectedObject, Guid> _protectedObjectRepository;
+        private readonly IRepository<PermissionedObject, Guid> _permissionedObjectRepository;
         private readonly IObjectMapper _objectMapper;
 
-        public ProtectedObjectsBootstrapper(IRepository<ProtectedObject, Guid> protectedObjectRepository, IObjectMapper objectMapper)
+        public PermissionedObjectsBootstrapper(IRepository<PermissionedObject, Guid> permissionedObjectRepository, IObjectMapper objectMapper)
         {
-            _protectedObjectRepository = protectedObjectRepository;
+            _permissionedObjectRepository = permissionedObjectRepository;
             _objectMapper = objectMapper;
         }
 
         public async Task Process()
         {
-            var providers = IocManager.Instance.ResolveAll<IProtectedObjectProvider>();
-            foreach (var protectedObjectProvider in providers)
+            var providers = IocManager.Instance.ResolveAll<IPermissionedObjectProvider>();
+            foreach (var permissionedObjectProvider in providers)
             {
-                var items  = protectedObjectProvider.GetAll();
-                var category = protectedObjectProvider.GetCategory();
+                var items  = permissionedObjectProvider.GetAll();
+                var category = permissionedObjectProvider.GetCategory();
 
-                var dbItems = await _protectedObjectRepository.GetAll().Where(x => x.Category == category).ToListAsync();
+                var dbItems = await _permissionedObjectRepository.GetAll().Where(x => x.Category == category).ToListAsync();
 
                 // ToDo: think how to update Protected objects in th bootstrapper
 
@@ -50,7 +50,7 @@ namespace Shesha.Permission
                     .ToList();
                 foreach (var item in toAdd)
                 {
-                    await _protectedObjectRepository.InsertAsync(_objectMapper.Map<ProtectedObject>(item));
+                    await _permissionedObjectRepository.InsertAsync(_objectMapper.Map<PermissionedObject>(item));
                 }
 
                 // Inactivate deleted items
@@ -58,7 +58,7 @@ namespace Shesha.Permission
                     .Where(dbi => !items.Any(i => dbi.Object == i.Object && dbi.Category == i.Category)).ToList();
                 foreach (var item in toDelete)
                 {
-                    await _protectedObjectRepository.DeleteAsync(item);
+                    await _permissionedObjectRepository.DeleteAsync(item);
                 }
             }
 

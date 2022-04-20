@@ -11,9 +11,9 @@ namespace Shesha.Authorization
             return cacheManager.GetCache<string, CustomUserPermissionCacheItem>(CustomUserPermissionCacheItem.CacheStoreName);
         }
 
-        public static ITypedCache<string, ProtectedObjectDto> GetProtectedObjectCache(this ICacheManager cacheManager)
+        public static ITypedCache<string, PermissionedObjectDto> GetPermissionedObjectCache(this ICacheManager cacheManager)
         {
-            return cacheManager.GetCache<string, ProtectedObjectDto>(ProtectedObjectDto.CacheStoreName);
+            return cacheManager.GetCache<string, PermissionedObjectDto>(PermissionedObjectDto.CacheStoreName);
         }
 
     }

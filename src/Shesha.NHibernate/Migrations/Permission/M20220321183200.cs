@@ -11,8 +11,8 @@ namespace Shesha.Migrations.Framework
     {
         public override void Up()
         {
-            // Shesha.Domain.ProtectedObjects
-            Create.Table("Frwk_ProtectedObjects")
+            // Shesha.Domain.PermissionedObjects
+            Create.Table("Frwk_PermissionedObjects")
                 .WithIdAsGuid()
                 .WithFullPowerChildEntityColumns()
                 .WithColumn("Object").AsString(1000).NotNullable()

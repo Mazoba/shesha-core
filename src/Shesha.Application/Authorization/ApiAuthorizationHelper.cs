@@ -21,17 +21,17 @@ namespace Shesha.Authorization
     {
 
         private readonly IAuthorizationConfiguration _authConfiguration;
-        private readonly ProtectedObjectManager _protectedObjectManager;
+        private readonly PermissionedObjectManager _permissionedObjectManager;
 
 
         public ApiAuthorizationHelper(
             IFeatureChecker featureChecker,
             IAuthorizationConfiguration authConfiguration,
-            ProtectedObjectManager protectedObjectManager
+            PermissionedObjectManager permissionedObjectManager
             ) : base(featureChecker, authConfiguration)
         {
             _authConfiguration = authConfiguration;
-            _protectedObjectManager = protectedObjectManager;
+            _permissionedObjectManager = permissionedObjectManager;
         }
 
         public override async Task AuthorizeAsync(MethodInfo methodInfo, Type type)
@@ -63,7 +63,7 @@ namespace Shesha.Authorization
                 );
             }*/
 
-            var permission = await _protectedObjectManager.GetAsync($"{type.FullName}@{methodInfo.Name}");
+            var permission = await _permissionedObjectManager.GetAsync($"{type.FullName}@{methodInfo.Name}");
 
             if (permission?.Permissions == null
                 || !permission.Permissions.Any() 

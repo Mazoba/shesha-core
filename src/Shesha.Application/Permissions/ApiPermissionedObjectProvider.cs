@@ -10,10 +10,10 @@ using Shesha.Reflection;
 
 namespace Shesha.Permissions
 {
-    public class ApiProtectedObjectProvider : ProtectedObjectProviderBase, IProtectedObjectProvider
+    public class ApiPermissionedObjectProvider : PermissionedObjectProviderBase, IPermissionedObjectProvider
     {
 
-        public ApiProtectedObjectProvider(IAssemblyFinder assembleFinder) : base(assembleFinder)
+        public ApiPermissionedObjectProvider(IAssemblyFinder assembleFinder) : base(assembleFinder)
         {
         }
 
@@ -39,10 +39,10 @@ namespace Shesha.Permissions
                 : null;
         }
 
-        public List<ProtectedObjectDto> GetAll()
+        public List<PermissionedObjectDto> GetAll()
         {
             var assemblies = _assembleFinder.GetAllAssemblies().Distinct(new AssemblyFullNameComparer()).Where(a => !a.IsDynamic).ToList();
-            var allApiPermissions = new List<ProtectedObjectDto>();
+            var allApiPermissions = new List<PermissionedObjectDto>();
 
             var shaServiceType = typeof(SheshaAppServiceBase);
             var crudServiceType = typeof(IAsyncCrudAppService<,,,,,,>);
@@ -57,7 +57,7 @@ namespace Shesha.Permissions
                     .ToList();
                 foreach (var service in services)
                 {
-                    var parent = new ProtectedObjectDto()
+                    var parent = new PermissionedObjectDto()
                     {
                         Object = service.FullName, 
                         Category = ObjectCategory, 
@@ -77,7 +77,7 @@ namespace Shesha.Permissions
 
                     foreach (var methodInfo in methods)
                     {
-                        var child = new ProtectedObjectDto()
+                        var child = new PermissionedObjectDto()
                         {
                             Object = service.FullName + "@" + methodInfo.Name,
                             //Action = methodInfo.Name, 

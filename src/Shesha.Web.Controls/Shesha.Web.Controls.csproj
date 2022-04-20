@@ -24,7 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Abp" Version="6.6.2" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="2.10.1" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.29" />
     <PackageReference Include="JsonLogic.Net" Version="1.1.9" />

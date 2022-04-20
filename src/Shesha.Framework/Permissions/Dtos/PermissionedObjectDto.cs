@@ -5,15 +5,15 @@ using ConcurrentCollections;
 
 namespace Shesha.Permissions
 {
-    public class ProtectedObjectDto : EntityDto<Guid>
+    public class PermissionedObjectDto : EntityDto<Guid>
     {
 
-        public const string CacheStoreName = "ProtectedObjectCache";
+        public const string CacheStoreName = "PermissionedObjectCache";
 
-        public ProtectedObjectDto()
+        public PermissionedObjectDto()
         {
             Permissions = new ConcurrentHashSet<string>();
-            Child = new List<ProtectedObjectDto>();
+            Child = new List<PermissionedObjectDto>();
             Inherited = true;
             Hidden = false;
         }
@@ -31,7 +31,7 @@ namespace Shesha.Permissions
         public string Parent { get; set; }
         public string Dependency { get; set; }
         
-        public List<ProtectedObjectDto> Child { get; set; }
+        public List<PermissionedObjectDto> Child { get; set; }
 
         public bool Hidden { get; set; }
 

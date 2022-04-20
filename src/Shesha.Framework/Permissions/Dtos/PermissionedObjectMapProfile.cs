@@ -8,14 +8,14 @@ using Shesha.DynamicEntities.Dtos;
 
 namespace Shesha.Permissions.Dtos
 {
-    public class ProtectedObjectMapProfile : ShaProfile
+    public class PermissionedObjectMapProfile : ShaProfile
     {
-        public ProtectedObjectMapProfile()
+        public PermissionedObjectMapProfile()
         {
             "".Split(",").ToList();
-            CreateMap<ProtectedObjectDto, ProtectedObject>()
+            CreateMap<PermissionedObjectDto, PermissionedObject>()
                 .ForMember(e => e.Permissions, c => c.MapFrom(e => string.Join(",", e.Permissions)));
-            CreateMap<ProtectedObject, ProtectedObjectDto>()
+            CreateMap<PermissionedObject, PermissionedObjectDto>()
                 .ForMember(e => e.Permissions, c => c.MapFrom(e => 
                     e.Permissions == null 
                         ? new List<string>() 
