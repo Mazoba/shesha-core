@@ -195,7 +195,7 @@ namespace Shesha.Reflection
             throw new Exception($"Property '{propertyName}' does not exist on entity type '{currentType.FullName}'");
         }
 
-        private static PropertyInfo FindHighestLevelProperty(string propertyName, Type entityType)
+        public static PropertyInfo FindHighestLevelProperty(string propertyName, Type entityType)
         {
             //PropertyInfo propInfo;
             var propInfo = entityType.GetProperties()
