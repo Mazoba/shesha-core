@@ -47,7 +47,7 @@ namespace Shesha
             Configuration.Notifications.Notifiers.Add<PushRealTimeNotifier>();
 
             Configuration.Authorization.Providers.Add<SheshaAuthorizationProvider>();
-            Configuration.Authorization.Providers.Add<DBAuthorizationProvider>();
+            Configuration.Authorization.Providers.Add<DbAuthorizationProvider>();
 
             // replace email sender
             Configuration.ReplaceService<ISmtpEmailSenderConfiguration, SmtpEmailSenderSettings>(DependencyLifeStyle.Transient);
