@@ -64,6 +64,7 @@ namespace Shesha.DynamicEntities
         /// </param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
         /// <param name="options">The <see cref="MvcOptions"/>.</param>
+        /// <param name="dynamicDtoTypeBuilder">Dynamic DTO builder</param>
         public DynamicDtoModelBinder(
             IList<IInputFormatter> formatters,
             IHttpRequestStreamReaderFactory readerFactory,

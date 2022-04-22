@@ -301,7 +301,7 @@ namespace Shesha
             where TEntity : class, IEntity<TPrimaryKey>
             where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
         {
-            var mapper = await DynamicDtoMappingHelper.GetDtoToEntityMapperAsync(dto.GetType(), entity.GetType());
+            var mapper = await DynamicDtoMappingHelper.GetDtoToEntityMapperAsync(entity.GetType(), dto.GetType());
 
             mapper.Map(dto, entity);
         }

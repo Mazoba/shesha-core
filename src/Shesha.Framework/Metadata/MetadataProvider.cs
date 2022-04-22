@@ -86,8 +86,27 @@ namespace Shesha.Metadata
                 //ConfigurableByUser = property.GetAttribute<BindableAttribute>()?.Bindable ?? true,
                 //GroupName = ReflectionHelper.get(declaredProperty ?? property),
             };
+            if (dataType.DataType == DataTypes.Array)
+            {
+                result.ItemsType = GetItemsType(property);
+            }
 
             return result;
+        }
+
+        private PropertyMetadataDto GetItemsType(PropertyInfo property)
+        {
+            if (property.IsMultiValueReferenceListProperty()) 
+            {
+                return new PropertyMetadataDto
+                {
+                    Path = "value",
+                    DataType = DataTypes.Number,
+                    DataFormat = NumberFormats.Int64,
+                };
+            }
+            
+            return null;
         }
 
         private bool IsFrameworkRelatedProperty(PropertyInfo property)
@@ -179,6 +198,9 @@ namespace Shesha.Metadata
 
             if (propType == typeof(bool))
                 return new DataTypeInfo(DataTypes.Boolean);
+
+            if (propInfo.IsMultiValueReferenceListProperty())
+                return new DataTypeInfo(DataTypes.Array);
 
             if (propInfo.IsReferenceListProperty())
                 return new DataTypeInfo(DataTypes.ReferenceListItem);

@@ -167,34 +167,22 @@ namespace Shesha.DynamicEntities
                         dbp = new EntityProperty
                         {
                             EntityConfig = entityConfig,
-                            Name = cp.Path,
-                            Label = cp.Label,
-                            Description = cp.Description,
-                            DataType = cp.DataType,
-                            DataFormat = cp.DataFormat,
-                            EntityType = cp.EntityTypeShortAlias,
-                            ReferenceListName = cp.ReferenceListName,
-                            ReferenceListNamespace = cp.ReferenceListNamespace,
-
                             Source = Domain.Enums.MetadataSourceType.ApplicationCode,
                             SortOrder = nextSortOrder++,
-                            IsFrameworkRelated = cp.IsFrameworkRelated,
                         };
+                        MapProperty(cp, dbp);
+
                         await _entityPropertyRepository.InsertAsync(dbp);
                     }
                     else {
                         // update hardcoded part
-                        dbp.DataType = cp.DataType;
-                        dbp.DataFormat = cp.DataFormat;
-                        dbp.EntityType = cp.EntityTypeShortAlias;
-                        dbp.ReferenceListName = cp.ReferenceListName;
-                        dbp.ReferenceListNamespace = cp.ReferenceListNamespace;
-
                         dbp.Source = Domain.Enums.MetadataSourceType.ApplicationCode;
-                        dbp.IsFrameworkRelated = cp.IsFrameworkRelated;
+                        MapProperty(cp, dbp, true);
 
                         await _entityPropertyRepository.UpdateAsync(dbp);
                     }
+
+                    await UpdateItemsTypeAsync(dbp, cp);
 
                     // todo: how to update properties? merge issue
                     //dbp.Label = cp.Label;
@@ -215,6 +203,50 @@ namespace Shesha.DynamicEntities
             catch (Exception e) 
             {
                 throw;
+            }
+        }
+
+        private async Task UpdateItemsTypeAsync(EntityProperty dbp, PropertyMetadataDto cp)
+        {
+            var shouldHaveItemsType = dbp.DataType == DataTypes.Array && cp.ItemsType != null;
+
+            if (!shouldHaveItemsType)
+            {
+                // delete item type if exists
+                if (dbp.ItemsType != null) 
+                {
+                    await _entityPropertyRepository.DeleteAsync(dbp.ItemsType);
+                    dbp.ItemsType = null;
+                    await _entityPropertyRepository.UpdateAsync(dbp);
+                }
+            }
+            else {
+                if (dbp.ItemsType == null)
+                    dbp.ItemsType = new EntityProperty();
+
+                dbp.ItemsType.EntityConfig = dbp.EntityConfig;
+                MapProperty(cp.ItemsType, dbp.ItemsType);
+
+                dbp.ItemsType.Source = Domain.Enums.MetadataSourceType.ApplicationCode;
+                dbp.ItemsType.SortOrder = 0;
+                await _entityPropertyRepository.UpdateAsync(dbp);
+            }
+        }
+
+        private void MapProperty(PropertyMetadataDto src, EntityProperty dst, bool skipConfigurable = true) 
+        {
+            dst.Name = src.Path;
+            dst.DataType = src.DataType;
+            dst.DataFormat = src.DataFormat;
+            dst.EntityType = src.EntityTypeShortAlias;
+            dst.ReferenceListName = src.ReferenceListName;
+            dst.ReferenceListNamespace = src.ReferenceListNamespace;
+            dst.IsFrameworkRelated = src.IsFrameworkRelated;
+
+            if (!skipConfigurable)
+            {
+                dst.Label = src.Label;
+                dst.Description = src.Description;
             }
         }
     }

@@ -1,15 +1,14 @@
-﻿using System;
+﻿using Abp.Domain.Entities;
+using AutoMapper;
+using Shesha.AutoMapper.Dto;
+using Shesha.Reflection;
+using Shesha.Services;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
-using System.Linq.Expressions;
-using Abp.Domain.Entities;
-using AutoMapper;
-using Castle.DynamicProxy.Generators.Emitters.SimpleAST;
-using Shesha.AutoMapper.Dto;
-using Shesha.Extensions;
-using Shesha.Reflection;
-using Shesha.Services;
+using System.Reflection;
 
 namespace Shesha.AutoMapper
 {
@@ -195,54 +194,126 @@ namespace Shesha.AutoMapper
 
             return expression;
         }
-        
-        /*
-        /// <summary>
-        /// Map child entity to EntityWithDisplayNameDto
-        /// </summary>
-        public static IMappingExpression<TSrc, TDest> MapEntityWithDisplayName<TSrc, TDest, TEntity, TId, TDto>(
-            this IMappingExpression<TSrc, TDest> expression, Expression<Func<TDest, TDto>> propFunc, Func<TSrc, TEntity> memberExpression) 
-            where TEntity : IEntity<TId> 
-            where TDto : EntityWithDisplayNameDto<TId>, new()
-        {
-            return expression.ForMember(propFunc,
-                    options => options.MapFrom(e => GetEntityWithDisplayNameDto<TSrc, TEntity, TId, TDto>(memberExpression, e)));
-        }
-
-        private static TDto GetEntityWithDisplayNameDto<TSrc, TEntity, TId, TDto>(Func<TSrc, TEntity> propFunc, TSrc e)
-            where TEntity : IEntity<TId> 
-            where TDto : EntityWithDisplayNameDto<TId>, new()
-        {
-            var propValue = propFunc.Invoke(e);
-            return propValue != null
-                ? new TDto() {Id = propValue.Id, DisplayText = propValue.GetDisplayName()}
-                : null;
-        }
 
         /// <summary>
-        /// Map child entity to EntityWithDisplayNameDto
+        /// Map multivalue reference list values from a singe value to decomposed list
         /// </summary>
-        public static IMappingExpression<TSrc, TDest> MapEntityWithDisplayNameNullable<TSrc, TDest, TEntity, TId, TDto>(
-            this IMappingExpression<TSrc, TDest> expression, Expression<Func<TDest, TDto>> propFunc, Func<TSrc, TEntity> memberExpression)
-            where TEntity : IEntity<TId>
-            where TId: struct
-            where TDto : EntityWithDisplayNameDto<TId?>, new()
+        public static IMappingExpression MapMultiValueReferenceListValuesToDto(
+            this IMappingExpression expression, Type sourceType, Type destinationType)
         {
-            return expression.ForMember(propFunc,
-                options => options.MapFrom(e => GetEntityWithDisplayNameDtoNullable<TSrc, TEntity, TId, TDto>(memberExpression, e)));
+            var multiValueRefListProperties = sourceType.GetProperties().Where(p => p.IsMultiValueReferenceListProperty())
+                .Select(p =>
+                {
+                    var destinationProperty = destinationType.GetProperty(p.Name);
+
+                    var propType = destinationProperty?.PropertyType.GetUnderlyingTypeIfNullable();
+                    if (propType == null || !propType.IsSubtypeOfGeneric(typeof(List<>)))
+                        return null;
+
+                    var itemType = propType.GetGenericArguments().FirstOrDefault();
+                    if (itemType != typeof(Int64) && itemType != typeof(Int64?))
+                        return null;
+
+                    return new
+                    {
+                        DstProperty = destinationProperty,
+                        SrcProperty = p,
+                        ItemType = itemType,
+                    };
+                }
+                )
+                .Where(i => i != null)
+                .ToList();
+
+            foreach (var item in multiValueRefListProperties)
+            {
+                expression.ForMember(item.DstProperty.Name, m => m.MapFrom(e => GetDecomposedMultiValueRefListValue(e, item.SrcProperty, item.ItemType)));
+            }
+
+            return expression;
         }
 
-        private static TDto GetEntityWithDisplayNameDtoNullable<TSrc, TEntity, TId, TDto>(Func<TSrc, TEntity> propFunc, TSrc e)
-            where TEntity : IEntity<TId>
-            where TId : struct
-            where TDto : EntityWithDisplayNameDto<TId?>, new()
+        private static object GetDecomposedMultiValueRefListValue(object owner, PropertyInfo property, Type itemType)
         {
-            var propValue = propFunc.Invoke(e);
-            return propValue != null
-                ? new TDto() { Id = propValue.Id, DisplayText = propValue.GetDisplayName() }
+            var rawValue = owner != null
+                ? property.GetValue(owner)
                 : null;
+
+            var intVal = rawValue != null
+                ? Convert.ToInt64(rawValue)
+                : (Int64?)null;
+
+            if (intVal == null)
+            {
+                var resultType = typeof(List<>).MakeGenericType(itemType);
+                return Activator.CreateInstance(resultType);
+            }
+
+            return Shesha.Extensions.EntityExtensions.DecomposeIntoBitFlagComponents(intVal);
         }
-        */
+
+
+        /// <summary>
+        /// Map multivalue reference list values from decomposed list to a single value
+        /// </summary>
+        public static IMappingExpression MapMultiValueReferenceListValuesFromDto(
+            this IMappingExpression expression, Type sourceType, Type destinationType)
+        {
+            var multiValueRefListProperties = destinationType.GetProperties().Where(p => p.IsMultiValueReferenceListProperty())
+                .Select(p =>
+                {
+                    var sourceProperty = sourceType.GetProperty(p.Name);
+
+                    var propType = sourceProperty?.PropertyType.GetUnderlyingTypeIfNullable();
+                    if (propType == null || !propType.IsSubtypeOfGeneric(typeof(List<>)))
+                        return null;
+
+                    var itemType = propType.GetGenericArguments().FirstOrDefault();
+                    if (itemType != typeof(Int64) && itemType != typeof(Int64?))
+                        return null;
+
+                    return new
+                    {
+                        DstProperty = p,
+                        SrcProperty = sourceProperty,
+                        SourceItemType = itemType,
+                    };
+                }
+                )
+                .Where(i => i != null)
+                .ToList();
+
+            foreach (var item in multiValueRefListProperties)
+            {
+                expression.ForMember(item.DstProperty.Name, m => m.MapFrom(e => GetMultiValueRefListValue(e, item.SrcProperty, item.DstProperty)));
+            }
+
+            return expression;
+        }
+
+        private static object GetMultiValueRefListValue(object owner, PropertyInfo srcProperty, PropertyInfo dstProperty)
+        {
+            var listValue = owner != null
+                ? srcProperty.GetValue(owner)
+                : null;
+
+            if (listValue is IList list)
+            {
+                Int64 value = 0;
+                foreach (var item in list) 
+                {
+                    var intValue = item as Int64?;
+
+                    if (intValue == null)
+                        continue;
+
+                    value = value | intValue.Value;
+                }
+                return value;
+            }
+
+            return null;
+        }
 
         private static object GetRefListItemValue(ReferenceListItemValueDto dto, Type propType)
         {
