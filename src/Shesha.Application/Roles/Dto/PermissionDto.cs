@@ -1,10 +1,9 @@
 using Abp.Application.Services.Dto;
 using Abp.AutoMapper;
-using Abp.Authorization;
 
 namespace Shesha.Roles.Dto
 {
-    [AutoMapFrom(typeof(Permission))]
+    [AutoMapFrom(typeof(Abp.Authorization.Permission))]
     public class PermissionDto : EntityDto<long>
     {
         public string Name { get; set; }

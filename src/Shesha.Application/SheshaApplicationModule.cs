@@ -22,6 +22,7 @@ using Shesha.Sms.Configuration;
 using Shesha.Startup;
 using System.Linq;
 using System.Reflection;
+using Abp.Authorization;
 
 namespace Shesha
 {
@@ -35,6 +36,8 @@ namespace Shesha
         {
             IocManager.Register<IShaApplicationModuleConfiguration, ShaApplicationModuleConfiguration>();
 
+            IocManager.Register<IAuthorizationHelper, ApiAuthorizationHelper>(DependencyLifeStyle.Transient);
+
             Configuration.Settings.Providers.Add<SmsSettingProvider>();
             Configuration.Settings.Providers.Add<PushSettingProvider>();
             Configuration.Settings.Providers.Add<EmailSettingProvider>();
@@ -44,7 +47,8 @@ namespace Shesha
             Configuration.Notifications.Notifiers.Add<PushRealTimeNotifier>();
 
             Configuration.Authorization.Providers.Add<SheshaAuthorizationProvider>();
-            
+            Configuration.Authorization.Providers.Add<DbAuthorizationProvider>();
+
             // replace email sender
             Configuration.ReplaceService<ISmtpEmailSenderConfiguration, SmtpEmailSenderSettings>(DependencyLifeStyle.Transient);
 
