@@ -33,23 +33,24 @@ namespace Shesha.Permissions
         /// <summary>
         /// Get list of protected objects
         /// </summary>
-        /// <param name="category"></param>
+        /// <param name="type"></param>
+        /// <param name="showNested"></param>
         /// <param name="showHidden"></param>
         /// <returns></returns>
-        public async Task<List<PermissionedObjectDto>> GetAllFlatAsync(string category, bool showHidden = false)
+        public async Task<List<PermissionedObjectDto>> GetAllFlatAsync(string type, bool showNested = true, bool showHidden = false)
         {
-            return await _permissionedObjectManager.GetAllFlatAsync(category, showHidden);
+            return await _permissionedObjectManager.GetAllFlatAsync(type, showNested, showHidden);
         }
 
         /// <summary>
         /// Get hierarchical list of protected objects
         /// </summary>
-        /// <param name="category"></param>
+        /// <param name="type"></param>
         /// <param name="showHidden"></param>
         /// <returns></returns>
-        public async Task<List<PermissionedObjectDto>> GetAllTreeAsync(string category, bool showHidden = false)
+        public async Task<List<PermissionedObjectDto>> GetAllTreeAsync(string type, bool showHidden = false)
         {
-            return await _permissionedObjectManager.GetAllTreeAsync(category, showHidden);
+            return await _permissionedObjectManager.GetAllTreeAsync(type, showHidden);
         }
 
         /// <summary>

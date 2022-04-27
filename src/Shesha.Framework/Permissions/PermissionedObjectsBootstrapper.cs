@@ -39,23 +39,29 @@ namespace Shesha.Permission
             foreach (var permissionedObjectProvider in providers)
             {
                 var items  = permissionedObjectProvider.GetAll();
-                var category = permissionedObjectProvider.GetCategory();
+                var objectType = permissionedObjectProvider.GetObjectType();
 
-                var dbItems = await _permissionedObjectRepository.GetAll().Where(x => x.Category == category).ToListAsync();
+                var dbItems = await _permissionedObjectRepository.GetAll().Where(x => x.Type == objectType || x.Type.Contains($"{objectType}.")).ToListAsync();
 
-                // ToDo: think how to update Protected objects in th bootstrapper
 
                 // Add news items
-                var toAdd = items.Where(i => !dbItems.Any(dbi => dbi.Object == i.Object && dbi.Category == i.Category))
+                var toAdd = items.Where(i => dbItems.All(dbi => dbi.Object != i.Object))
                     .ToList();
                 foreach (var item in toAdd)
                 {
                     await _permissionedObjectRepository.InsertAsync(_objectMapper.Map<PermissionedObject>(item));
                 }
 
+                // ToDo: think how to update Protected objects in th bootstrapper
+                // Update items
+                /*var toUpdate = dbItems.Where(dbi => items.Any(i => dbi.Object == i.Object).ToList();
+                foreach (var item in toUpdate)
+                {
+                    await _permissionedObjectRepository.UpdateAsync(_objectMapper.Map<PermissionedObject>(item));
+                }*/
+
                 // Inactivate deleted items
-                var toDelete = dbItems
-                    .Where(dbi => !items.Any(i => dbi.Object == i.Object && dbi.Category == i.Category)).ToList();
+                var toDelete = dbItems.Where(dbi => items.All(i => dbi.Object != i.Object)).ToList();
                 foreach (var item in toDelete)
                 {
                     await _permissionedObjectRepository.DeleteAsync(item);

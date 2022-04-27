@@ -5,6 +5,7 @@ using System.Reflection;
 using Abp.Application.Services;
 using Abp.Dependency;
 using Abp.Domain.Entities;
+using Abp.Modules;
 using Abp.Reflection;
 using Shesha.Permissions;
 using Shesha.Reflection;
@@ -18,14 +19,12 @@ namespace Shesha.Permission
         {
         }
 
-        public const string ObjectCategory = "entity";
-
-        public string GetCategory()
+        public string GetObjectType()
         {
-            return ObjectCategory;
+            return PermissionedObjectsSheshaTypes.Entity;
         }
 
-        public string GetCategoryByType(Type type)
+        public string GetObjectType(Type type)
         {
             var entityType = typeof(IEntity<>);
 
@@ -33,15 +32,15 @@ namespace Shesha.Permission
                    && type.GetInterfaces().Any(x =>
                        x.IsGenericType &&
                        x.GetGenericTypeDefinition() == entityType)
-                ? ObjectCategory
+                ? PermissionedObjectsSheshaTypes.Entity
                 : null;
         }
 
         public List<PermissionedObjectDto> GetAll()
         {
             // ToDo: add Entities to configured permissions
-            return new List<PermissionedObjectDto>();
-
+            //return new List<PermissionedObjectDto>();
+            
             var assemblies = _assembleFinder.GetAllAssemblies().Distinct(new AssemblyFullNameComparer()).Where(a => !a.IsDynamic).ToList();
             var allPermissions = new List<PermissionedObjectDto>();
 
@@ -49,17 +48,24 @@ namespace Shesha.Permission
 
             foreach (var assembly in assemblies)
             {
+
+                var module = assembly.GetTypes().FirstOrDefault(t =>
+                    t.IsPublic && !t.IsAbstract && typeof(AbpModule).IsAssignableFrom(t));
+
                 var services = assembly.GetTypes()
                     .Where(t => t.IsPublic && !t.IsAbstract && t.GetInterfaces().Any(x =>
                                     x.IsGenericType &&
                                     x.GetGenericTypeDefinition() == entityType))
+                    .Where(t => !t.Name.EndsWith("Base") && !t.Name.Contains("`"))
                     .ToList();
                 foreach (var service in services)
                 {
                     var parent = new PermissionedObjectDto()
                     {
+                        Name = service.Name,
+                        Module = module?.FullName ?? "",
                         Object = service.FullName, 
-                        Category = ObjectCategory, 
+                        Type = PermissionedObjectsSheshaTypes.Entity, 
                         Description = GetDescription(service)
                     };
                     allPermissions.Add(parent);
@@ -67,8 +73,10 @@ namespace Shesha.Permission
 
                     var child = new PermissionedObjectDto()
                     {
-                        Object = service.FullName + "@Create", 
-                        Category = ObjectCategory, 
+                        Name = "Create",
+                        Module = module?.FullName ?? "",
+                        Object = service.FullName + "@Create",
+                        Type = PermissionedObjectsSheshaTypes.EntityAction, 
                         Parent = service.FullName, 
                         Description = "Create"
                     };
@@ -76,8 +84,10 @@ namespace Shesha.Permission
 
                     child = new PermissionedObjectDto()
                     {
+                        Name = "Update",
+                        Module = module?.FullName ?? "",
                         Object = service.FullName + "@Update",
-                        Category = ObjectCategory,
+                        Type = PermissionedObjectsSheshaTypes.EntityAction,
                         Parent = service.FullName,
                         Description = "Update"
                     };
@@ -85,8 +95,10 @@ namespace Shesha.Permission
 
                     child = new PermissionedObjectDto()
                     {
+                        Name = "Delete",
+                        Module = module?.FullName ?? "",
                         Object = service.FullName + "@Delete",
-                        Category = ObjectCategory,
+                        Type = PermissionedObjectsSheshaTypes.EntityAction,
                         Parent = service.FullName,
                         Description = "Delete"
                     };
@@ -94,8 +106,10 @@ namespace Shesha.Permission
 
                     child = new PermissionedObjectDto()
                     {
+                        Name = "Get",
+                        Module = module?.FullName ?? "",
                         Object = service.FullName + "@Get",
-                        Category = ObjectCategory,
+                        Type = PermissionedObjectsSheshaTypes.EntityAction,
                         Parent = service.FullName,
                         Description = "Get"
                     };
@@ -104,6 +118,7 @@ namespace Shesha.Permission
             }
 
             return allPermissions;
+            
         }
     }
 }

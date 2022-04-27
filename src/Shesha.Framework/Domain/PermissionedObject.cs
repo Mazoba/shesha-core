@@ -17,9 +17,26 @@ namespace Shesha.Domain
         /// <summary>
         /// Category for grouping objects
         /// </summary>
-        [NotNull]
         public virtual string Category { get; set; }
 
+        /// <summary>
+        /// Shesha Module of the permissioned object
+        /// </summary>
+        [NotNull]
+        public virtual string Module { get; set; }
+
+        /// <summary>
+        /// Type of the permissioned object
+        /// </summary>
+        [NotNull]
+        public virtual string Type { get; set; }
+
+        /// <summary>
+        /// Name for display in the configurator
+        /// </summary>
+        [NotNull]
+        public virtual string Name { get; set; }
+        
         /// <summary>
         /// Description for display in the configurator
         /// </summary>

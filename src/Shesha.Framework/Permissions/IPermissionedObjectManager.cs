@@ -12,7 +12,7 @@ namespace Shesha.Permissions
         /// </summary>
         /// <param name="type">Type</param>
         /// <returns></returns>
-        string GetCategoryByType(Type type);
+        string GetObjectType(Type type);
 
         /// <summary>
         /// Get list of protected objects
@@ -20,7 +20,7 @@ namespace Shesha.Permissions
         /// <param name="category">Filter by Category</param>
         /// <param name="showHidden">Show hidden protected objects</param>
         /// <returns></returns>
-        Task<List<PermissionedObjectDto>> GetAllFlatAsync(string category, bool showHidden);
+        Task<List<PermissionedObjectDto>> GetAllFlatAsync(string type = null, bool withNested = true, bool withHidden = false);
 
         /// <summary>
         /// Get hierarchical list of protected objects
@@ -28,7 +28,7 @@ namespace Shesha.Permissions
         /// <param name="category">Filter by Category</param>
         /// <param name="showHidden">Show hidden protected objects</param>
         /// <returns></returns>
-        Task<List<PermissionedObjectDto>> GetAllTreeAsync(string category, bool showHidden);
+        Task<List<PermissionedObjectDto>> GetAllTreeAsync(string type, bool withHidden);
 
         /// <summary>
         /// Get Protected Object by object name with children
@@ -36,7 +36,7 @@ namespace Shesha.Permissions
         /// <param name="objectName"></param>
         /// <param name="showHidden"></param>
         /// <returns></returns>
-        Task<PermissionedObjectDto> GetObjectWithChild(string objectName, bool showHidden);
+        Task<PermissionedObjectDto> GetObjectWithChild(string type, bool withHidden);
 
         /// <summary>
         /// Get Protected Object by object name

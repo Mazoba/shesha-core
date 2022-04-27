@@ -37,61 +37,77 @@ namespace Shesha.Permissions
             _objectMapper = objectMapper;
         }
 
-        public virtual string GetCategoryByType(Type type)
+        public virtual string GetObjectType(Type type)
         {
             var providers = IocManager.Instance.ResolveAll<IPermissionedObjectProvider>();
             foreach (var permissionedObjectProvider in providers)
             {
-                var category = permissionedObjectProvider.GetCategoryByType(type);
-                if (!string.IsNullOrEmpty(category))
-                    return category;
+                var objType = permissionedObjectProvider.GetObjectType(type);
+                if (!string.IsNullOrEmpty(objType))
+                    return objType;
             }
 
             return null;
         }
 
         [UnitOfWork]
-        public virtual async Task<List<PermissionedObjectDto>> GetAllFlatAsync(string category = null, bool showHidden = false)
+        public virtual async Task<List<PermissionedObjectDto>> GetAllFlatAsync(string type = null, bool withNested = true, bool withHidden = false)
         {
-            return (await _permissionedObjectRepository.GetAll()
-                .WhereIf(!string.IsNullOrEmpty(category?.Trim()), x => x.Category == category)
-                .WhereIf(!showHidden, x => !x.Hidden)
+            var root = (await _permissionedObjectRepository.GetAll()
+                .WhereIf(!string.IsNullOrEmpty(type?.Trim()), x => x.Type == type)
+                .WhereIf(!withHidden, x => !x.Hidden)
                 .ToListAsync())
                 .Select(x => _objectMapper.Map<PermissionedObjectDto>(x))
+                .OrderBy(x => x.Name)
                 .ToList();
+
+            if (withNested && !string.IsNullOrEmpty(type?.Trim()))
+            {
+                var nested = (await _permissionedObjectRepository.GetAll()
+                        .Where(x => x.Type.Contains($"{type}."))
+                        .WhereIf(!withHidden, x => !x.Hidden)
+                        .ToListAsync())
+                    .Select(x => _objectMapper.Map<PermissionedObjectDto>(x))
+                    .OrderBy(x => x.Name)
+                    .ToList();
+                root.AddRange(nested);
+            }
+
+            return root;
         }
 
         [UnitOfWork]
-        public virtual async Task<List<PermissionedObjectDto>> GetAllTreeAsync(string category = null, bool showHidden = false)
+        public virtual async Task<List<PermissionedObjectDto>> GetAllTreeAsync(string type = null, bool withHidden = false)
         {
             return (await _permissionedObjectRepository.GetAll()
-                .WhereIf(!string.IsNullOrEmpty(category?.Trim()), x => x.Category == category)
-                .WhereIf(!showHidden, x => !x.Hidden)
+                .WhereIf(!string.IsNullOrEmpty(type?.Trim()), x => x.Type == type)
+                .WhereIf(!withHidden, x => !x.Hidden)
                 .Where(x => x.Parent == null || x.Parent == "")
                 .ToListAsync())
-                .Select(x => GetObjectWithChild(x, showHidden))
+                .OrderBy(x => x.Name)
+                .Select(x => GetObjectWithChild(x, withHidden))
                 .ToList();
         }
 
-        [UnitOfWork]
-        public virtual async Task<PermissionedObjectDto> GetObjectWithChild(string objectName, bool showHidden = false)
+        public virtual async Task<PermissionedObjectDto> GetObjectWithChild(string objectName, bool withHidden = false)
         {
             var obj = await _permissionedObjectRepository.GetAll()
-                .WhereIf(!showHidden, x => !x.Hidden)
+                .WhereIf(!withHidden, x => !x.Hidden)
                 .FirstOrDefaultAsync(x => x.Parent == null || x.Parent == "");
-            return GetObjectWithChild(obj, showHidden);
+            return GetObjectWithChild(obj, withHidden);
         }
 
-        private PermissionedObjectDto GetObjectWithChild(PermissionedObject obj, bool showHidden = false)
+        private PermissionedObjectDto GetObjectWithChild(PermissionedObject obj, bool withHidden = false)
         {
             var dto = _objectMapper.Map<PermissionedObjectDto>(obj);
             var child = _permissionedObjectRepository.GetAll()
-                .WhereIf(!showHidden, x => !x.Hidden)
+                .WhereIf(!withHidden, x => !x.Hidden)
                 .Where(x => x.Parent == obj.Object)
+                .OrderBy(x => x.Name)
                 .ToList();
             foreach (var permissionedObject in child)
             {
-                dto.Child.Add(GetObjectWithChild(permissionedObject, showHidden));
+                dto.Child.Add(GetObjectWithChild(permissionedObject, withHidden));
             }
             return dto;
         }
@@ -150,18 +166,22 @@ namespace Shesha.Permissions
         [UnitOfWork]
         public virtual async Task<PermissionedObjectDto> SetAsync(PermissionedObjectDto permissionedObject)
         {
-            // ToDo: AS - check permission names exist
+            // ToDo: AS - check if permission names exist
             var obj = await _permissionedObjectRepository.GetAll().FirstOrDefaultAsync(x =>
                           x.Object == permissionedObject.Object
-                          && x.Category == permissionedObject.Category) 
+                          && x.Type == permissionedObject.Type
+                          && x.Module == permissionedObject.Module) 
                       ??
                       new PermissionedObject()
                       {
                           Object = permissionedObject.Object,
-                          Category = permissionedObject.Category,
+                          Type = permissionedObject.Type,
+                          Module = permissionedObject.Module,
                           Parent = permissionedObject.Parent,
+                          Name = permissionedObject.Name
                       };
 
+            obj.Category = permissionedObject.Category;
             obj.Description = permissionedObject.Description;
             obj.Permissions = string.Join(",", permissionedObject.Permissions ?? new ConcurrentHashSet<string>());
             obj.Inherited = permissionedObject.Inherited;

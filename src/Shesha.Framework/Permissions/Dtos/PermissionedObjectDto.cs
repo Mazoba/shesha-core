@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using Abp.Application.Services.Dto;
 using ConcurrentCollections;
 
@@ -21,6 +22,12 @@ namespace Shesha.Permissions
         public string Object { get; set; }
 
         public string Category { get; set; }
+
+        public virtual string Module { get; set; }
+
+        public virtual string Type { get; set; }
+
+        public virtual string Name { get; set; }
 
         public string Description { get; set; }
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Abp.Application.Services;
 using Abp.Dependency;
+using Abp.Modules;
 using Abp.Reflection;
 using Shesha.Permissions;
 using Shesha.Reflection;
@@ -28,14 +29,12 @@ namespace Shesha.Permissions
             { "Remove", "Delete" }
         };
 
-        public const string ObjectCategory = "crudServices";
-
-        public string GetCategory()
+        public string GetObjectType()
         {
-            return ObjectCategory;
+            return PermissionedObjectsSheshaTypes.WebCrudApi;
         }
 
-        public string GetCategoryByType(Type type)
+        public string GetObjectType(Type type)
         {
             var shaServiceType = typeof(SheshaAppServiceBase);
             var crudServiceType = typeof(IAsyncCrudAppService<,,,,,,>);
@@ -44,7 +43,7 @@ namespace Shesha.Permissions
                    && type.GetInterfaces().Any(x =>
                        x.IsGenericType &&
                        x.GetGenericTypeDefinition() == crudServiceType)
-                ? ObjectCategory
+                ? PermissionedObjectsSheshaTypes.WebCrudApi
                 : null;
         }
 
@@ -59,6 +58,9 @@ namespace Shesha.Permissions
 
             foreach (var assembly in assemblies)
             {
+                var module = assembly.GetTypes().FirstOrDefault(t =>
+                    t.IsPublic && !t.IsAbstract && typeof(AbpModule).IsAssignableFrom(t));
+
                 var services = assembly.GetTypes()
                     .Where(t => t.IsPublic && !t.IsAbstract && shaServiceType.IsAssignableFrom(t) && t.GetInterfaces().Any(x =>
                                    x.IsGenericType &&
@@ -76,8 +78,10 @@ namespace Shesha.Permissions
 
                     var parent = new PermissionedObjectDto()
                     {
-                        Object = service.FullName, 
-                        Category = ObjectCategory, 
+                        Object = service.FullName,
+                        Module = module?.FullName ?? "",
+                        Name = GetName(service),
+                        Type = PermissionedObjectsSheshaTypes.WebCrudApi,
                         Description = GetDescription(service),
                         Dependency = entityType != null 
                             ? entityType.FullName
@@ -91,6 +95,7 @@ namespace Shesha.Permissions
                         && !x.IsAbstract
                         && !x.IsConstructor
                         && !x.IsSpecialName
+                        && !x.IsGenericMethod
                         && x.DeclaringType != typeof(object)
                         && x.DeclaringType != typeof(ApplicationService)
                     ).ToList();
@@ -101,9 +106,11 @@ namespace Shesha.Permissions
 
                         var child = new PermissionedObjectDto()
                         {
-                            Object = service.FullName + "@" + methodInfo.Name, 
+                            Object = service.FullName + "@" + methodInfo.Name,
                             //Action = methodInfo.Name, 
-                            Category = ObjectCategory, 
+                            Module = module?.FullName ?? "",
+                            Name = GetName(methodInfo),
+                            Type = PermissionedObjectsSheshaTypes.WebCrudApiAction,
                             Parent = service.FullName, 
                             Description = GetDescription(methodInfo),
                             Dependency = entityType != null && CrudMethods.ContainsKey(methodName)
