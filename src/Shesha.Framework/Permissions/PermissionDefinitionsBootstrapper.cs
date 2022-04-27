@@ -1,30 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Abp.Authorization;
+﻿using Abp.Dependency;
 using Abp.Domain.Repositories;
-using Abp.Domain.Uow;
+using Abp.Reflection;
+using NHibernate.Linq;
+using Shesha.Bootstrappers;
+using Shesha.Configuration.Runtime;
 using Shesha.Domain;
+using Shesha.Metadata;
+using Shesha.Metadata.Dtos;
+using Shesha.Reflection;
 using Shesha.Utilities;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+using Abp.Authorization;
+using Abp.Domain.Uow;
+using Abp.ObjectMapping;
+using Shesha.Permissions;
 
-namespace Shesha.Authorization
+namespace Shesha.Permission
 {
-    public class DbAuthorizationProvider : AuthorizationProvider
+    public class PermissionDefinitionsBootstrapper : IBootstrapper, ITransientDependency
     {
-
+        private readonly IPermissionManager _permissionManager;
         private readonly IRepository<PermissionDefinition, Guid> _permissionDefinitionRepository;
 
-        public DbAuthorizationProvider(
-            IRepository<PermissionDefinition, Guid> permissionDefinitionRepository
-            )
+        public PermissionDefinitionsBootstrapper(IPermissionManager permissionManager, IRepository<PermissionDefinition, Guid> permissionDefinitionRepository)
         {
+            _permissionManager = permissionManager;
             _permissionDefinitionRepository = permissionDefinitionRepository;
         }
 
-        [UnitOfWork]
-        public override void SetPermissions(IPermissionDefinitionContext context)
+        public async Task Process()
         {
-            /*var dbPermissions = _permissionDefinitionRepository.GetAllList();
+            SetPermissions(_permissionManager as IPermissionDefinitionContext);
+            // todo: write changelog
+        }
+
+        [UnitOfWork]
+        public void SetPermissions(IPermissionDefinitionContext context)
+        {
+            var dbPermissions = _permissionDefinitionRepository.GetAllList();
 
             // Update DB-related items
             var dbRootPermissions = dbPermissions.Where(x => string.IsNullOrEmpty(x.Parent)).ToList();
@@ -60,7 +79,7 @@ namespace Shesha.Authorization
                     }
                     dbPermissions.Remove(dbPermission);
                 }
-            }*/
+            }
         }
 
         private void CreateChildPermissions(List<PermissionDefinition> dbPermissions, Abp.Authorization.Permission permission)
@@ -74,5 +93,6 @@ namespace Shesha.Authorization
                 dbPermissions.Remove(dbChildPermission);
             }
         }
+
     }
 }
