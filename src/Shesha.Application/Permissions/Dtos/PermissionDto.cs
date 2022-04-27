@@ -8,7 +8,11 @@ namespace Shesha.Roles.Dto
     {
         public string Name { get; set; }
 
-        public string DisplayName { get; set; }
+        // ToDo: Temporary - localization problem
+        public string DisplayName
+        {
+            get => Name;
+        }// set; }
 
         public string Description { get; set; }
     }
