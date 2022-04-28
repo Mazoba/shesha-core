@@ -107,16 +107,6 @@ namespace Shesha.EntityHistory
             var entityTypeFullName =
                 input.Filter.FirstOrDefault(f => f.RealPropertyName == "EntityTypeFullName")?.Filter.ToString();
 
-            // fix for Settings audit
-            if (entityTypeFullName == typeof(Setting).FullName)
-            {
-                if (entityId.ToLong(0) == 0)
-                {
-                    // convert from Name to Id
-                    entityId = _settingRepository.GetAll().FirstOrDefault(x => x.Name == entityId)?.Id.ToString();
-                }
-            }
-
             var itemType = TypeFinder.Find(t => t.FullName == entityTypeFullName)?.FirstOrDefault();
 
             var history = new List<EntityHistoryItemDto>();
@@ -405,18 +395,26 @@ namespace Shesha.EntityHistory
                 // If there is no Created record then get the create date stored in ICreationAudited entity
                 if (list.All(x => x.HistoryItemType != (int?)EntityHistoryItemType.Created))
                 {
-                    if (DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
+                    try
                     {
-                        var createdBy = GetPersonByUserId(obj.CreatorUserId);
-                        list.Add(new EntityHistoryItemDto()
+                        if (Parser.CanParseId(entityId, entityType) &&
+                            DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
                         {
-                            HistoryItemType = (int?)EntityHistoryItemType.Created,
-                            CreationTime = obj.CreationTime,
-                            EntityTypeFullName = entityType?.FullName,
-                            EntityId = entityId,
-                            EventText = string.IsNullOrEmpty(childName) ? "Created" : "Added",
-                            UserFullName = createdBy?.FullName ?? $"UserId: {obj.CreatorUserId}"
-                        });
+                            var createdBy = GetPersonByUserId(obj.CreatorUserId);
+                            list.Add(new EntityHistoryItemDto()
+                            {
+                                HistoryItemType = (int?) EntityHistoryItemType.Created,
+                                CreationTime = obj.CreationTime,
+                                EntityTypeFullName = entityType?.FullName,
+                                EntityId = entityId,
+                                EventText = string.IsNullOrEmpty(childName) ? "Created" : "Added",
+                                UserFullName = createdBy?.FullName ?? $"UserId: {obj.CreatorUserId}"
+                            });
+                        }
+                    }
+                    catch
+                    {
+                        // hide exception
                     }
                 }
             }
@@ -441,7 +439,7 @@ namespace Shesha.EntityHistory
 
                 if (ownField == null)
                 {
-                    var ownFields = manyToManyType.GetProperties().Where(x => x.PropertyType.IsAssignableFrom(itemType)).ToList();
+                    var ownFields = manyToManyType.GetProperties().Where(x => itemType.IsAssignableFrom(x.PropertyType)).ToList();
                     if (ownFields.Count() > 1)
                         throw new Exception($"Found more then 1 field with parent type {itemType.FullName}");
                     ownField = ownFields.FirstOrDefault();
@@ -573,7 +571,7 @@ namespace Shesha.EntityHistory
 
                 if (ownField == null)
                 {
-                    var ownFields = manyToOneType.GetProperties().Where(x => x.PropertyType.IsAssignableFrom(itemType)).ToList();
+                    var ownFields = manyToOneType.GetProperties().Where(x => itemType.IsAssignableFrom(x.PropertyType)).ToList();
                     if (ownFields.Count() > 1)
                         throw new Exception($"Found more then 1 field with parent type {itemType.FullName}");
                     ownField = ownFields.FirstOrDefault();

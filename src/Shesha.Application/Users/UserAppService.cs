@@ -30,7 +30,7 @@ using Shesha.Otp;
 using Shesha.Otp.Dto;
 using Shesha.Utilities;
 using Microsoft.AspNetCore.Mvc;
-
+//IH:Test
 namespace Shesha.Users
 {
     [AbpAuthorize(PermissionNames.Pages_Users)]
@@ -126,7 +126,7 @@ namespace Shesha.Users
 
             var user = await _userManager.GetUserByIdAsync(userId);
 
-            if (user.IsActive)
+            if (!user.IsActive)
                 throw new InvalidOperationException("Cannot inactivate user. User is already inactive.");
 
             user.IsActive = false;
