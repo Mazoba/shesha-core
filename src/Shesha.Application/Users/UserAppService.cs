@@ -30,7 +30,7 @@ using Shesha.Otp;
 using Shesha.Otp.Dto;
 using Shesha.Utilities;
 using Microsoft.AspNetCore.Mvc;
-//IH:Test
+
 namespace Shesha.Users
 {
     [AbpAuthorize(PermissionNames.Pages_Users)]
