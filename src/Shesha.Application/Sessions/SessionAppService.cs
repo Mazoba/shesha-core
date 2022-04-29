@@ -63,7 +63,7 @@ namespace Shesha.Sessions
 
         private async Task<List<string>> GetGrantedPermissions()
         {
-            var granterPermissions = new List<string>();
+            var grantedPermissions = new List<string>();
 
             if (AbpSession.UserId.HasValue)
             {
@@ -72,11 +72,11 @@ namespace Shesha.Sessions
                 foreach (var permissionName in allPermissionNames)
                 {
                     if (await PermissionChecker.IsGrantedAsync(permissionName))
-                        granterPermissions.Add(permissionName);
+                        grantedPermissions.Add(permissionName);
                 }
             }
 
-            return granterPermissions;
+            return grantedPermissions;
         }
 
       

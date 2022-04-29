@@ -1,6 +1,6 @@
 ﻿using FluentMigrator;
 
-namespace Shesha.Migrations.Framework
+namespace Shesha.Web.FormsDesigner.Migrations
 {
     [Migration(20220209094299)]
     public class M20220209094299 : AutoReversingMigration

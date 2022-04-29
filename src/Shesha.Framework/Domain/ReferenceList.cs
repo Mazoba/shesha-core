@@ -32,7 +32,7 @@ namespace Shesha.Domain
         public virtual string Namespace { get; set; }
 
         [Display(Name = "No Selection Value")]
-        public virtual int? NoSelectionValue { get; set; }
+        public virtual Int64? NoSelectionValue { get; set; }
 
         /*
         /// <summary>

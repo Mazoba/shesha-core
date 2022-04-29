@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain.Enums
@@ -7,6 +8,7 @@ namespace Shesha.Domain.Enums
     /// Type of the check list item
     /// </summary>
     [ReferenceList("Shesha.Core", "CheckListItemType")]
+    [Obsolete("Should use equivalent entity under Shesha.Enterprise")]
     public enum RefListCheckListItemType
     {
         /// <summary>

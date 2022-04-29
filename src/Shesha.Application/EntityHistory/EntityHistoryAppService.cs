@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Abp.Application.Services;
+using Abp.Configuration;
 using Abp.Domain.Entities.Auditing;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
@@ -42,7 +43,9 @@ namespace Shesha.EntityHistory
         private readonly IRepository<EntityChange, long> EntityChangeRepository;
         private readonly IRepository<EntityPropertyChange, long> EntityPropertyChangeRepository;
         private readonly IRepository<EntityHistoryItem, long> EntityHistoryItemRepository;
-        
+
+        private readonly IRepository<Setting, long> _settingRepository;
+
         private readonly IObjectMapper Mapper;
         private readonly ISessionFactory SessionFactory;
         private readonly ITypeFinder TypeFinder;
@@ -55,6 +58,7 @@ namespace Shesha.EntityHistory
             IRepository<EntityChange, long> entityChangeRepository,
             IRepository<EntityPropertyChange, long> entityPropertyChangeRepository,
             IRepository<EntityHistoryItem, long> entityHistoryItemRepository,
+            IRepository<Setting, long> settingRepository,
             IObjectMapper mapper,
             ITypeFinder typeFinder,
             ISessionFactory sessionFactory)
@@ -66,6 +70,7 @@ namespace Shesha.EntityHistory
             EntityPropertyChangeRepository = entityPropertyChangeRepository;
             EntityChangeRepository = entityChangeRepository;
             EntityHistoryItemRepository = entityHistoryItemRepository;
+            _settingRepository = settingRepository;
             Mapper = mapper;
             TypeFinder = typeFinder;
             SessionFactory = sessionFactory;
@@ -390,18 +395,26 @@ namespace Shesha.EntityHistory
                 // If there is no Created record then get the create date stored in ICreationAudited entity
                 if (list.All(x => x.HistoryItemType != (int?)EntityHistoryItemType.Created))
                 {
-                    if (DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
+                    try
                     {
-                        var createdBy = GetPersonByUserId(obj.CreatorUserId);
-                        list.Add(new EntityHistoryItemDto()
+                        if (Parser.CanParseId(entityId, entityType) &&
+                            DynamicRepository.Get(entityType, entityId) is ICreationAudited obj)
                         {
-                            HistoryItemType = (int?)EntityHistoryItemType.Created,
-                            CreationTime = obj.CreationTime,
-                            EntityTypeFullName = entityType?.FullName,
-                            EntityId = entityId,
-                            EventText = string.IsNullOrEmpty(childName) ? "Created" : "Added",
-                            UserFullName = createdBy?.FullName ?? $"UserId: {obj.CreatorUserId}"
-                        });
+                            var createdBy = GetPersonByUserId(obj.CreatorUserId);
+                            list.Add(new EntityHistoryItemDto()
+                            {
+                                HistoryItemType = (int?) EntityHistoryItemType.Created,
+                                CreationTime = obj.CreationTime,
+                                EntityTypeFullName = entityType?.FullName,
+                                EntityId = entityId,
+                                EventText = string.IsNullOrEmpty(childName) ? "Created" : "Added",
+                                UserFullName = createdBy?.FullName ?? $"UserId: {obj.CreatorUserId}"
+                            });
+                        }
+                    }
+                    catch
+                    {
+                        // hide exception
                     }
                 }
             }
@@ -426,7 +439,7 @@ namespace Shesha.EntityHistory
 
                 if (ownField == null)
                 {
-                    var ownFields = manyToManyType.GetProperties().Where(x => x.PropertyType.IsAssignableFrom(itemType)).ToList();
+                    var ownFields = manyToManyType.GetProperties().Where(x => itemType.IsAssignableFrom(x.PropertyType)).ToList();
                     if (ownFields.Count() > 1)
                         throw new Exception($"Found more then 1 field with parent type {itemType.FullName}");
                     ownField = ownFields.FirstOrDefault();
@@ -558,7 +571,7 @@ namespace Shesha.EntityHistory
 
                 if (ownField == null)
                 {
-                    var ownFields = manyToOneType.GetProperties().Where(x => x.PropertyType.IsAssignableFrom(itemType)).ToList();
+                    var ownFields = manyToOneType.GetProperties().Where(x => itemType.IsAssignableFrom(x.PropertyType)).ToList();
                     if (ownFields.Count() > 1)
                         throw new Exception($"Found more then 1 field with parent type {itemType.FullName}");
                     ownField = ownFields.FirstOrDefault();

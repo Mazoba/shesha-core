@@ -28,8 +28,6 @@ namespace Shesha.Elmah
                 httpContextAccessor.HttpContext.RiseError(exception);
             else
                 ElmahExtensions.RiseError(exception);
-
-            exception.MarkExceptionAsLogged();
         }
 	}
 }

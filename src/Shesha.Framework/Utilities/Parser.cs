@@ -568,6 +568,18 @@ namespace Shesha.Utilities
                 : result;
         }
 
+        public static bool CanParseId(string value, Type entityType)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value == "-999")
+                return false;
+
+            var idProp = entityType.GetProperty("Id");
+            if (idProp == null)
+                return false;
+
+            return CanParseTo(value, idProp.PropertyType);
+        }
+
         public static object ParseTo(string value, Type type)
         {
             if (string.IsNullOrEmpty(value) || type == null)

@@ -150,11 +150,12 @@ namespace Shesha.Email
         {
             var message = new MailMessage
             {
-                From = new MailAddress(_smtpSettings.SupportSmtpRelay ? fromAddress : _smtpSettings.DefaultFromAddress),
                 Subject = (subject ?? "").Replace("\r", " ").Replace("\n", " ").RemoveDoubleSpaces(),
                 Body = body,
                 IsBodyHtml = Regex.IsMatch(body, @"\</html>") && Regex.IsMatch(body, @"\</body\>"),
             };
+            if (!string.IsNullOrWhiteSpace(fromAddress))
+                message.From = new MailAddress(fromAddress);
 
             NormalizeMail(message);
 

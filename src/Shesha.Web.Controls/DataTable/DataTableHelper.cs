@@ -19,7 +19,7 @@ using Shesha.Web.DataTable.Columns;
 namespace Shesha.Web.DataTable
 {
     /// inheritedDoc
-    public class DataTableHelper: IDataTableHelper, ITransientDependency
+    public class DataTableHelper : IDataTableHelper, ITransientDependency
     {
         private readonly IEntityConfigurationStore _entityConfigurationStore;
         private readonly IMetadataProvider _metadataProvider;
@@ -35,7 +35,7 @@ namespace Shesha.Web.DataTable
             _metadataProvider = metadataProvider;
         }
 
-        public void AppendQuickSearchCriteria(DataTableConfig tableConfig, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria) 
+        public void AppendQuickSearchCriteria(DataTableConfig tableConfig, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria)
         {
             AppendQuickSearchCriteria(tableConfig.RowType, tableConfig.Columns, searchMode, sSearch, filterCriteria, tableConfig.OnRequestToQuickSearch, tableConfig.Id);
         }
@@ -61,7 +61,7 @@ namespace Shesha.Web.DataTable
                 var addSubQuery = new Action<string, object>((q, v) =>
                 {
                     var queryParamName = "p" + filterCriteria.FilterParameters.Count.ToString();
-                    var criteria = string.Format((string) q, ":" + queryParamName);
+                    var criteria = string.Format((string)q, ":" + queryParamName);
                     subQueries.Add(criteria);
 
                     filterCriteria.FilterParameters.Add(queryParamName, v);
@@ -118,7 +118,7 @@ namespace Shesha.Web.DataTable
             if (onRequestToQuickSearch != null)
             {
                 var quickSearchCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
-                
+
                 // copy parameters to fix numbering todo: review and make parameters unique
                 foreach (var paramName in filterCriteria.FilterParameters.Keys)
                 {
@@ -349,7 +349,7 @@ namespace Shesha.Web.DataTable
         }
 
         /// inheritedDoc
-        public DataTablesDisplayPropertyColumn GetDisplayPropertyColumn(Type rowType, string propName, string name = null) 
+        public DataTablesDisplayPropertyColumn GetDisplayPropertyColumn(Type rowType, string propName, string name = null)
         {
             var prop = propName == null
                 ? null

@@ -29,6 +29,7 @@ using Shesha.NHibernate.EntityHistory;
 using Shesha.Otp;
 using Shesha.Otp.Dto;
 using Shesha.Utilities;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Shesha.Users
 {
@@ -116,6 +117,40 @@ namespace Shesha.Users
         {
             var user = await _userManager.GetUserByIdAsync(input.Id);
             await _userManager.DeleteAsync(user);
+        }
+
+        [HttpPost]
+        public async Task<bool> InactivateUser(long userId)
+        {
+            CheckUpdatePermission();
+
+            var user = await _userManager.GetUserByIdAsync(userId);
+
+            if (!user.IsActive)
+                throw new InvalidOperationException("Cannot inactivate user. User is already inactive.");
+
+            user.IsActive = false;
+
+            CheckErrors(await _userManager.UpdateAsync(user));
+
+            return true;
+        }
+
+        [HttpPost]
+        public async Task<bool> ActivateUser(long userId)
+        {
+            CheckUpdatePermission();
+
+            var user = await _userManager.GetUserByIdAsync(userId);
+
+            if (user.IsActive)
+                throw new InvalidOperationException("Cannot activate user. User is already active.");
+
+            user.IsActive = true;
+
+            CheckErrors(await _userManager.UpdateAsync(user));
+
+            return true;
         }
 
         public async Task<ListResultDto<RoleDto>> GetRoles()

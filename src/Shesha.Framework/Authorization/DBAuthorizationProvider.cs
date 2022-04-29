@@ -24,7 +24,7 @@ namespace Shesha.Authorization
         [UnitOfWork]
         public override void SetPermissions(IPermissionDefinitionContext context)
         {
-            var dbPermissions = _permissionDefinitionRepository.GetAllList();
+            /*var dbPermissions = _permissionDefinitionRepository.GetAllList();
 
             // Update DB-related items
             var dbRootPermissions = dbPermissions.Where(x => string.IsNullOrEmpty(x.Parent)).ToList();
@@ -60,7 +60,7 @@ namespace Shesha.Authorization
                     }
                     dbPermissions.Remove(dbPermission);
                 }
-            }
+            }*/
         }
 
         private void CreateChildPermissions(List<PermissionDefinition> dbPermissions, Abp.Authorization.Permission permission)

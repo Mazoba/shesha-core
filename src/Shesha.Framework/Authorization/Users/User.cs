@@ -38,7 +38,6 @@ namespace Shesha.Authorization.Users
             NormalizedEmailAddress = EmailAddress?.ToUpperInvariant();
         }
 
-
         public static User CreateTenantAdminUser(int tenantId, string emailAddress)
         {
             var user = new User

@@ -195,7 +195,7 @@ namespace Shesha.Reflection
             throw new Exception($"Property '{propertyName}' does not exist on entity type '{currentType.FullName}'");
         }
 
-        private static PropertyInfo FindHighestLevelProperty(string propertyName, Type entityType)
+        public static PropertyInfo FindHighestLevelProperty(string propertyName, Type entityType)
         {
             //PropertyInfo propInfo;
             var propInfo = entityType.GetProperties()
@@ -582,6 +582,15 @@ namespace Shesha.Reflection
                 (TAttribute)fi.GetCustomAttributes(
                     typeof(TAttribute),
                     false).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Indicates is the specified property is a multivalue Reference List property
+        /// </summary>
+        /// <returns></returns>
+        public static bool IsMultiValueReferenceListProperty(this MemberInfo memberInfo)
+        {
+            return memberInfo.HasAttribute<MultiValueReferenceListAttribute>();
         }
 
         /// <summary>
