@@ -10,11 +10,11 @@ namespace Shesha.Permissions
     [AbpAuthorize()]
     public class PermissionedObjectAppService : SheshaCrudServiceBase<PermissionedObject, PermissionedObjectDto, Guid>, IPermissionedObjectAppService
     {
-        private readonly PermissionedObjectManager _permissionedObjectManager;
+        private readonly IPermissionedObjectManager _permissionedObjectManager;
 
         public PermissionedObjectAppService(
             IRepository<PermissionedObject, Guid> repository,
-            PermissionedObjectManager permissionedObjectManager
+            IPermissionedObjectManager permissionedObjectManager
             ) : base(repository)
         {
             _permissionedObjectManager = permissionedObjectManager;

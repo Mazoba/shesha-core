@@ -46,7 +46,8 @@ namespace Shesha.Permissions
         /// <param name="useDependency">Get permission data from related Protected Object if it specified</param>
         /// <param name="useHidden">Allow to get permission data from hidden protected objects</param>
         /// <returns></returns>
-        Task<PermissionedObjectDto> GetAsync(string objectName, bool useInherited, UseDependencyType useDependency, bool useHidden);
+        Task<PermissionedObjectDto> GetAsync(string objectName, bool useInherited = true,
+            UseDependencyType useDependency = UseDependencyType.Before, bool useHidden = false);
 
         /// <summary>
         /// Set Protected Object data (save to DB and cache)

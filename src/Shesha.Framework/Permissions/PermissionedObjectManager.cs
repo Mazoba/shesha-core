@@ -126,7 +126,7 @@ namespace Shesha.Permissions
                     obj = _objectMapper.Map<PermissionedObjectDto>(dbObj);
                     _cacheManager.GetPermissionedObjectCache().Set(objectName, obj);
                 }
-                unitOfWork.Complete();
+                await unitOfWork.CompleteAsync();
             }
 
             // Check hidden, dependency and inherited

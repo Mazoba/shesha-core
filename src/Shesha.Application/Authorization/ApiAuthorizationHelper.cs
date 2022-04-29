@@ -21,13 +21,13 @@ namespace Shesha.Authorization
     {
 
         private readonly IAuthorizationConfiguration _authConfiguration;
-        private readonly PermissionedObjectManager _permissionedObjectManager;
+        private readonly IPermissionedObjectManager _permissionedObjectManager;
 
 
         public ApiAuthorizationHelper(
             IFeatureChecker featureChecker,
             IAuthorizationConfiguration authConfiguration,
-            PermissionedObjectManager permissionedObjectManager
+            IPermissionedObjectManager permissionedObjectManager
             ) : base(featureChecker, authConfiguration)
         {
             _authConfiguration = authConfiguration;
