@@ -266,11 +266,16 @@ namespace Shesha.Scheduler
         {
             try
             {
-                var trigger = GetTrigger();
-                if (trigger == null)
-                    return;
+                using (var uow = UnitOfWorkManager.Begin())
+                {
+                    var trigger = GetTrigger();
+                    if (trigger == null)
+                        return;
 
-                // todo: implement notifications
+                    // todo: implement notifications
+
+                    uow.Complete();
+                }
             }
             catch (Exception e)
             {
@@ -282,11 +287,16 @@ namespace Shesha.Scheduler
         {
             try
             {
-                var trigger = GetTrigger();
-                if (trigger == null)
-                    return;
+                using (var uow = UnitOfWorkManager.Begin()) 
+                {
+                    var trigger = GetTrigger();
+                    if (trigger == null)
+                        return;
 
-                // todo: implement notifications
+                    // todo: implement notifications
+
+                    uow.Complete();
+                }
             }
             catch (Exception e)
             {
