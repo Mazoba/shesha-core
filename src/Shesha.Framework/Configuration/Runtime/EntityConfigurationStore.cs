@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Abp.Dependency;
+﻿using Abp.Dependency;
 using Abp.Reflection;
+using Shesha.Configuration.Runtime.Exceptions;
 using Shesha.Domain.Attributes;
 using Shesha.Extensions;
 using Shesha.Reflection;
-using Shesha.Utilities;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Shesha.Configuration.Runtime
 {
@@ -15,14 +16,11 @@ namespace Shesha.Configuration.Runtime
     /// </summary>
     public class EntityConfigurationStore: IEntityConfigurationStore, ISingletonDependency
     {
-        private readonly IDictionary<string, Type> _entityTypesByShortAlias = new Dictionary<string, Type>();
+        private readonly Hashtable _entityByTypeShortAlias = new Hashtable();
+        private readonly Hashtable _entityByClassName = new Hashtable();
+
         private readonly IDictionary<Type, EntityConfiguration> _entityConfigurations = new Dictionary<Type, EntityConfiguration>();
         private readonly ITypeFinder _typeFinder;
-
-        /// <summary>
-        /// Entity types dictionary (key - TypeShortAlias, value - type of entity)
-        /// </summary>
-        public IDictionary<string, Type> EntityTypes => _entityTypesByShortAlias;
 
         public EntityConfigurationStore(ITypeFinder typeFinder)
         {
@@ -35,27 +33,22 @@ namespace Shesha.Configuration.Runtime
         {
             var entityTypes = _typeFinder.FindAll().Where(t => t.IsEntityType())
                 .Select(t => new { Type = t, TypeShortAlias = t.GetAttribute<EntityAttribute>()?.TypeShortAlias })
-                .Where(i => !string.IsNullOrWhiteSpace(i.TypeShortAlias))
                 .ToList();
 
             // check for duplicates
             var duplicates = entityTypes
+                .Where(i => !string.IsNullOrWhiteSpace(i.TypeShortAlias))
                 .GroupBy(i => i.TypeShortAlias, (t, items) => new {TypeShortAlias = t, Types = items.Select(i => i.Type)})
                 .Where(g => g.Types.Count() > 1).ToList();
             if (duplicates.Any())
-                throw new Exception($"Duplicated {nameof(EntityAttribute.TypeShortAlias)} found: {duplicates.Select(i => $"{i.TypeShortAlias}: { i.Types.Select(t => t.FullName) }").Delimited("; ")}");
+                throw new DuplicatedTypeShortAliasesException(duplicates.ToDictionary(i => i.TypeShortAlias, i => i.Types));
 
             foreach (var entityType in entityTypes)
             {
-                _entityTypesByShortAlias.Add(entityType.TypeShortAlias, entityType.Type);
+                _entityByClassName.Add(entityType.Type.FullName, entityType.Type);
+                if (!string.IsNullOrWhiteSpace(entityType.TypeShortAlias))
+                    _entityByTypeShortAlias.Add(entityType.TypeShortAlias, entityType.Type);
             }
-        }
-
-        public Type GetEntityTypeFromAlias(string typeShortAlias)
-        {
-            return _entityTypesByShortAlias.ContainsKey(typeShortAlias)
-                ? _entityTypesByShortAlias[typeShortAlias]
-                : null;
         }
 
         public string GetEntityTypeAlias(Type entityType)
@@ -65,12 +58,18 @@ namespace Shesha.Configuration.Runtime
         }
 
         /// inheritedDoc
-        public EntityConfiguration Get(string typeShortAlias)
+        public EntityConfiguration Get(string nameOrAlias)
         {
-            if (!_entityTypesByShortAlias.ContainsKey(typeShortAlias))
-                throw new Exception($"Entity with {nameof(EntityAttribute.TypeShortAlias)} = '{typeShortAlias}' not found");
-            
-            return Get(_entityTypesByShortAlias[typeShortAlias]);
+            var type = _entityByTypeShortAlias.ContainsKey(nameOrAlias)
+                ? _entityByTypeShortAlias[nameOrAlias] as Type
+                : _entityByClassName.ContainsKey(nameOrAlias)
+                    ? _entityByClassName[nameOrAlias] as Type
+                    : null;
+
+            if (type == null)
+                throw new EntityTypeNotFound(nameOrAlias);
+
+            return Get(type);
         }
 
         /// inheritedDoc
