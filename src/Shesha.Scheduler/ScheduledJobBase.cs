@@ -195,7 +195,11 @@ namespace Shesha.Scheduler
                         try
                         {
                             SaveJobExecutionIdForLogging();
-                            await DoExecuteAsync(cancellationToken);
+                            using (var uow = UnitOfWorkManager.Begin()) 
+                            {
+                                await DoExecuteAsync(cancellationToken);
+                                await uow.CompleteAsync();
+                            }
                             OnSuccess();
                         }
                         catch (Exception e)
