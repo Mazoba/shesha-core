@@ -147,7 +147,7 @@ namespace Shesha.NHibernate.Session
             return CreateQuery(session, entityType, "select count(*) ", criteria, null);
         }
 
-        private static void TransferHqlParameters(IQuery q, FilterCriteria criteria)
+        public static void TransferHqlParameters(IQuery q, FilterCriteria criteria)
         {
             foreach (var param in criteria.FilterParameters)
             {
