@@ -69,14 +69,14 @@ namespace Shesha.Permissions
             
             var persons = PermissionManager.GetAllPermissions()
                 .Where(p => (p.Name ?? "").ToLower().Contains(term)
-                            || (p.Description.Localize(_localizationContext) ?? "").ToLower().Contains(term)
-                            || (p.DisplayName.Localize(_localizationContext) ?? "").ToLower().Contains(term)
+                            || (p.Description?.Localize(_localizationContext) ?? "").ToLower().Contains(term)
+                            || (p.DisplayName?.Localize(_localizationContext) ?? "").ToLower().Contains(term)
                             )
                 .OrderBy(p => p.Name)
                 .Take(10)
                 .Select(p => new AutocompleteItemDto
                 {
-                    DisplayText = $"{p.DisplayName.Localize(_localizationContext)}{p.Name}",
+                    DisplayText = $"{p.DisplayName.Localize(_localizationContext)} ({p.Name})",
                     Value = p.Name
                 })
                 .ToList();

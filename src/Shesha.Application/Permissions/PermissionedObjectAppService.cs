@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Abp.Application.Services.Dto;
 using Abp.Authorization;
 using Abp.Domain.Repositories;
 using Shesha.Domain;
+using Shesha.Domain.Enums;
 
 namespace Shesha.Permissions
 {
@@ -70,9 +72,9 @@ namespace Shesha.Permissions
         /// <param name="inherited"></param>
         /// <param name="permissions"></param>
         /// <returns></returns>
-        public async Task<PermissionedObjectDto> SetPermissionsAsync(string objectName, bool inherited, List<string> permissions)
+        public async Task<PermissionedObjectDto> SetPermissionsAsync(string objectName, int access, List<string> permissions)
         {
-            return await _permissionedObjectManager.SetPermissionsAsync(objectName, inherited, permissions);
+            return await _permissionedObjectManager.SetPermissionsAsync(objectName, access, permissions);
         }
 
         /// <summary>
@@ -85,6 +87,12 @@ namespace Shesha.Permissions
         {
             var action = string.IsNullOrEmpty(actionName) ? "" : "@" + actionName;
             return await _permissionedObjectManager.GetAsync($"{serviceName}{action}");
+        }
+
+        public override async Task<PermissionedObjectDto> GetAsync(EntityDto<Guid> input)
+        {
+            var obj = await base.GetAsync(input);
+            return await _permissionedObjectManager.GetAsync(obj.Object);
         }
 
         /// <summary>
@@ -105,10 +113,10 @@ namespace Shesha.Permissions
         /// <param name="inherited"></param>
         /// <param name="permissions"></param>
         /// <returns></returns>
-        public async Task<PermissionedObjectDto> SetApiPermissionsAsync(string serviceName, string actionName, bool inherited, List<string> permissions)
+        public async Task<PermissionedObjectDto> SetApiPermissionsAsync(string serviceName, string actionName, int access, List<string> permissions)
         {
             var action = string.IsNullOrEmpty(actionName) ? "" : "@" + actionName;
-            return await _permissionedObjectManager.SetPermissionsAsync($"{serviceName}{action}", inherited, permissions);
+            return await _permissionedObjectManager.SetPermissionsAsync($"{serviceName}{action}", access, permissions);
         }
 
         /// <summary>

@@ -12,40 +12,31 @@ using Abp.Localization;
 using Abp.Runtime.Caching;
 using ConcurrentCollections;
 using Shesha.Authorization.Dtos;
+using Shesha.Domain.Enums;
 using Shesha.Permission;
 using Shesha.Permissions;
+using Shesha.Utilities;
 
 namespace Shesha.Authorization
 {
-    public class ApiAuthorizationHelper : AuthorizationHelper
+    public class ApiAuthorizationHelper : AuthorizationHelper, IApiAuthorizationHelper
     {
 
         private readonly IAuthorizationConfiguration _authConfiguration;
         private readonly IPermissionedObjectManager _permissionedObjectManager;
 
-
         public ApiAuthorizationHelper(
             IFeatureChecker featureChecker,
             IAuthorizationConfiguration authConfiguration,
-            IPermissionedObjectManager permissionedObjectManager
-            ) : base(featureChecker, authConfiguration)
+            IPermissionedObjectManager permissionedObjectManager,
+            ILocalizationManager localizationManager
+            ): base(featureChecker, authConfiguration)
         {
             _authConfiguration = authConfiguration;
             _permissionedObjectManager = permissionedObjectManager;
         }
 
-        public override async Task AuthorizeAsync(MethodInfo methodInfo, Type type)
-        {
-            await base.AuthorizeAsync(methodInfo, type);
-            await CheckApiPermissionsAsync(methodInfo, type);
-        }
-
-        public override void Authorize(MethodInfo methodInfo, Type type)
-        {
-            base.Authorize(methodInfo, type);
-        }
-
-        protected virtual async Task CheckApiPermissionsAsync(MethodInfo methodInfo, Type type)
+        public virtual async Task AuthorizeAsync(MethodInfo methodInfo, Type type)
         {
             if (!_authConfiguration.IsEnabled)
             {
@@ -65,12 +56,27 @@ namespace Shesha.Authorization
 
             var permission = await _permissionedObjectManager.GetAsync($"{type.FullName}@{methodInfo.Name}");
 
-            if (permission?.Permissions == null
-                || !permission.Permissions.Any() 
-                || permission.Inherited) return;
+            if (permission != null && (
+                permission.ActualAccess == (int)RefListPermissionedAccess.Disable
+                || permission.ActualAccess == (int)RefListPermissionedAccess.AnyAuthenticated && AbpSession.UserId == null
+                || permission.ActualAccess == (int)RefListPermissionedAccess.RequiresPermissions
+                && (permission.ActualPermissions == null || !permission.ActualPermissions.Any())
+            ))
+            {
+                throw new AbpAuthorizationException(
+                    LocalizationManager.GetString(SheshaConsts.LocalizationSourceName, "AccessDenied")
+                );
+            }
+
+            if (permission == null
+                || permission.ActualAccess == (int)RefListPermissionedAccess.AllowAnonymous
+                || permission.ActualAccess == (int)RefListPermissionedAccess.AnyAuthenticated && AbpSession.UserId != null
+                || permission.ActualPermissions == null 
+                || !permission.ActualPermissions.Any())
+                return;
 
             // ToDo: add RequireAll flag
-            PermissionChecker.Authorize(false , permission.Permissions.ToArray());
+            PermissionChecker.Authorize(false , permission.ActualPermissions.ToArray());
         }
     }
 }

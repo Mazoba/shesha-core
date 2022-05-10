@@ -12,6 +12,7 @@ using ConcurrentCollections;
 using NHibernate.Linq;
 using Shesha.Authorization;
 using Shesha.Domain;
+using Shesha.Domain.Enums;
 using Shesha.Permissions.Enum;
 
 
@@ -112,6 +113,79 @@ namespace Shesha.Permissions
             return dto;
         }
 
+
+
+        public virtual PermissionedObjectDto Get(string objectName, bool useInherited = true,
+            UseDependencyType useDependency = UseDependencyType.Before, bool useHidden = false)
+        {
+            var obj = _cacheManager.GetPermissionedObjectCache().GetOrDefault(objectName);
+
+            if (obj == null)
+            {
+                using var unitOfWork = _unitOfWorkManager.Begin();
+                var dbObj = _permissionedObjectRepository.GetAll().FirstOrDefault(x => x.Object == objectName);
+                if (dbObj != null)
+                {
+                    obj = _objectMapper.Map<PermissionedObjectDto>(dbObj);
+                    _cacheManager.GetPermissionedObjectCache().Set(objectName, obj);
+                }
+                unitOfWork.Complete();
+            }
+
+            // Check hidden, dependency and inherited
+            if (obj != null)
+            {
+                // skip hidden
+                if (!useHidden && obj.Hidden)
+                    return null;
+
+                // get dependency
+                var dep = !string.IsNullOrEmpty(obj.Dependency)
+                    ? Get(obj.Dependency, true, useDependency, useHidden)
+                    : null;
+
+                // check dependency before
+                if (useDependency == UseDependencyType.Before && dep != null && dep.ActualAccess != (int)RefListPermissionedAccess.Inherited)
+                {
+                    obj.ActualPermissions = dep.Permissions;
+                    obj.ActualAccess = dep.Access;
+                    return obj;
+                }
+                    
+
+                // if current object is inherited
+                if (useInherited && obj.Inherited && !string.IsNullOrEmpty(obj.Parent))
+                {
+                    var parent = Get(obj.Parent, true, UseDependencyType.NotUse, useHidden);
+
+                    // check parent
+                    if (parent != null && parent.ActualAccess != (int)RefListPermissionedAccess.Inherited)
+                    {
+                        obj.ActualPermissions = parent.Permissions;
+                        obj.ActualAccess = parent.Access;
+                        return obj;
+                    }
+
+                    // check dependency after
+                    if (useDependency == UseDependencyType.After && dep != null && dep.ActualAccess != (int)RefListPermissionedAccess.Inherited)
+                    {
+                        obj.ActualPermissions = dep.Permissions;
+                        obj.ActualAccess = dep.Access;
+                        return obj;
+                    }
+                }
+            }
+
+            return obj;
+        }
+
+        public ConcurrentHashSet<string> GetActualPermissions(string objectName, bool useInherited = true,
+            UseDependencyType useDependency = UseDependencyType.Before)
+        {
+            var obj = Get(objectName, useInherited, useDependency);
+            return obj?.Permissions ?? new ConcurrentHashSet<string>();
+        }
+
         public virtual async Task<PermissionedObjectDto> GetAsync(string objectName, bool useInherited = true,
             UseDependencyType useDependency = UseDependencyType.Before, bool useHidden = false)
         {
@@ -132,6 +206,9 @@ namespace Shesha.Permissions
             // Check hidden, dependency and inherited
             if (obj != null)
             {
+                obj.ActualPermissions = obj.Permissions;
+                obj.ActualAccess = obj.Access;
+
                 // skip hidden
                 if (!useHidden && obj.Hidden)
                     return null;
@@ -142,21 +219,34 @@ namespace Shesha.Permissions
                     : null;
 
                 // check dependency before
-                if (useDependency == UseDependencyType.Before && dep != null && !dep.Inherited && dep.Permissions.Any())
-                    return dep;
+                if (useDependency == UseDependencyType.Before && dep != null && dep.ActualAccess != (int)RefListPermissionedAccess.Inherited)
+                {
+                    obj.ActualPermissions = dep.ActualPermissions;
+                    obj.ActualAccess = dep.ActualAccess;
+                    return obj;
+                }
+
 
                 // if current object is inherited
                 if (useInherited && obj.Inherited && !string.IsNullOrEmpty(obj.Parent))
                 {
-                    var parent = await GetAsync(obj.Parent, true, UseDependencyType.NotUse, useHidden);
+                    var parent = await GetAsync(obj.Parent, true, useDependency, useHidden);
 
                     // check parent
-                    if (parent != null && !parent.Inherited && parent.Permissions.Any())
-                        return parent;
+                    if (parent != null && parent.ActualAccess != (int)RefListPermissionedAccess.Inherited)
+                    {
+                        obj.ActualPermissions = parent.ActualPermissions;
+                        obj.ActualAccess = parent.ActualAccess;
+                        return obj;
+                    }
 
                     // check dependency after
-                    if (useDependency == UseDependencyType.After && dep != null && !dep.Inherited && dep.Permissions.Any())
-                        return dep;
+                    if (useDependency == UseDependencyType.After && dep != null && dep.ActualAccess != (int)RefListPermissionedAccess.Inherited)
+                    {
+                        obj.ActualPermissions = dep.ActualPermissions;
+                        obj.ActualAccess = dep.ActualAccess;
+                        return obj;
+                    }
                 }
             }
 
@@ -178,14 +268,15 @@ namespace Shesha.Permissions
                           Type = permissionedObject.Type,
                           Module = permissionedObject.Module,
                           Parent = permissionedObject.Parent,
-                          Name = permissionedObject.Name
+                          Name = permissionedObject.Name,
                       };
 
             obj.Category = permissionedObject.Category;
             obj.Description = permissionedObject.Description;
             obj.Permissions = string.Join(",", permissionedObject.Permissions ?? new ConcurrentHashSet<string>());
-            obj.Inherited = permissionedObject.Inherited;
+            //obj.Inherited = permissionedObject.Inherited;
             obj.Hidden = permissionedObject.Hidden;
+            obj.Access = (RefListPermissionedAccess?) permissionedObject.Access ?? RefListPermissionedAccess.Inherited;
 
             await _permissionedObjectRepository.InsertOrUpdateAsync(obj);
 
@@ -195,7 +286,7 @@ namespace Shesha.Permissions
         }
 
         [UnitOfWork]
-        public virtual async Task<PermissionedObjectDto> SetPermissionsAsync(string objectName, bool inherited, List<string> permissions)
+        public virtual async Task<PermissionedObjectDto> SetPermissionsAsync(string objectName, int access, List<string> permissions)
         {
             // ToDo: AS - check permission names exist
             var obj = await _permissionedObjectRepository.GetAll().FirstOrDefaultAsync(x => x.Object == objectName);
@@ -203,7 +294,7 @@ namespace Shesha.Permissions
             if (obj == null) return null;
 
             obj.Permissions = string.Join(",", permissions ?? new List<string>());
-            obj.Inherited = inherited;
+            obj.Access = (RefListPermissionedAccess) access;
             await _permissionedObjectRepository.InsertOrUpdateAsync(obj);
 
             var dto = _objectMapper.Map<PermissionedObjectDto>(obj);

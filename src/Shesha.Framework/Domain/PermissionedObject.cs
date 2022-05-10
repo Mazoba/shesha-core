@@ -2,6 +2,7 @@
 using Abp.Domain.Entities.Auditing;
 using JetBrains.Annotations;
 using Shesha.Domain.Attributes;
+using Shesha.Domain.Enums;
 
 namespace Shesha.Domain
 {
@@ -50,7 +51,12 @@ namespace Shesha.Domain
         /// <summary>
         /// Object inherits permissions from parent object
         /// </summary>
-        public virtual bool Inherited { get; set; }
+        public virtual bool Inherited => Access == RefListPermissionedAccess.Inherited;
+
+        /// <summary>
+        /// Access type
+        /// </summary>
+        public virtual RefListPermissionedAccess Access { get; set; }
 
         /// <summary>
         /// Text identifier of the parent object
