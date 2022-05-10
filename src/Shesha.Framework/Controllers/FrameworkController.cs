@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Abp.Configuration;
 using Abp.Dependency;
@@ -96,6 +97,44 @@ namespace Shesha.Controllers
             var bootstrapper = StaticContext.IocManager.Resolve<ReferenceListBootstrapper>();
             await bootstrapper.Process();
             return "Bootstrapped successfully";
+        }
+
+        [HttpGet]
+        [DontWrapResult]
+        public List<AssemblyInfo> Assemblies(string searchString)
+        {
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
+            {
+                try
+                {
+                    return !a.IsDynamic && a.GetTypes().Any();
+                }
+                catch
+                {
+                    // GetTypes can throw exception, skip assembly
+                    return false;
+                }
+            })
+                .Distinct<Assembly>(new AssemblyFullNameComparer())
+                .Where(a => string.IsNullOrWhiteSpace(searchString) || a.FullName.Contains(searchString, StringComparison.InvariantCultureIgnoreCase))
+                .OrderBy(a => a.FullName);
+
+            var result = assemblies.Select(a => new AssemblyInfo 
+                { 
+                    FullName = a.GetName().Name,
+                    Location = a.Location,
+                    Version = a.GetName().Version.ToString()
+                })
+                .ToList();
+            
+            return result;
+        }
+
+        public class AssemblyInfo
+        { 
+            public string Location { get; set; }
+            public string FullName { get; set; }
+            public string Version { get; set; }
         }
     }
 }
