@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
-using Abp.Configuration;
+﻿using Abp.Configuration;
 using Abp.Dependency;
 using Abp.Reflection;
 using Abp.Web.Models;
@@ -12,12 +6,18 @@ using Castle.Core.Logging;
 using Microsoft.AspNetCore.Mvc;
 using NHibernate;
 using Shesha.Bootstrappers;
-using Shesha.Configuration;
+using Shesha.Controllers.Dtos;
 using Shesha.Domain.Attributes;
 using Shesha.Extensions;
 using Shesha.Migrations;
 using Shesha.Reflection;
 using Shesha.Services;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Shesha.Controllers
 {
@@ -35,11 +35,11 @@ namespace Shesha.Controllers
 
         [HttpGet]
         [DontWrapResult]
-        public IList ExecuteHql(string query)
+        public IList ExecuteHql(ExecuteHqlInput input)
         {
             var sessionFactory = StaticContext.IocManager.Resolve<ISessionFactory>();
             var session = sessionFactory.GetCurrentSession();
-            var list = session.CreateQuery(query).List();
+            var list = session.CreateQuery(input.Query).List();
             return list;
         }
 
@@ -101,7 +101,7 @@ namespace Shesha.Controllers
 
         [HttpGet]
         [DontWrapResult]
-        public List<AssemblyInfo> Assemblies(string searchString)
+        public List<AssemblyInfoDto> Assemblies(string searchString)
         {
             var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
             {
@@ -119,22 +119,16 @@ namespace Shesha.Controllers
                 .Where(a => string.IsNullOrWhiteSpace(searchString) || a.FullName.Contains(searchString, StringComparison.InvariantCultureIgnoreCase))
                 .OrderBy(a => a.FullName);
 
-            var result = assemblies.Select(a => new AssemblyInfo 
-                { 
+            var result = assemblies.Select(a => new AssemblyInfoDto
+            { 
                     FullName = a.GetName().Name,
                     Location = a.Location,
-                    Version = a.GetName().Version.ToString()
+                    Version = a.GetName().Version.ToString(),
+                    Architecture = a.GetName().ProcessorArchitecture.ToString()
                 })
                 .ToList();
             
             return result;
-        }
-
-        public class AssemblyInfo
-        { 
-            public string Location { get; set; }
-            public string FullName { get; set; }
-            public string Version { get; set; }
         }
     }
 }
