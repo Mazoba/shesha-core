@@ -1185,72 +1185,24 @@ namespace Shesha.Web.DataTable
 
         private IQuery CreateQueryHql<TEntity>(FilterCriteria criteria, string orderBy = null)
         {
-            // Return empty list if user have no permissions to view entities of type T
-            var fullCriteria = GenerateHqlFilteringCriteria<TEntity>(criteria);
-
             var sessionFactory = _iocResolver.Resolve<ISessionFactory>();
             var session = sessionFactory.GetCurrentSession();
 
             var q = string.IsNullOrEmpty(orderBy)
-                ? session.CreateQuery(typeof(TEntity), fullCriteria)
-                : session.CreateQuery(typeof(TEntity), fullCriteria, orderBy);
+                ? session.CreateQuery(typeof(TEntity), criteria)
+                : session.CreateQuery(typeof(TEntity), criteria, orderBy);
 
             return q;
         }
 
         private IQuery CreateQueryCountHql<TEntity>(FilterCriteria criteria)
         {
-            // Return empty list if user have no permissions to view entities of type T
-            var fullCriteria = GenerateHqlFilteringCriteria<TEntity>(criteria);
-
             var sessionFactory = _iocResolver.Resolve<ISessionFactory>();
             var session = sessionFactory.GetCurrentSession();
 
-            var q = session.CreateQueryCount(typeof(TEntity), fullCriteria);
+            var q = session.CreateQueryCount(typeof(TEntity), criteria);
 
             return q;
-        }
-
-        private FilterCriteria GenerateHqlFilteringCriteria<TEntity>(FilterCriteria userCriteria)
-        {
-            var criteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
-
-            var frameworkCriteria = GenerateFrameworkHqlCriteria<TEntity>();
-            if (frameworkCriteria != null) 
-                criteria.AppendCriteria(frameworkCriteria);
-
-            //var customCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
-            //FilterResultsByHql(customCriteria);
-            //if (customCriteria != null)
-            //    criteria.AppendCriteria(customCriteria);
-
-            if (userCriteria != null)
-                criteria.AppendCriteria(userCriteria);
-
-            //ModifyFindAllCriteriaBeforeExecute(criteria);
-
-            return criteria;
-        }
-
-        /// <summary>
-        /// Generates a list of filtering criteria to be applied to any operation
-        /// </summary>
-        /// <returns></returns>
-        private FilterCriteria GenerateFrameworkHqlCriteria<TEntity>()
-        {
-            var criteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
-
-            // Adding any criteria to limit visibility based on 'Inactive' flag if applicable.
-            // note: it's already handled by SoftDelete filter!
-            /*
-            if (_unitOfWorkManager.Current.IsFilterEnabled(AbpDataFilters.SoftDelete) && 
-                typeof(ISoftDelete).IsAssignableFrom(typeof(TEntity)))
-            {
-                criteria.FilterClauses.Add($"ent.IsDeleted = false");
-            }
-            */
-
-            return criteria;
         }
 
         public async Task<Int64> CountAsync<TEntity, TPrimaryKey>(FilterCriteria criteria, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>

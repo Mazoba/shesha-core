@@ -9,18 +9,13 @@ namespace Shesha.Configuration.Runtime
     public interface IEntityConfigurationStore
     {
         /// <summary>
-        /// Entity types dictionary (key - TypeShortAlias, value - type of entity)
-        /// </summary>
-        IDictionary<string, Type> EntityTypes { get; }
-
-        /// <summary>
         /// Returns <see cref="EntityConfiguration"/> by entity type
         /// </summary>
         EntityConfiguration Get(Type entityType);
 
         /// <summary>
-        /// Returns <see cref="EntityConfiguration"/> by type short alias
+        /// Returns <see cref="EntityConfiguration"/> by class name or type short alias
         /// </summary>
-        EntityConfiguration Get(string typeShortAlias);
+        EntityConfiguration Get(string nameOrAlias);
     }
 }
