@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using ConcurrentCollections;
 using Shesha.Permissions.Enum;
 
 namespace Shesha.Permissions
@@ -46,7 +47,22 @@ namespace Shesha.Permissions
         /// <param name="useDependency">Get permission data from related Protected Object if it specified</param>
         /// <param name="useHidden">Allow to get permission data from hidden protected objects</param>
         /// <returns></returns>
-        Task<PermissionedObjectDto> GetAsync(string objectName, bool useInherited, UseDependencyType useDependency, bool useHidden);
+        Task<PermissionedObjectDto> GetAsync(string objectName, bool useInherited = true,
+            UseDependencyType useDependency = UseDependencyType.Before, bool useHidden = false);
+
+        /// <summary>
+        /// Get Protected Object by object name
+        /// </summary>
+        /// <param name="objectName">Object name for search Protected Object (usually it has format "type@action")</param>
+        /// <param name="useInherited">Get permission data from parent if inherited</param>
+        /// <param name="useDependency">Get permission data from related Protected Object if it specified</param>
+        /// <param name="useHidden">Allow to get permission data from hidden protected objects</param>
+        /// <returns></returns>
+        PermissionedObjectDto Get(string objectName, bool useInherited = true,
+            UseDependencyType useDependency = UseDependencyType.Before, bool useHidden = false);
+
+        ConcurrentHashSet<string> GetActualPermissions(string objectName, bool useInherited = true,
+            UseDependencyType useDependency = UseDependencyType.Before);
 
         /// <summary>
         /// Set Protected Object data (save to DB and cache)
@@ -59,10 +75,10 @@ namespace Shesha.Permissions
         /// Set permission data for Protected Object by object name
         /// </summary>
         /// <param name="objectName">Object name for search Protected Object (usually it has format "type@action")</param>
-        /// <param name="inherited">Get permission data from the parent Protected Object if value is True</param>
+        /// <param name="access">Get permission data from the parent Protected Object if value is Inherited</param>
         /// <param name="permissions">Required permissions for Protected Object. Will be ignored if Inherited is True</param>
         /// <returns></returns>
-        Task<PermissionedObjectDto> SetPermissionsAsync(string objectName, bool inherited, List<string> permissions);
+        Task<PermissionedObjectDto> SetPermissionsAsync(string objectName, int access, List<string> permissions);
 
         /// <summary>
         /// Clear protected objects cache

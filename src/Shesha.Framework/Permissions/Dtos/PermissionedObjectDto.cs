@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.Linq;
 using Abp.Application.Services.Dto;
 using ConcurrentCollections;
+using Shesha.Domain.Enums;
 
 namespace Shesha.Permissions
 {
@@ -15,7 +16,7 @@ namespace Shesha.Permissions
         {
             Permissions = new ConcurrentHashSet<string>();
             Child = new List<PermissionedObjectDto>();
-            Inherited = true;
+            Access = (int)RefListPermissionedAccess.Inherited;
             Hidden = false;
         }
 
@@ -23,17 +24,22 @@ namespace Shesha.Permissions
 
         public string Category { get; set; }
 
-        public virtual string Module { get; set; }
+        public string Module { get; set; }
 
-        public virtual string Type { get; set; }
+        public string Type { get; set; }
 
-        public virtual string Name { get; set; }
+        public string Name { get; set; }
 
         public string Description { get; set; }
 
         public ConcurrentHashSet<string> Permissions { get; set; }
 
-        public bool Inherited { get; set; }
+        public ConcurrentHashSet<string> ActualPermissions { get; set; }
+
+        public int? Access { get; set; }
+
+        public bool Inherited => Access == (int) RefListPermissionedAccess.Inherited;
+        public int? ActualAccess { get; set; }
 
         public string Parent { get; set; }
         public string Dependency { get; set; }
@@ -44,7 +50,11 @@ namespace Shesha.Permissions
 
         public override string ToString()
         {
-            var permissions = Hidden ? "Hidden" : Inherited ? "Inherited" : string.Join(", ", Permissions);
+            var permissions = Hidden 
+                ? "Hidden" 
+                : Access == (int)RefListPermissionedAccess.RequiresPermissions
+                    ? string.Join(", ", Permissions)
+                : Access.ToString();
             return $"{Object} -> {Dependency} ({permissions})";
         }
     }

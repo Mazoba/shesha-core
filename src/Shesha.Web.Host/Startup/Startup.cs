@@ -24,7 +24,10 @@ using Shesha.Scheduler.Extensions;
 using Shesha.Swagger;
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using Abp.AspNetCore.Mvc.Authorization;
+using Shesha.Authorization;
 
 namespace Shesha.Web.Host.Startup
 {
@@ -125,6 +128,12 @@ namespace Shesha.Web.Host.Startup
             services.AddHangfire(config =>
             {
                 config.UseSqlServerStorage(_appConfiguration.GetConnectionString("Default"));
+            });
+
+            // ToDo: fix AbpAuthorizationFilter
+            services.AddMvc(options =>
+            {
+                options.Filters.AddService(typeof(SheshaAuthorizationFilter));
             });
 
             // Add ABP and initialize 
