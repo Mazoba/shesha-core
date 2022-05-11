@@ -9,9 +9,11 @@ using Abp.Json;
 using Abp.Notifications;
 using Abp.Runtime.Session;
 using Shesha.Notifications.Dto;
+using Shesha.Notifications.Exceptions;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Shesha.Notifications
 {
@@ -22,7 +24,7 @@ namespace Shesha.Notifications
     {
         public const int MaxUserCountToDirectlyDistributeANotification = 5;
 
-        private readonly INotificationDistributer _notificationDistributer;
+        private readonly IShaNotificationDistributer _notificationDistributer;
 
         /// <summary>
         /// Indicates all tenants.
@@ -55,7 +57,7 @@ namespace Shesha.Notifications
             INotificationConfiguration notificationConfiguration,
             IGuidGenerator guidGenerator,
             IIocResolver iocResolver,
-            INotificationDistributer notificationDistributer)
+            IShaNotificationDistributer notificationDistributer)
         {
             _store = store;
             _backgroundJobManager = backgroundJobManager;
@@ -77,50 +79,60 @@ namespace Shesha.Notifications
             UserIdentifier[] excludedUserIds = null,
             int?[] tenantIds = null)
         {
-            if (notificationName.IsNullOrEmpty())
+            Guid? notificationId = null;
+
+            using (var uow = UnitOfWorkManager.Begin(TransactionScopeOption.RequiresNew)) 
             {
-                throw new ArgumentException("NotificationName can not be null or whitespace!", "notificationName");
+                if (notificationName.IsNullOrEmpty())
+                {
+                    throw new ArgumentException("NotificationName can not be null or whitespace!", "notificationName");
+                }
+
+                if (!tenantIds.IsNullOrEmpty() && !userIds.IsNullOrEmpty())
+                {
+                    throw new ArgumentException("tenantIds can be set only if userIds is not set!", "tenantIds");
+                }
+
+                if (tenantIds.IsNullOrEmpty() && userIds.IsNullOrEmpty())
+                {
+                    tenantIds = new[] { AbpSession.TenantId };
+                }
+
+                var notificationInfo = new NotificationInfo(_guidGenerator.Create())
+                {
+                    NotificationName = notificationName,
+                    EntityTypeName = entityIdentifier == null ? null : entityIdentifier.Type.FullName,
+                    EntityTypeAssemblyQualifiedName = entityIdentifier == null ? null : entityIdentifier.Type.AssemblyQualifiedName,
+                    EntityId = entityIdentifier == null ? null : entityIdentifier.Id.ToJsonString(),
+                    Severity = severity,
+                    UserIds = userIds.IsNullOrEmpty() ? null : userIds.Select(uid => uid.ToUserIdentifierString()).JoinAsString(","),
+                    ExcludedUserIds = excludedUserIds.IsNullOrEmpty() ? null : excludedUserIds.Select(uid => uid.ToUserIdentifierString()).JoinAsString(","),
+                    TenantIds = tenantIds.IsNullOrEmpty() ? null : tenantIds.JoinAsString(","),
+                    Data = data == null ? null : data.ToJsonString(),
+                    DataTypeName = data == null ? null : data.GetType().AssemblyQualifiedName
+                };
+
+                await _store.InsertNotificationAsync(notificationInfo);
+                
+                await uow.CompleteAsync(); //To get Id of the notification
+                
+                notificationId = notificationInfo.Id;
             }
 
-            if (!tenantIds.IsNullOrEmpty() && !userIds.IsNullOrEmpty())
-            {
-                throw new ArgumentException("tenantIds can be set only if userIds is not set!", "tenantIds");
-            }
-
-            if (tenantIds.IsNullOrEmpty() && userIds.IsNullOrEmpty())
-            {
-                tenantIds = new[] { AbpSession.TenantId };
-            }
-
-            var notificationInfo = new NotificationInfo(_guidGenerator.Create())
-            {
-                NotificationName = notificationName,
-                EntityTypeName = entityIdentifier == null ? null : entityIdentifier.Type.FullName,
-                EntityTypeAssemblyQualifiedName = entityIdentifier == null ? null : entityIdentifier.Type.AssemblyQualifiedName,
-                EntityId = entityIdentifier == null ? null : entityIdentifier.Id.ToJsonString(),
-                Severity = severity,
-                UserIds = userIds.IsNullOrEmpty() ? null : userIds.Select(uid => uid.ToUserIdentifierString()).JoinAsString(","),
-                ExcludedUserIds = excludedUserIds.IsNullOrEmpty() ? null : excludedUserIds.Select(uid => uid.ToUserIdentifierString()).JoinAsString(","),
-                TenantIds = tenantIds.IsNullOrEmpty() ? null : tenantIds.JoinAsString(","),
-                Data = data == null ? null : data.ToJsonString(),
-                DataTypeName = data == null ? null : data.GetType().AssemblyQualifiedName
-            };
-
-            await _store.InsertNotificationAsync(notificationInfo);
-
-            await CurrentUnitOfWork.SaveChangesAsync(); //To get Id of the notification
+            if (notificationId == null)
+                throw new ShaNotificationSaveFailedException(notificationName, data);
 
             var isShaNotification = data != null && data is ShaNotificationData;
             if (isShaNotification || userIds != null && userIds.Length <= MaxUserCountToDirectlyDistributeANotification)
             {
-                await _notificationDistributer.DistributeAsync(notificationInfo.Id);
+                await _notificationDistributer.DistributeAsync(notificationId.Value);
             }
             else
             {
                 //We enqueue a background job since distributing may get a long time
                 await _backgroundJobManager.EnqueueAsync<NotificationDistributionJob, NotificationDistributionJobArgs>(
                     new NotificationDistributionJobArgs(
-                        notificationInfo.Id
+                        notificationId.Value
                         )
                     );
             }

@@ -20,8 +20,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Dtos\**" />
+    <Compile Remove="ObjectMapper\**" />
     <EmbeddedResource Remove="Dtos\**" />
+    <EmbeddedResource Remove="ObjectMapper\**" />
     <None Remove="Dtos\**" />
+    <None Remove="ObjectMapper\**" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Hangfire.Core" Version="1.7.25" />
@@ -37,8 +40,5 @@
     <ProjectReference Include="..\Shesha.Elmah\Shesha.Elmah.csproj" />
     <ProjectReference Include="..\Shesha.Framework\Shesha.Framework.csproj" />
     <ProjectReference Include="..\Shesha.Web.Controls\Shesha.Web.Controls.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ObjectMapper\" />
   </ItemGroup>
 </Project>
