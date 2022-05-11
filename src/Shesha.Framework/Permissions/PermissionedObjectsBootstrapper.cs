@@ -38,33 +38,43 @@ namespace Shesha.Permission
             var providers = IocManager.Instance.ResolveAll<IPermissionedObjectProvider>();
             foreach (var permissionedObjectProvider in providers)
             {
-                var items  = permissionedObjectProvider.GetAll();
-                var objectType = permissionedObjectProvider.GetObjectType();
+                var objectTypes = permissionedObjectProvider.GetObjectTypes();
 
-                var dbItems = await _permissionedObjectRepository.GetAll().Where(x => x.Type == objectType || x.Type.Contains($"{objectType}.")).ToListAsync();
-
-
-                // Add news items
-                var toAdd = items.Where(i => dbItems.All(dbi => dbi.Object != i.Object))
-                    .ToList();
-                foreach (var item in toAdd)
+                foreach (var objectType in objectTypes)
                 {
-                    await _permissionedObjectRepository.InsertAsync(_objectMapper.Map<PermissionedObject>(item));
-                }
+                    var items = permissionedObjectProvider.GetAll(objectType);
 
-                // ToDo: think how to update Protected objects in th bootstrapper
-                // Update items
-                /*var toUpdate = dbItems.Where(dbi => items.Any(i => dbi.Object == i.Object).ToList();
-                foreach (var item in toUpdate)
-                {
-                    await _permissionedObjectRepository.UpdateAsync(_objectMapper.Map<PermissionedObject>(item));
-                }*/
+                    var dbItems = await _permissionedObjectRepository.GetAll()
+                        .Where(x => x.Type == objectType || x.Type.Contains($"{objectType}.")).ToListAsync();
 
-                // Inactivate deleted items
-                var toDelete = dbItems.Where(dbi => items.All(i => dbi.Object != i.Object)).ToList();
-                foreach (var item in toDelete)
-                {
-                    await _permissionedObjectRepository.DeleteAsync(item);
+
+                    // Add news items
+                    var toAdd = items.Where(i => dbItems.All(dbi => dbi.Object != i.Object))
+                        .ToList();
+                    foreach (var item in toAdd)
+                    {
+                        await _permissionedObjectRepository.InsertAsync(_objectMapper.Map<PermissionedObject>(item));
+                    }
+
+                    // ToDo: think how to update Protected objects in th bootstrapper
+                    // Update items
+                    var toUpdate = dbItems.Where(dbi => items.Any(i => dbi.Object == i.Object)).ToList();
+                    foreach (var dbItem in toUpdate)
+                    {
+                        var item = items.FirstOrDefault(x => x.Object == dbItem.Object);
+                        if (item == null) continue;
+                        dbItem.Module = item.Module;
+                        dbItem.Parent = item.Parent;
+                        dbItem.Name = item.Name;
+                        await _permissionedObjectRepository.UpdateAsync(dbItem);
+                    }
+
+                    // Inactivate deleted items
+                    var toDelete = dbItems.Where(dbi => items.All(i => dbi.Object != i.Object)).ToList();
+                    foreach (var item in toDelete)
+                    {
+                        await _permissionedObjectRepository.DeleteAsync(item);
+                    }
                 }
             }
 

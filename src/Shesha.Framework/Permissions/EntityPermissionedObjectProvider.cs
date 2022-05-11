@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using Abp.Application.Services;
-using Abp.Dependency;
 using Abp.Domain.Entities;
 using Abp.Modules;
 using Abp.Reflection;
@@ -19,9 +16,9 @@ namespace Shesha.Permission
         {
         }
 
-        public string GetObjectType()
+        public List<string> GetObjectTypes()
         {
-            return PermissionedObjectsSheshaTypes.Entity;
+            return new List<string> {PermissionedObjectsSheshaTypes.Entity} ;
         }
 
         public string GetObjectType(Type type)
@@ -36,11 +33,10 @@ namespace Shesha.Permission
                 : null;
         }
 
-        public List<PermissionedObjectDto> GetAll()
+        public List<PermissionedObjectDto> GetAll(string objectType = null)
         {
-            // ToDo: add Entities to configured permissions
-            //return new List<PermissionedObjectDto>();
-            
+            if (!GetObjectTypes().Contains(objectType)) return new List<PermissionedObjectDto>();
+
             var assemblies = _assembleFinder.GetAllAssemblies().Distinct(new AssemblyFullNameComparer()).Where(a => !a.IsDynamic).ToList();
             var allPermissions = new List<PermissionedObjectDto>();
 
