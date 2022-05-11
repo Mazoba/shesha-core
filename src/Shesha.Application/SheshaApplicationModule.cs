@@ -36,8 +36,6 @@ namespace Shesha
         {
             IocManager.Register<IShaApplicationModuleConfiguration, ShaApplicationModuleConfiguration>();
 
-            IocManager.Register<IAuthorizationHelper, ApiAuthorizationHelper>(DependencyLifeStyle.Transient);
-
             Configuration.Settings.Providers.Add<SmsSettingProvider>();
             Configuration.Settings.Providers.Add<PushSettingProvider>();
             Configuration.Settings.Providers.Add<EmailSettingProvider>();
