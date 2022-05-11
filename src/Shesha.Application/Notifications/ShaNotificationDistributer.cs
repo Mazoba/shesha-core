@@ -99,7 +99,7 @@ namespace Shesha.Notifications
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warn(ex.ToString(), ex);
+                    Logger.Error(ex.ToString(), ex);
                 }
             }
         }
@@ -312,7 +312,7 @@ namespace Shesha.Notifications
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warn(ex.ToString(), ex);
+                    Logger.Error(ex.ToString(), ex);
                 }
             }
         }
@@ -333,7 +333,7 @@ namespace Shesha.Notifications
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warn(ex.ToString(), ex);
+                    Logger.Error(ex.ToString(), ex);
                 }
             }
         }
