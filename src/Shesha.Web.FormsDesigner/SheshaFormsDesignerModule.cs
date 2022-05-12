@@ -1,10 +1,13 @@
-﻿using System.Reflection;
+﻿using Abp.AspNetCore;
 using Abp.AspNetCore.Configuration;
 using Abp.AutoMapper;
 using Abp.Modules;
+using Abp.Reflection.Extensions;
+using System.Reflection;
 
 namespace Shesha.Web.FormsDesigner
 {
+    [DependsOn(typeof(AbpAspNetCoreModule))]
     public class SheshaFormsDesignerModule : AbpModule
     {
         public override void Initialize()
@@ -19,21 +22,12 @@ namespace Shesha.Web.FormsDesigner
             );
         }
 
-        public override void PostInitialize()
+        public override void PreInitialize()
         {
-            try
-            {
-                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                    typeof(SheshaFormsDesignerModule).Assembly,
-                    moduleName: "Shesha",
-                    useConventionalHttpVerbs: true);
-            }
-            catch
-            {
-                // note: we mute exceptions for unit tests only
-                // todo: refactor and remove this try-catch block
-            }
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                typeof(SheshaFormsDesignerModule).GetAssembly(),
+                moduleName: "Shesha",
+                useConventionalHttpVerbs: true);
         }
-
     }
 }

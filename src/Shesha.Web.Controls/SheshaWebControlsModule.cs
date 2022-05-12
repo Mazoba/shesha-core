@@ -1,11 +1,12 @@
 ﻿using System.Reflection;
+using Abp.AspNetCore;
 using Abp.AspNetCore.Configuration;
 using Abp.AutoMapper;
 using Abp.Modules;
 
 namespace Shesha.Web
 {
-    [DependsOn(typeof(AbpAutoMapperModule))]
+    [DependsOn(typeof(AbpAutoMapperModule), typeof(AbpAspNetCoreModule))]
     public class SheshaWebControlsModule : AbpModule
     {
         public override void Initialize()
@@ -19,21 +20,12 @@ namespace Shesha.Web
             IocManager.RegisterAssemblyByConvention(thisAssembly);
         }
 
-        public override void PostInitialize()
+        public override void PreInitialize()
         {
-            try
-            {
-                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                    this.GetType().Assembly,
-                    moduleName: "Shesha",
-                    useConventionalHttpVerbs: true);
-            }
-            catch
-            {
-                // note: we mute exceptions for unit tests only
-                // todo: refactor and remove this try-catch block
-            }
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                this.GetType().Assembly,
+                moduleName: "Shesha",
+                useConventionalHttpVerbs: true);
         }
-
     }
 }
