@@ -5,8 +5,8 @@ namespace Shesha.Permissions
 {
     public interface IPermissionedObjectProvider
     {
-        string GetObjectType();
+        List<string> GetObjectTypes();
         string GetObjectType(Type type);
-        List<PermissionedObjectDto> GetAll();
+        List<PermissionedObjectDto> GetAll(string objectType = null);
     }
 }

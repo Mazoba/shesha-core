@@ -12,7 +12,7 @@ using Shesha.Utilities;
 
 namespace Shesha.Permissions
 {
-    public class CrudPermissionedObjectProvider : PermissionedObjectProviderBase, IPermissionedObjectProvider
+    /*public class CrudPermissionedObjectProvider : PermissionedObjectProviderBase, IPermissionedObjectProvider
     {
 
         public CrudPermissionedObjectProvider(IAssemblyFinder assembleFinder) : base(assembleFinder)
@@ -126,5 +126,5 @@ namespace Shesha.Permissions
 
             return allApiPermissions;
         }
-    }
+    }*/
 }
