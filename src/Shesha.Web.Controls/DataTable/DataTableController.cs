@@ -1236,7 +1236,7 @@ namespace Shesha.Web.DataTable
             var columnsToSort = !userSortingDisabled && input.Sorting.Any()
                 ? input.Sorting.Select(sc =>
                     {
-                        var column = columns.FirstOrDefault(c => c.Name == sc.Id && c.IsSortable) as DataTablesDisplayPropertyColumn;
+                        var column = columns.FirstOrDefault(c => c.PropertyName == sc.Id && c.IsSortable) as DataTablesDisplayPropertyColumn;
                         var childEntityDisplayName = column?.GeneralDataType == GeneralDataType.EntityReference &&
                                                      !string.IsNullOrWhiteSpace(column.EntityReferenceTypeShortAlias)
                             ? entityConfigurationStore.Get(column.EntityReferenceTypeShortAlias)?.DisplayNamePropertyInfo

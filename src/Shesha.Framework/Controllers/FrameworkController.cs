@@ -33,9 +33,10 @@ namespace Shesha.Controllers
             _settingManager = settingManager;
         }
 
-        [HttpGet]
+        [HttpPost]
+        [Consumes("multipart/form-data")]
         [DontWrapResult]
-        public IList ExecuteHql(ExecuteHqlInput input)
+        public IList ExecuteHql([FromForm] ExecuteHqlInput input)
         {
             var sessionFactory = StaticContext.IocManager.Resolve<ISessionFactory>();
             var session = sessionFactory.GetCurrentSession();
