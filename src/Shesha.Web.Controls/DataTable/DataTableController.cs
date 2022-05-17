@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Abp.Authorization;
 using Abp.Dependency;
 using Abp.Domain.Entities;
+using Abp.Domain.Entities.Auditing;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
 using Abp.ObjectMapping;
@@ -904,56 +905,59 @@ namespace Shesha.Web.DataTable
 
             foreach (var columnToSort in columnsToSort)
             {
-                columnToSort.ChildEntityDisplayProperty = GetChildEntitySortProperty(columnToSort.Column);
                 var alias = "ent";
-                var propertyName = string.IsNullOrWhiteSpace(columnToSort.ChildEntityDisplayProperty)
-                    ? columnToSort.Column.PropertyName
-                    : $"{columnToSort.Column.PropertyName}.{columnToSort.ChildEntityDisplayProperty}";
 
                 // add joins
-                if (columnToSort.Column.PropertyName.Contains("."))
+                var propertyName = string.Empty;
+                var parts = columnToSort.Column.PropertyName.Split(".");
+
+                var currentClass = context.RootClass;
+                var currentPath = alias;
+
+                for (int i = 0; i < parts.Length; i++)
                 {
-                    var parts = columnToSort.Column.PropertyName.Split(".");
+                    var part = parts[i];
+                    var nestedProp = currentClass.GetProperty(part);
+                    currentClass = nestedProp?.PropertyType;
 
-                    var currentClass = context.RootClass;
-                    var currentPath = alias;
-                    foreach (var part in parts)
+                    currentPath += "." + part;
+
+                    if (currentClass.IsEntityType())
                     {
-                        var nestedProp = currentClass.GetProperty(part);
-                        currentClass = nestedProp?.PropertyType;
-
-                        currentPath += "." + part;
-
-                        if (currentClass.IsEntityType()) 
+                        var join = context.Joins.FirstOrDefault(j => j.Reference == currentPath);
+                        if (join == null)
                         {
-                            var join = context.Joins.FirstOrDefault(j => j.Reference == currentPath);
-                            if (join == null)
+                            join = new JoinClause
                             {
-                                join = new JoinClause
-                                {
-                                    Reference = currentPath,
-                                    Alias = currentPath.Replace('.', '_'),
-                                    JoinType = JoinType.Left
-                                };
-                                context.Joins.Add(join);
-                            }
-                            alias = join.Alias;
-                            currentPath = alias;
-                        }                        
+                                Reference = currentPath,
+                                Alias = currentPath.Replace('.', '_'),
+                                JoinType = JoinType.Left
+                            };
+                            context.Joins.Add(join);
+                        }
+                        alias = join.Alias;
+                        currentPath = alias;
                     }
-                    propertyName = parts.Last();
+
+                    if (i == parts.Length - 1) 
+                    {
+                        if (currentClass.IsEntityType())
+                        {
+                            propertyName = _entityConfigStore.Get(currentClass)?.DisplayNamePropertyInfo?.Name;
+                            if (string.IsNullOrWhiteSpace(propertyName))
+                                propertyName = currentClass is IHasCreationTime
+                                    ? nameof(IHasCreationTime.CreationTime)
+                                    : nameof(IEntity.Id);
+                        } else
+                            propertyName = part;
+                    }
                 }
-                
+
+                if (string.IsNullOrWhiteSpace(propertyName))
+                    throw new Exception("Failed to find sorting property");
+
                 sortItems.Add($"{alias}.{propertyName} {columnToSort.SortOrder}");
             }
-
-            /*
-            // ChildEntityDisplayProperty
-            // 'ent.'-prefix helps by removing ambiguity in cases where query joins other tables/entities which may also have properties with the same name
-            var sortString = columnsToSort.Select(i => string.IsNullOrWhiteSpace(i.ChildEntityDisplayProperty)
-                ? $"ent.{i.Column.PropertyName} {i.SortOrder}"
-                : $"ent.{i.Column.PropertyName}.{i.ChildEntityDisplayProperty} {i.SortOrder}").Delimited(", ");
-            */
 
             context.OrderBy = sortItems.Delimited(", ");
         }
@@ -1392,7 +1396,6 @@ namespace Shesha.Web.DataTable
                     .Where(i => i?.Column != null)
                     .ToList();
 
-            // ChildEntityDisplayProperty
             // 'ent.'-prefix helps by removing ambiguity in cases where query joins other tables/entities which may also have properties with the same name
             var sortString = columnsToSort.Select(i => string.IsNullOrWhiteSpace(i.ChildEntityDisplayProperty)
                 ? $"ent.{i.Column.PropertyName} {i.SortOrder}"

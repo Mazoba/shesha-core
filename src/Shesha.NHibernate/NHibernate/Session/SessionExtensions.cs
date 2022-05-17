@@ -125,7 +125,6 @@ namespace Shesha.NHibernate.Session
 
         public static IQuery CreateQuery(this ISession session, QueryBuildingContext queryContext)
         {
-            //return CreateQuery(session, entityType, "select ent ", criteria, orderByClause);
             var sb = new StringBuilder();
             sb.Append("select ent ");
 
@@ -177,13 +176,6 @@ namespace Shesha.NHibernate.Session
 
             AppendHqlClauses(queryContext, sb);
 
-            /*
-            if (!string.IsNullOrEmpty(queryContext.OrderBy))
-            {
-                sb.Append(" order by ");
-                sb.Append(queryContext.OrderBy.Replace("ascending", "asc").Replace("descending", "desc"));
-            }
-            */
             var q = session.CreateQuery(sb.ToString());
             TransferHqlParameters(q, queryContext.FilterCriteria);
 
