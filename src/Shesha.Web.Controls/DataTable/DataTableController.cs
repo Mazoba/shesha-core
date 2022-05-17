@@ -24,6 +24,8 @@ using NHibernate;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
+using Shesha.Domain.QueryBuilder;
+using Shesha.Extensions;
 using Shesha.JsonLogic;
 using Shesha.Metadata;
 using Shesha.NHibernate.Session;
@@ -32,6 +34,7 @@ using Shesha.Utilities;
 using Shesha.Web.DataTable.Columns;
 using Shesha.Web.DataTable.Excel;
 using Shesha.Web.DataTable.Model;
+using Shesha.Web.DataTable.QueryBuilder;
 
 namespace Shesha.Web.DataTable
 {
@@ -396,30 +399,31 @@ namespace Shesha.Web.DataTable
         {
             try
             {
-                var filterCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
-                AppendStandardFilterCriteria(tableConfig.Columns, input, filterCriteria);
+                var context = new DataTableQueryBuildingContext(tableConfig.RowType, tableConfig.Columns, input);
+
+                AppendStandardFilterCriteria(context);
 
                 // todo: Handle additional posted data (for child tables)
-                AppendChildEntityFilterParameters(tableConfig, input, filterCriteria);
+                AppendChildEntityFilterParameters(tableConfig, context);
 
-                AppendStoredFilters(tableConfig, input, filterCriteria);
-                AppendPredefinedFilters(tableConfig.Columns, input, filterCriteria);
+                AppendStoredFilters(tableConfig, context);
+                AppendPredefinedFilters(context);
 
-                tableConfig.OnRequestToFilterStatic?.Invoke(filterCriteria, input);
+                tableConfig.OnRequestToFilterStatic?.Invoke(context.FilterCriteria, input);
                 if (tableConfig.OnRequestToFilterStaticAsync != null)
-                    await tableConfig.OnRequestToFilterStaticAsync.Invoke(filterCriteria, input);
+                    await tableConfig.OnRequestToFilterStaticAsync.Invoke(context.FilterCriteria, input);
 
                 var data = new QueryDataDto<TEntity, TPrimaryKey>
                 {
-                    TotalRowsBeforeFilter = await CountAsync<TEntity, TPrimaryKey>(filterCriteria, cancellationToken)
+                    TotalRowsBeforeFilter = await CountAsync<TEntity, TPrimaryKey>(context, cancellationToken)
                 };
 
-                var filterBefore = filterCriteria.Clone() as FilterCriteria;
+                var filterBefore = context.FilterCriteria.Clone() as FilterCriteria;
 
                 // Applying any Table Configuration specific filter logic.
-                tableConfig.OnRequestToFilter?.Invoke(filterCriteria, input);
+                tableConfig.OnRequestToFilter?.Invoke(context.FilterCriteria, input);
                 if (tableConfig.OnRequestToFilterAsync != null)
-                    await tableConfig.OnRequestToFilterAsync.Invoke(filterCriteria, input);
+                    await tableConfig.OnRequestToFilterAsync.Invoke(context.FilterCriteria, input);
 
                 var orderBy = GetOrderByClause(tableConfig.Columns, input, tableConfig.UserSortingDisabled);
 
@@ -428,15 +432,15 @@ namespace Shesha.Web.DataTable
                     : int.MaxValue;
 
                 if (!string.IsNullOrWhiteSpace(input.QuickSearch))
-                    _helper.AppendQuickSearchCriteria(tableConfig, tableConfig.QuickSearchMode, input.QuickSearch, filterCriteria);
+                    _helper.AppendQuickSearchCriteria(tableConfig, tableConfig.QuickSearchMode, input.QuickSearch, context.FilterCriteria);
 
                 var skipCount = Math.Max(0, (input.CurrentPage - 1) * takeCount);
 
-                data.Entities = await FindAllAsync<TEntity, TPrimaryKey>(filterCriteria, skipCount, takeCount, orderBy, cancellationToken);
+                data.Entities = await FindAllAsync<TEntity, TPrimaryKey>(context.FilterCriteria, skipCount, takeCount, orderBy, cancellationToken);
 
-                data.TotalRows = filterBefore != null && filterBefore.FilterClauses.Count == filterCriteria.FilterClauses.Count
+                data.TotalRows = filterBefore != null && filterBefore.FilterClauses.Count == context.FilterCriteria.FilterClauses.Count
                     ? data.TotalRowsBeforeFilter
-                    : await CountAsync<TEntity, TPrimaryKey>(filterCriteria, cancellationToken);
+                    : await CountAsync<TEntity, TPrimaryKey>(context, cancellationToken);
 
                 return data;
             }
@@ -457,39 +461,40 @@ namespace Shesha.Web.DataTable
         {
             try
             {
-                var filterCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
-                AppendStandardFilterCriteria(columns, input, filterCriteria);
+                var queryContext = new DataTableQueryBuildingContext(typeof(TEntity), columns, input);
+
+                AppendStandardFilterCriteria(queryContext);
 
                 // todo: implement support of child tables with configured columns
                 //AppendChildEntityFilterParameters(tableConfig, input, filterCriteria);
 
                 // todo: add support of static filters as it's done for datatable configs
+                AppendPredefinedFilters(queryContext);
 
-                AppendPredefinedFilters(columns, input, filterCriteria);
+                // Append `order by`. Note: joins can be added during calculation of `order by` part
+                AppendOrderBy(queryContext, false);
 
                 var data = new QueryDataDto<TEntity, TPrimaryKey>
                 {
-                    TotalRowsBeforeFilter = await CountAsync<TEntity, TPrimaryKey>(filterCriteria, cancellationToken)
+                    TotalRowsBeforeFilter = await CountAsync<TEntity, TPrimaryKey>(queryContext, cancellationToken)
                 };
 
-                var filterBefore = filterCriteria.Clone() as FilterCriteria;
-
-                var orderBy = GetOrderByClause(columns, input, false);
+                var filterBefore = queryContext.FilterCriteria.Clone() as FilterCriteria;
 
                 var takeCount = input.PageSize > -1
                     ? input.PageSize
                     : int.MaxValue;
 
                 if (!string.IsNullOrWhiteSpace(input.QuickSearch))
-                    _helper.AppendQuickSearchCriteria(typeof(TEntity), columns, QuickSearchMode.Sql, input.QuickSearch, filterCriteria, null, !string.IsNullOrWhiteSpace(input.Id) ? input.Id : input.Uid);
+                    _helper.AppendQuickSearchCriteria(typeof(TEntity), columns, QuickSearchMode.Sql, input.QuickSearch, queryContext.FilterCriteria, null, !string.IsNullOrWhiteSpace(input.Id) ? input.Id : input.Uid);
 
                 var skipCount = Math.Max(0, (input.CurrentPage - 1) * takeCount);
 
-                data.Entities = await FindAllAsync<TEntity, TPrimaryKey>(filterCriteria, skipCount, takeCount, orderBy, cancellationToken);
+                data.Entities = await FindAllAsync<TEntity, TPrimaryKey>(queryContext, skipCount, takeCount, queryContext.OrderBy, cancellationToken);
 
-                data.TotalRows = filterBefore != null && filterBefore.FilterClauses.Count == filterCriteria.FilterClauses.Count
+                data.TotalRows = filterBefore != null && filterBefore.FilterClauses.Count == queryContext.FilterCriteria.FilterClauses.Count
                     ? data.TotalRowsBeforeFilter
-                    : await CountAsync<TEntity, TPrimaryKey>(filterCriteria, cancellationToken);
+                    : await CountAsync<TEntity, TPrimaryKey>(queryContext, cancellationToken);
 
                 return data;
             }
@@ -498,22 +503,21 @@ namespace Shesha.Web.DataTable
                 throw;
             }
         }
-        private void AppendChildEntityFilterParameters([NotNull] DataTableConfig tableConfig, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria)
+        private void AppendChildEntityFilterParameters(DataTableConfig tableConfig, DataTableQueryBuildingContext queryContext)
         {
             if (!(tableConfig is IChildDataTableConfig childConfig))
                 return;
 
-            if (filterCriteria.FilteringMethod != FilterCriteria.FilterMethod.Hql)
-                throw new NotSupportedException($"Unsupported FilterMethod: {filterCriteria.FilteringMethod}");
+            var filterCriteria = queryContext.FilterCriteria;
 
-            if (string.IsNullOrWhiteSpace(input.ParentEntityId))
+            if (string.IsNullOrWhiteSpace(queryContext.DataTableInput.ParentEntityId))
             {
                 // if config is for child dataTable and parent info not passed - filter out all records
                 filterCriteria.FilterClauses.Add("1=0");
                 return;
             }
 
-            var parsedId = Parser.ParseId(input.ParentEntityId, childConfig.ParentType);
+            var parsedId = Parser.ParseId(queryContext.DataTableInput.ParentEntityId, childConfig.ParentType);
 
             switch (childConfig.RelationshipType)
             {
@@ -534,17 +538,17 @@ namespace Shesha.Web.DataTable
             }
         }
         
-        private void AppendStandardFilterCriteria([NotNull] List<DataTableColumn> columns,
-            [NotNull]DataTableGetDataInput input, [NotNull]FilterCriteria filterCriteria)
+        private void AppendStandardFilterCriteria(DataTableQueryBuildingContext queryContext)
         {
-            foreach (var filter in input.Filter)
+            foreach (var filter in queryContext.DataTableInput.Filter)
             {
                 if (filter.Filter == null)
                     continue;
 
-                var column = columns.FirstOrDefault(c => c.Name == filter.RealPropertyName);
+                var column = queryContext.Columns.FirstOrDefault(c => c.Name == filter.RealPropertyName);
                 if (column?.GeneralDataType == null)
                     continue;
+                var filterCriteria = queryContext.FilterCriteria;
 
                 // workaround for booleans (we support only `equals`)
                 if (column.GeneralDataType == GeneralDataType.Boolean ||
@@ -860,16 +864,111 @@ namespace Shesha.Web.DataTable
             return person;
         }
 
+        private string GetChildEntitySortProperty(DataTablesDisplayPropertyColumn column) 
+        {
+            if (column?.GeneralDataType != GeneralDataType.EntityReference)
+                return null;
+
+            if (string.IsNullOrWhiteSpace(column.EntityReferenceTypeShortAlias))
+                return null;
+
+            return _entityConfigStore.Get(column.EntityReferenceTypeShortAlias)?.DisplayNamePropertyInfo?.Name ?? "Id";
+        }
+
+        private void AppendOrderBy(DataTableQueryBuildingContext context, bool userSortingDisabled)
+        {
+            var columnsToSort = !userSortingDisabled && context.DataTableInput.Sorting.Any()
+                ? context.DataTableInput.Sorting.Select(sc =>
+                    {
+                        var column = context.Columns.FirstOrDefault(c => c.PropertyName == sc.Id && c.IsSortable) as DataTablesDisplayPropertyColumn;
+
+                        return new SortingInfo
+                        {
+                            Column = column,
+                            SortOrder = sc.Desc ? "desc" : "asc",
+                        };
+                    })
+                    .Where(i => i.Column != null)
+                    .ToList()
+                : context.Columns.OfType<DataTablesDisplayPropertyColumn>().Select(c => c.DefaultSorting != null
+                        ? new SortingInfo()
+                        {
+                            Column = c,
+                            SortOrder = c.DefaultSorting == ListSortDirection.Descending ? "desc" : "asc",
+                        }
+                        : null)
+                    .Where(i => i?.Column != null)
+                    .ToList();
+
+            var sortItems = new List<string>();
+
+            foreach (var columnToSort in columnsToSort)
+            {
+                columnToSort.ChildEntityDisplayProperty = GetChildEntitySortProperty(columnToSort.Column);
+                var alias = "ent";
+                var propertyName = string.IsNullOrWhiteSpace(columnToSort.ChildEntityDisplayProperty)
+                    ? columnToSort.Column.PropertyName
+                    : $"{columnToSort.Column.PropertyName}.{columnToSort.ChildEntityDisplayProperty}";
+
+                // add joins
+                if (columnToSort.Column.PropertyName.Contains("."))
+                {
+                    var parts = columnToSort.Column.PropertyName.Split(".");
+
+                    var currentClass = context.RootClass;
+                    var currentPath = alias;
+                    foreach (var part in parts)
+                    {
+                        var nestedProp = currentClass.GetProperty(part);
+                        currentClass = nestedProp?.PropertyType;
+
+                        currentPath += "." + part;
+
+                        if (currentClass.IsEntityType()) 
+                        {
+                            var join = context.Joins.FirstOrDefault(j => j.Reference == currentPath);
+                            if (join == null)
+                            {
+                                join = new JoinClause
+                                {
+                                    Reference = currentPath,
+                                    Alias = currentPath.Replace('.', '_'),
+                                    JoinType = JoinType.Left
+                                };
+                                context.Joins.Add(join);
+                            }
+                            alias = join.Alias;
+                            currentPath = alias;
+                        }                        
+                    }
+                    propertyName = parts.Last();
+                }
+                
+                sortItems.Add($"{alias}.{propertyName} {columnToSort.SortOrder}");
+            }
+
+            /*
+            // ChildEntityDisplayProperty
+            // 'ent.'-prefix helps by removing ambiguity in cases where query joins other tables/entities which may also have properties with the same name
+            var sortString = columnsToSort.Select(i => string.IsNullOrWhiteSpace(i.ChildEntityDisplayProperty)
+                ? $"ent.{i.Column.PropertyName} {i.SortOrder}"
+                : $"ent.{i.Column.PropertyName}.{i.ChildEntityDisplayProperty} {i.SortOrder}").Delimited(", ");
+            */
+
+            context.OrderBy = sortItems.Delimited(", ");
+        }
+
         /// <summary>
         /// Apply all selected stored filters
         /// </summary>
-        private void AppendPredefinedFilters([NotNull] List<DataTableColumn> columns, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria)
+        private void AppendPredefinedFilters(DataTableQueryBuildingContext queryContext)
+            // [NotNull] List<DataTableColumn> columns, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria
         {
-            if (input.SelectedFilters == null)
+            if (queryContext.DataTableInput.SelectedFilters == null)
                 return;
 
             // Validate stored filters: validate IDs then also validate that for Exclusive filters, user can only submit zero or 1 filters to apply
-            foreach (var filter in input.SelectedFilters)
+            foreach (var filter in queryContext.DataTableInput.SelectedFilters)
             {
                 if (filter.Expression == null || string.IsNullOrWhiteSpace(filter.Expression?.ToString()))
                     continue;
@@ -892,9 +991,9 @@ namespace Shesha.Web.DataTable
                             // convert json logic to HQL
                             var context = new JsonLogic2HqlConverterContext();
                             
-                            if (!string.IsNullOrWhiteSpace(input.EntityType))
+                            if (!string.IsNullOrWhiteSpace(queryContext.DataTableInput.EntityType))
                             {
-                                var entityConfig = _entityConfigStore.Get(input.EntityType);
+                                var entityConfig = _entityConfigStore.Get(queryContext.DataTableInput.EntityType);
                                 var properties = _metadataProvider.GetProperties(entityConfig.EntityType);
 
                                 DataTableHelper.FillVariablesResolvers(properties, context);
@@ -902,16 +1001,16 @@ namespace Shesha.Web.DataTable
                             }
                             else 
                             {
-                                DataTableHelper.FillVariablesResolvers(columns, context);
-                                DataTableHelper.FillContextMetadata(columns, context);
+                                DataTableHelper.FillVariablesResolvers(queryContext.Columns, context);
+                                DataTableHelper.FillContextMetadata(queryContext.Columns, context);
                             }
 
                             var hql = _jsonLogic2HqlConverter.Convert(jsonLogic, context);
 
-                            filterCriteria.FilterClauses.Add(hql);
+                            queryContext.FilterCriteria.FilterClauses.Add(hql);
                             foreach (var parameter in context.FilterParameters)
                             {
-                                filterCriteria.FilterParameters.Add(parameter.Key, parameter.Value);
+                                queryContext.FilterCriteria.FilterParameters.Add(parameter.Key, parameter.Value);
                             }
                             
                             break;
@@ -924,7 +1023,7 @@ namespace Shesha.Web.DataTable
                             foreach (var tag in tagsDictionary)
                                 if (hql.Contains(tag.Key))
                                     hql = hql.Replace(tag.Key, tag.Value);
-                            filterCriteria.FilterClauses.Add(hql);
+                            queryContext.FilterCriteria.FilterClauses.Add(hql);
                             // Use parameters instead of replacing tags
                             break;
                         }
@@ -936,24 +1035,26 @@ namespace Shesha.Web.DataTable
         /// <summary>
         /// Apply all selected stored filters
         /// </summary>
-        private void AppendStoredFilters([NotNull] DataTableConfig tableConfig, [NotNull] DataTableGetDataInput input, [NotNull] FilterCriteria filterCriteria)
+        private void AppendStoredFilters([NotNull] DataTableConfig tableConfig, [NotNull] DataTableQueryBuildingContext queryContext)
         {
             var entityConfigurationStore = _iocResolver.Resolve<IEntityConfigurationStore>();
-            var filterIds = input.SelectedStoredFilterIds
-                .Where(id => input.SelectedFilters == null || !input.SelectedFilters.Any(f => f.Id == id))
+            var filterIds = queryContext.DataTableInput.SelectedStoredFilterIds
+                .Where(id => queryContext.DataTableInput.SelectedFilters == null || !queryContext.DataTableInput.SelectedFilters.Any(f => f.Id == id))
                 .Select(id => id.ToGuid())
                 .Where(id => id != Guid.Empty)
                 .ToList();
+
+            var filterCriteria = queryContext.FilterCriteria;
 
             // Validate stored filters: validate IDs then also validate that for Exclusive filters, user can only submit zero or 1 filters to apply
             foreach (var filterId in filterIds)
             {
                 // if filter included into request - skip, it'll be handled by another handler
-                if (input.SelectedFilters != null && input.SelectedFilters.Any(f => f.Id == filterId.ToString()))
+                if (queryContext.DataTableInput.SelectedFilters != null && queryContext.DataTableInput.SelectedFilters.Any(f => f.Id == filterId.ToString()))
                     continue;
 
                 var storedFilter = _filterRepository.Get(filterId);
-                if (storedFilter.IsExclusive && input.SelectedStoredFilterIds.Count > 1)
+                if (storedFilter.IsExclusive && queryContext.DataTableInput.SelectedStoredFilterIds.Count > 1)
                     throw new Exception($"Only one Exclusive filter can be selected. Please either ensure one filter is selected or update {storedFilter.Name} filter with ID {storedFilter.Id} to not be exclusive");
                 
                 // Security: when visibility conditions are provided, restrict the filter
@@ -1170,9 +1271,30 @@ namespace Shesha.Web.DataTable
             return await FindAllHqlAsync<TEntity>(criteria, skip, take, orderBy, cancellationToken);
         }
 
+        public async Task<IList<TEntity>> FindAllAsync<TEntity, TPrimaryKey>(DataTableQueryBuildingContext queryContext, int skip, int take, string orderBy, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        {
+            if (queryContext.FilterCriteria.FilteringMethod != FilterCriteria.FilterMethod.Hql)
+                throw new NotImplementedException();
+
+            return await FindAllHqlAsync<TEntity>(queryContext, skip, take, cancellationToken);
+        }
+        
         private async Task<IList<TEntity>> FindAllHqlAsync<TEntity>(FilterCriteria criteria, int skip, int take, string orderBy, CancellationToken cancellationToken)
         {
             var q = CreateQueryHql<TEntity>(criteria, orderBy);
+
+            if (skip > 0)
+                q.SetFirstResult(skip);
+
+            if (take > 0)
+                q.SetMaxResults(take);
+
+            return await q.ListAsync<TEntity>(cancellationToken);
+        }
+
+        private async Task<IList<TEntity>> FindAllHqlAsync<TEntity>(QueryBuildingContext queryContext, int skip, int take, CancellationToken cancellationToken)
+        {
+            var q = CreateQueryHql<TEntity>(queryContext);
 
             if (skip > 0)
                 q.SetFirstResult(skip);
@@ -1195,19 +1317,27 @@ namespace Shesha.Web.DataTable
             return q;
         }
 
-        private IQuery CreateQueryCountHql<TEntity>(FilterCriteria criteria)
+        private IQuery CreateQueryHql<TEntity>(QueryBuildingContext queryContext)
         {
             var sessionFactory = _iocResolver.Resolve<ISessionFactory>();
             var session = sessionFactory.GetCurrentSession();
 
-            var q = session.CreateQueryCount(typeof(TEntity), criteria);
+            return session.CreateQuery(queryContext);
+        }
+
+        private IQuery CreateQueryCountHql<TEntity>(DataTableQueryBuildingContext queryContext)
+        {
+            var sessionFactory = _iocResolver.Resolve<ISessionFactory>();
+            var session = sessionFactory.GetCurrentSession();
+
+            var q = session.CreateQueryCount(typeof(TEntity), queryContext);
 
             return q;
         }
 
-        public async Task<Int64> CountAsync<TEntity, TPrimaryKey>(FilterCriteria criteria, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        public async Task<Int64> CountAsync<TEntity, TPrimaryKey>(DataTableQueryBuildingContext queryContext, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
         {
-            var query = CreateQueryCountHql<TEntity>(criteria);
+            var query = CreateQueryCountHql<TEntity>(queryContext);
             return await query.UniqueResultAsync<Int64>(cancellationToken);
         }
 

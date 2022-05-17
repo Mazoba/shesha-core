@@ -1,6 +1,6 @@
-﻿using System;
+﻿using JetBrains.Annotations;
+using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 
 namespace Shesha.Domain
 {
@@ -23,12 +23,10 @@ namespace Shesha.Domain
             FilterClauses = new List<string>();
             FilterParameters = new Dictionary<string, object>();
             FilteringMethod = FilterMethod.DynamicLinq;
-            JoinClauses = new List<string>();
         }
 
         public FilterMethod FilteringMethod { get; protected set; }
         public List<string> FilterClauses { get; protected set; }
-        public List<string> JoinClauses { get; protected set; }
         public Dictionary<string, object> FilterParameters { get; protected set; }
 
         /// <summary>
@@ -40,8 +38,6 @@ namespace Shesha.Domain
         {
             if (criteria.FilteringMethod != this.FilteringMethod)
                 throw new Exception("The filtering method used is incompatible and may cause problems due to differences in syntax.");
-
-            JoinClauses.AddRange(criteria.JoinClauses);
 
             FilterClauses.AddRange(criteria.FilterClauses);
 
@@ -66,14 +62,6 @@ namespace Shesha.Domain
             FilterParameters.Add(queryParamName, parameterValue);
         }
 
-        public void AddJoinClause(string join)
-        {
-            if (FilteringMethod != FilterMethod.Hql)
-                throw new NotSupportedException("Adding a join only applies to Hql based filtering.");
-
-            JoinClauses.Add(join);
-        }
-
         #region ICloneable Members
 
         public object Clone()
@@ -83,8 +71,6 @@ namespace Shesha.Domain
             clone.FilteringMethod = FilteringMethod;
             foreach (var o in FilterClauses)
                 clone.FilterClauses.Add(o);
-            foreach (var o in JoinClauses)
-                clone.JoinClauses.Add(o);
             foreach (var o in FilterParameters)
                 clone.FilterParameters.Add(o.Key, o.Value); // Assumes that the value is a value type or else will still be referencing the same object which presents a slight risk i.e. changes on the clone will impact changes on the original copy.
 

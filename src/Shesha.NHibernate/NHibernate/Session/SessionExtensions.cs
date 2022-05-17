@@ -13,6 +13,7 @@ using Abp.Extensions;
 using Shesha.Domain;
 using Shesha.NHibernate;
 using Shesha.NHibernate.Interceptors;
+using Shesha.Domain.QueryBuilder;
 
 namespace Shesha.NHibernate.Session
 {
@@ -122,6 +123,27 @@ namespace Shesha.NHibernate.Session
             return CreateQuery(session, entityType, "select ent ", criteria, orderByClause);
         }
 
+        public static IQuery CreateQuery(this ISession session, QueryBuildingContext queryContext)
+        {
+            //return CreateQuery(session, entityType, "select ent ", criteria, orderByClause);
+            var sb = new StringBuilder();
+            sb.Append("select ent ");
+
+            AppendHqlClauses(queryContext, sb);
+
+            if (!string.IsNullOrEmpty(queryContext.OrderBy))
+            {
+                sb.Append(" order by ");
+                sb.Append(queryContext.OrderBy.Replace("ascending", "asc").Replace("descending", "desc"));
+            }
+
+            var q = session.CreateQuery(sb.ToString());
+            TransferHqlParameters(q, queryContext.FilterCriteria);
+
+            return q;
+
+        }
+
         public static IQuery CreateQuery(this ISession session, System.Type entityType, string hqlStart, FilterCriteria criteria, string orderByClause)
         {
             var sb = new StringBuilder();
@@ -145,6 +167,27 @@ namespace Shesha.NHibernate.Session
         public static IQuery CreateQueryCount(this ISession session, System.Type entityType, FilterCriteria criteria)
         {
             return CreateQuery(session, entityType, "select count(*) ", criteria, null);
+        }
+
+        public static IQuery CreateQueryCount(this ISession session, System.Type entityType, QueryBuildingContext queryContext)
+        {
+            var sb = new StringBuilder();
+
+            sb.Append("select count(*) ");
+
+            AppendHqlClauses(queryContext, sb);
+
+            /*
+            if (!string.IsNullOrEmpty(queryContext.OrderBy))
+            {
+                sb.Append(" order by ");
+                sb.Append(queryContext.OrderBy.Replace("ascending", "asc").Replace("descending", "desc"));
+            }
+            */
+            var q = session.CreateQuery(sb.ToString());
+            TransferHqlParameters(q, queryContext.FilterCriteria);
+
+            return q;
         }
 
         public static void TransferHqlParameters(IQuery q, FilterCriteria criteria)
@@ -173,18 +216,54 @@ namespace Shesha.NHibernate.Session
             sb.Append(entityType.FullName);
             sb.Append(" ent");
 
-            foreach (var joinClause in criteria.JoinClauses)
-            {
-                sb.Append(" ");
-                sb.Append(joinClause);
-                sb.Append(" ");
-            }
-
             if (criteria.FilterClauses.Count > 0)
             {
                 sb.Append(" where ");
                 bool hasClause = false;
                 foreach (var clause in criteria.FilterClauses)
+                {
+                    if (hasClause)
+                        sb.Append(" and ");
+
+                    sb.Append("(");
+                    sb.Append(clause);
+                    sb.Append(")");
+                    hasClause = true;
+                }
+            }
+        }
+
+        private static string GetJoinTypeString(JoinType joinType) 
+        {
+            switch (joinType)
+            {
+                case JoinType.Left:
+                    return "left";
+                case JoinType.Inner:
+                    return "inner";
+                default:
+                    throw new NotSupportedException($"Unsupported join type: {joinType}");
+                    
+            }
+        }
+
+        private static void AppendHqlClauses(QueryBuildingContext queryContext, StringBuilder sb)
+        {
+            sb.Append(" from ");
+            sb.Append(queryContext.RootClass.FullName);
+            sb.Append(" ent");
+
+            // add joins
+            foreach (var join in queryContext.Joins) 
+            {
+                sb.Append($" {GetJoinTypeString(join.JoinType)} join {join.Reference} {join.Alias}");
+            }
+
+            if (queryContext.FilterCriteria.FilterClauses.Count > 0)
+            {
+                sb.Append(" where ");
+                bool hasClause = false;
+                foreach (var clause in queryContext.FilterCriteria.FilterClauses)
                 {
                     if (hasClause)
                         sb.Append(" and ");
