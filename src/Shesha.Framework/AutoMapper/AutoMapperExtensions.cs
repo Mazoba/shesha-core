@@ -323,13 +323,15 @@ namespace Shesha.AutoMapper
             if (srcPropType.IsEnum)
                 return Enum.ToObject(srcPropType, dto.ItemValue);
 
-            if (dstPropType.IsEnum) {
-                var enumUnderlayingType = dstPropType.GetEnumUnderlyingType();
-                var numericValue = System.Convert.ChangeType(dto.ItemValue.Value, enumUnderlayingType);
-                return Enum.ToObject(dstPropType, numericValue);
-            }
+            var dstType = dstPropType.GetUnderlyingTypeIfNullable();
 
-            return System.Convert.ChangeType(dto.ItemValue.Value, dstPropType);
+            if (dstType.IsEnum) {
+                var enumUnderlayingType = dstType.GetEnumUnderlyingType();
+                var numericValue = System.Convert.ChangeType(dto.ItemValue.Value, enumUnderlayingType);
+                return Enum.ToObject(dstType, numericValue);
+            }
+                        
+            return System.Convert.ChangeType(dto.ItemValue.Value, dstType);
         }
     }
 }
