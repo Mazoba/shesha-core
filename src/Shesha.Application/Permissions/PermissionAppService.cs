@@ -96,7 +96,7 @@ namespace Shesha.Permissions
             return ObjectMapper.Map<PermissionDto>(await _shaPermissionManager.CreatePermissionAsync(permission));
         }
 
-        [HttpPut] // ToDo: temporary - Allow HttpPost because permission can be created from edit mode
+        [HttpPut, HttpPost] // ToDo: temporary - Allow HttpPost because permission can be created from edit mode
         public async Task<PermissionDto> UpdateAsync(PermissionDto permission)
         {
             if (permission?.Id == emptyId)
