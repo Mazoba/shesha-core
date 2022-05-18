@@ -249,6 +249,10 @@ namespace Shesha.NHibernate.Session
             foreach (var join in queryContext.Joins) 
             {
                 sb.Append($" {GetJoinTypeString(join.JoinType)} join {join.Reference} {join.Alias}");
+                if (!string.IsNullOrWhiteSpace(join.Condition)) {
+                    sb.Append(" on ");
+                    sb.Append(join.Condition);                    
+                }
             }
 
             if (queryContext.FilterCriteria.FilterClauses.Count > 0)

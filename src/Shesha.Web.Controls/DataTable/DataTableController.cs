@@ -30,6 +30,7 @@ using Shesha.Extensions;
 using Shesha.JsonLogic;
 using Shesha.Metadata;
 using Shesha.NHibernate.Session;
+using Shesha.Reflection;
 using Shesha.Services;
 using Shesha.Utilities;
 using Shesha.Web.DataTable.Columns;
@@ -948,8 +949,25 @@ namespace Shesha.Web.DataTable
                                 propertyName = currentClass is IHasCreationTime
                                     ? nameof(IHasCreationTime.CreationTime)
                                     : nameof(IEntity.Id);
-                        } else
-                            propertyName = part;
+                        }
+                        else {
+                            var refListIdentifier = nestedProp.GetReferenceListIdentifierOrNull();
+                            if (refListIdentifier != null) 
+                            {
+                                var refListAlias = currentPath.Replace('.', '_');
+                                var refListJoin = new JoinClause
+                                {
+                                    Reference = nameof(FlatReferenceListItem),
+                                    Alias = refListAlias,
+                                    JoinType = JoinType.Left,
+                                    Condition = $"{refListAlias}.{nameof(FlatReferenceListItem.ItemValue)} = {currentPath} and {refListAlias}.{nameof(FlatReferenceListItem.ReferenceListFullName)} = '{refListIdentifier.Namespace}.{refListIdentifier.Name}'"
+                                };
+                                context.Joins.Add(refListJoin);
+                                alias = refListJoin.Alias;
+                                propertyName = nameof(FlatReferenceListItem.Item);
+                            } else
+                                propertyName = part;
+                        }
                     }
                 }
 
