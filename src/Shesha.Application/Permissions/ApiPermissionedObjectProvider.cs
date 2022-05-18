@@ -8,6 +8,7 @@ using Abp.Modules;
 using Abp.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Shesha.Extensions;
 using Shesha.Utilities;
 
 namespace Shesha.Permissions
@@ -34,7 +35,7 @@ namespace Shesha.Permissions
 
         public List<string> GetObjectTypes()
         {
-            return new List<string> () {PermissionedObjectsSheshaTypes.WebApi, PermissionedObjectsSheshaTypes.WebCrudApi };
+            return new List<string>() { PermissionedObjectsSheshaTypes.WebApi, PermissionedObjectsSheshaTypes.WebCrudApi };
         }
 
         private bool IsCrud(Type type)
@@ -50,8 +51,8 @@ namespace Shesha.Permissions
         {
             var shaServiceType = typeof(ApplicationService);
             var controllerType = typeof(ControllerBase);
-            
-            return !(type.IsPublic && !type.IsAbstract 
+
+            return !(type.IsPublic && !type.IsAbstract
                                  && (shaServiceType.IsAssignableFrom(type) || controllerType.IsAssignableFrom(type)))
                    ? null // if not controller
                    : IsCrud(type)
@@ -68,17 +69,23 @@ namespace Shesha.Permissions
                     : null;
         }
 
+        private Type GetModuleOfType(Type type)
+        {
+            return type.Assembly.GetTypes().FirstOrDefault(t => t.IsPublic && !t.IsAbstract && typeof(AbpModule).IsAssignableFrom(t));
+        }
+
+
         public List<PermissionedObjectDto> GetAll(string objectType = null)
         {
-            if (!GetObjectTypes().Contains(objectType)) return new List<PermissionedObjectDto>();
+            if (objectType != null && !GetObjectTypes().Contains(objectType)) return new List<PermissionedObjectDto>();
 
             var api = _apiDescriptionsProvider.ApiDescriptionGroups.Items.SelectMany(g => g.Items.Select(a =>
             {
                 var descriptor = a.ActionDescriptor.AsControllerActionDescriptor();
-                var module = descriptor.ControllerTypeInfo.AsType()
-                    .Assembly.GetTypes().FirstOrDefault(t => t.IsPublic && !t.IsAbstract && typeof(AbpModule).IsAssignableFrom(t));
+                var module = GetModuleOfType(descriptor.ControllerTypeInfo.AsType());
                 return new ApiDescriptor()
                 {
+                    Description = a,
                     Module = module,
                     Service = descriptor.ControllerTypeInfo.AsType(),
                     HttpMethod = a.HttpMethod,
@@ -96,34 +103,45 @@ namespace Shesha.Permissions
 
                 foreach (var service in services)
                 {
-                    var objType = GetObjectType(service);
+                    var isDynamic = service.GetInterfaces().Any(x =>
+                        x.IsGenericType &&
+                        x.GetGenericTypeDefinition() == typeof(IDynamicCrudAppService<,,>));
 
-                    Type entityType = null;
-
-                    if (objType == PermissionedObjectsSheshaTypes.WebCrudApi)
-                    {
-                        var crudServiceType = typeof(AbpAsyncCrudAppService<,,,,,,,>);
-                        var btype = service;
-                        while (btype != null && (!btype.IsGenericType || btype.GetGenericTypeDefinition() != crudServiceType))
-                        {
-                            btype = btype.BaseType;
-                        }
-
-                        entityType = btype?.GetGenericArguments()[0];
-                    }
+                    var objType = isDynamic
+                        ? PermissionedObjectsSheshaTypes.WebCrudApi
+                        : GetObjectType(service);
 
                     if (objectType != null && objType != objectType) continue;
-                    
+
+                    string name = null;
+                    string fullName = null;
+                    string description = null;
+                    Type eModule = null;
+
+                    Type entityType = null;
+                    if (objType == PermissionedObjectsSheshaTypes.WebCrudApi)
+                    {
+                        entityType = service.FindBaseGenericType(typeof(AbpAsyncCrudAppService<,,,,,,,>))?.GetGenericArguments()[0];
+                        if (isDynamic && entityType != null)
+                        {
+                            name = $"{entityType.Name}DynamicCrudAppService";
+                            fullName = $"{entityType.Namespace}.Dynamic{entityType.Name}CrudAppService";
+                            description = $"CRUD API service for {entityType.Name} entity";
+                            eModule = GetModuleOfType(entityType);
+                        }
+                    }
+
+
                     var parent = new PermissionedObjectDto()
                     {
-                        Object = service.FullName, 
-                        Module = module?.FullName ?? "",
-                        Name = GetName(service),
-                        Type = objType, 
-                        Description = GetDescription(service),
+                        Object = fullName ?? service.FullName,
+                        Module = (eModule ?? module)?.FullName ?? "",
+                        Name = name ?? GetName(service),
+                        Type = objType,
+                        Description = description ?? GetDescription(service),
                         Dependency = entityType != null
-                        ? entityType.FullName
-                        : null
+                    ? entityType.FullName
+                    : null
                     };
                     allApiPermissions.Add(parent);
 
@@ -135,16 +153,19 @@ namespace Shesha.Permissions
 
                         var child = new PermissionedObjectDto()
                         {
-                            Object = service.FullName + "@" + methodInfo.Action.Name,
-                            Module = module?.FullName ?? "",
+                            Object = parent.Object + "@" + methodInfo.Action.Name,
+                            Module = parent.Module,
                             Name = GetName(methodInfo.Action),
                             Type = GetMethodType(objType),
-                            Parent = service.FullName, 
+                            Parent = parent.Object,
                             Description = GetDescription(methodInfo.Action),
                             Dependency = entityType != null && CrudMethods.ContainsKey(methodName)
                                 ? entityType.FullName + "@" + CrudMethods.GetValueOrDefault(methodName)
-                                : null
+                                : null,
                         };
+
+                        child.AdditionalParameters.Add("HttpMethod", methodInfo.HttpMethod);
+                        child.AdditionalParameters.Add("Endpoint", methodInfo.Endpoint);
                         //parent.Child.Add(child);
                         allApiPermissions.Add(child);
                     }
@@ -156,6 +177,7 @@ namespace Shesha.Permissions
 
         private class ApiDescriptor
         {
+            public ApiDescription Description { get; set; }
             public Type Module { get; set; }
             public Type Service { get; set; }
             public MethodInfo Action { get; set; }

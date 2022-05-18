@@ -1,8 +1,11 @@
-﻿using Abp.Modules;
+﻿using Abp.Dependency;
+using Abp.Modules;
 using Abp.Reflection.Extensions;
 using Abp.Timing;
 using Abp.Zero;
 using Abp.Zero.Configuration;
+using Castle.MicroKernel.Registration;
+using Shesha.Authorization;
 using Shesha.Authorization.Roles;
 using Shesha.Authorization.Users;
 using Shesha.Localization;
@@ -17,6 +20,10 @@ namespace Shesha
     {
         public override void PreInitialize()
         {
+            IocManager.IocContainer.Register(
+                Component.For<ICustomPermissionChecker>().Forward<ShaPermissionChecker>().ImplementedBy<ShaPermissionChecker>().LifestyleTransient()
+            );
+
             Configuration.Auditing.IsEnabledForAnonymousUsers = true;
 
             // Declare entity types

@@ -39,6 +39,14 @@ namespace Shesha.Services.VersionedFields
                 .FirstOrDefaultAsync(f => f.OwnerId == owner.Id.ToString() && f.OwnerType == config.TypeShortAlias && f.Name == fieldName);
         }
 
+        public VersionedField GetVersionedField<TEntity, TId>(TEntity owner, string fieldName) where TEntity : IEntity<TId>
+        {
+            var config = _entityConfigurationStore.Get(typeof(TEntity));
+
+            return _fieldRepository.GetAll()
+                .FirstOrDefault(f => f.OwnerId == owner.Id.ToString() && f.OwnerType == config.TypeShortAlias && f.Name == fieldName);
+        }
+
         /// <summary>
         /// Creates versioned field is missing
         /// </summary>
@@ -55,11 +63,12 @@ namespace Shesha.Services.VersionedFields
             var wait = TimeSpan.FromSeconds(2);
             var retry = TimeSpan.FromSeconds(1);
 
-            await lockFactory.DoExclusiveAsync(resource, expiry, wait, retry, async () =>
+            // ToDo: AS Review frozen on async locking
+            lockFactory.DoExclusive(resource, expiry, wait, retry, () =>
             {
                 // trying to get the field one more time because it might be created while we were waiting for the lock
-                field = await GetVersionedFieldAsync<TEntity, TId>(owner, fieldName) 
-                        ?? await CreateFieldAsync<TEntity, TId>(owner, fieldName, initAction);
+                field = GetVersionedField<TEntity, TId>(owner, fieldName) 
+                        ?? CreateField<TEntity, TId>(owner, fieldName, initAction);
             });
 
             if (field == null)
@@ -78,6 +87,20 @@ namespace Shesha.Services.VersionedFields
             field.SetOwner(owner);
             await _fieldRepository.InsertAsync(field);
             await _currentUowProvider.Current.SaveChangesAsync();
+
+            return field;
+        }
+
+        public VersionedField CreateField<TEntity, TId>(TEntity owner, string fieldName, Action<VersionedField> initAction = null) where TEntity : IEntity<TId>
+        {
+            var field = new VersionedField
+            {
+                Name = fieldName,
+            };
+            initAction?.Invoke(field);
+            field.SetOwner(owner);
+            _fieldRepository.Insert(field);
+            _currentUowProvider.Current.SaveChanges();
 
             return field;
         }

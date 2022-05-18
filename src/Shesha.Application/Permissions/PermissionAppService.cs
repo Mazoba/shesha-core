@@ -8,6 +8,9 @@ using Abp.Domain.Repositories;
 using Abp.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NHibernate.Linq;
+using NUglify.Helpers;
+using Shesha.Authorization;
 using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
 using Shesha.Roles.Dto;
@@ -20,6 +23,10 @@ namespace Shesha.Permissions
         //private readonly IPermissionDefinitionContext _permissionDefinitionContext;
         private readonly IRepository<PermissionDefinition, Guid> _permissionDefinitionRepository;
         private readonly ILocalizationContext _localizationContext;
+        private IPermissionDefinitionContext _defenitionContext => PermissionManager as IPermissionDefinitionContext;
+        private IShaPermissionManager _shaPermissionManager => PermissionManager as IShaPermissionManager;
+
+        private const string emptyId = "_";
 
         public PermissionAppService(
             //IPermissionDefinitionContext permissionDefinitionContext,
@@ -32,38 +39,89 @@ namespace Shesha.Permissions
             _localizationContext = localizationContext;
         }
 
-        public Task<ListResultDto<PermissionDto>> GetAllPermissions()
+        public async Task<PermissionDto> GetAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                return null;
+            return ObjectMapper.Map<PermissionDto>(PermissionManager.GetPermission(id));
+        }
+
+        public async Task<List<PermissionDto>> GetAllAsync()
         {
             var permissions = PermissionManager.GetAllPermissions();
 
-            return Task.FromResult(new ListResultDto<PermissionDto>(
-                ObjectMapper.Map<List<PermissionDto>>(permissions).OrderBy(p => p.DisplayName).ToList()
-            ));
+            return ObjectMapper.Map<List<PermissionDto>>(permissions)
+                .Select(x => 
+                {
+                    x.Child = null;
+                    return x;
+                }).OrderBy(p => p.DisplayName).ToList();
         }
 
-        public async Task<PermissionDto> CreatePermission(PermissionDto permission)
+        public async Task<List<PermissionDto>> GetAllTreeAsync()
         {
+            var permissions = PermissionManager.GetAllPermissions();
 
-            // ToDo: AS - Move to the Permission manager or extension
-            var dbp = new PermissionDefinition()
+            var dtoList = ObjectMapper.Map<List<PermissionDto>>(permissions).OrderBy(p => p.DisplayName).ToList();
+
+            var tree =new List<PermissionDto>();
+            tree.AddRange(dtoList.Where(x => string.IsNullOrEmpty(x.ParentName)));
+            tree.ForEach(x => dtoList.Remove(x));
+
+            foreach (var permissionDto in tree.ToList())
             {
-                Name = permission.Name,
-                DisplayName = permission.DisplayName,
-                Description = permission.Description
-            };
-            _permissionDefinitionRepository.InsertOrUpdate(dbp);
+                AddChild(permissionDto, dtoList);
+            }
 
-            return ObjectMapper.Map<PermissionDto>(
-                (PermissionManager as IPermissionDefinitionContext)?.CreatePermission(
-                        permission.Name, 
-                        L(permission.DisplayName),
-                        L(permission.Description))
-                );
+            tree.AddRange(dtoList);
+
+            return tree;
+        }
+
+        private void AddChild(PermissionDto perm, List<PermissionDto> list)
+        {
+            var child = list.Where(x => x.ParentName == perm.Name).ToList();
+            perm.Child = child;
+            child.ForEach(x =>
+            {
+                x.Parent = null;
+                list.Remove(x);
+                AddChild(x, list);
+            });
+        }
+
+        [HttpPost]
+        public async Task<PermissionDto> CreateAsync(PermissionDto permission)
+        {
+            return ObjectMapper.Map<PermissionDto>(await _shaPermissionManager.CreatePermissionAsync(permission));
+        }
+
+        [HttpPut] // ToDo: temporary - Allow HttpPost because permission can be created from edit mode
+        public async Task<PermissionDto> UpdateAsync(PermissionDto permission)
+        {
+            if (permission?.Id == emptyId)
+            {
+                permission.Id = null;
+                return await CreateAsync(permission);
+            }
+
+            return ObjectMapper.Map<PermissionDto>(await _shaPermissionManager.EditPermissionAsync(permission));
+        }
+
+        [HttpPut] 
+        public async Task UpdateParentAsync(PermissionDto permission)
+        {
+            await _shaPermissionManager.UpdateParentAsync(permission.Name, permission.ParentName);
+        }
+
+        [HttpDelete]
+        public async Task DeleteAsync(string name)
+        {
+            await _shaPermissionManager.DeletePermissionAsync(name);
         }
 
         [HttpGet]
-        [AbpAuthorize()]
-        public async Task<List<AutocompleteItemDto>> Autocomplete(string term)
+        public async Task<List<AutocompleteItemDto>> AutocompleteAsync(string term)
         {
             term = (term ?? "").ToLower();
             

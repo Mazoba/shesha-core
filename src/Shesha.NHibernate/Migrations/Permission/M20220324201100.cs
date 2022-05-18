@@ -14,7 +14,7 @@ namespace Shesha.Migrations.Framework
             // Shesha.Domain.PermissionDefinition
             Create.Table("Frwk_PermissionDefinitions")
                 .WithIdAsGuid()
-                .WithFullPowerChildEntityColumns()
+                .WithFullPowerEntityColumns()
                 .WithColumn("Parent").AsString(512).Nullable()
                 .WithColumn("Name").AsString(512).NotNullable()
                 .WithColumn("DisplayName").AsString(512).NotNullable()

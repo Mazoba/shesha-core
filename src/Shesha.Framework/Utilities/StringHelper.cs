@@ -34,7 +34,7 @@ namespace Shesha.Utilities
         /// <returns></returns>
         public static ILocalizableString L(this string name, string localizationSourceName = SheshaConsts.LocalizationSourceName)
         {
-            return new LocalizableString(name, localizationSourceName);
+            return new LocalizableString(name ?? "", localizationSourceName);
         }
 
         /// <summary>

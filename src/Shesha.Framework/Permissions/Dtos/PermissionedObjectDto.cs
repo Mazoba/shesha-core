@@ -18,6 +18,7 @@ namespace Shesha.Permissions
             Child = new List<PermissionedObjectDto>();
             Access = (int)RefListPermissionedAccess.Inherited;
             Hidden = false;
+            AdditionalParameters = new Dictionary<string, string>();
         }
 
         public string Object { get; set; }
@@ -47,6 +48,8 @@ namespace Shesha.Permissions
         public List<PermissionedObjectDto> Child { get; set; }
 
         public bool Hidden { get; set; }
+
+        public Dictionary<string, string> AdditionalParameters { get; set; }
 
         public override string ToString()
         {

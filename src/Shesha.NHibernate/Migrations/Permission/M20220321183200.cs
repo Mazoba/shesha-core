@@ -14,7 +14,7 @@ namespace Shesha.Migrations.Framework
             // Shesha.Domain.PermissionedObjects
             Create.Table("Frwk_PermissionedObjects")
                 .WithIdAsGuid()
-                .WithFullPowerChildEntityColumns()
+                .WithFullPowerEntityColumns()
                 .WithColumn("Object").AsString(1000).NotNullable()
                 .WithColumn("Category").AsString(255).NotNullable()
                 .WithColumn("Description").AsString(1000).Nullable()

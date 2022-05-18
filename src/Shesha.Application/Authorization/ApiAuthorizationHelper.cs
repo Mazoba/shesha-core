@@ -11,8 +11,10 @@ using Abp.Dependency;
 using Abp.Localization;
 using Abp.Runtime.Caching;
 using ConcurrentCollections;
+using Microsoft.AspNetCore.Mvc;
 using Shesha.Authorization.Dtos;
 using Shesha.Domain.Enums;
+using Shesha.Extensions;
 using Shesha.Permission;
 using Shesha.Permissions;
 using Shesha.Utilities;
@@ -43,8 +45,9 @@ namespace Shesha.Authorization
                 return;
             }
 
-            var shaServiceType = typeof(SheshaAppServiceBase);
-            if (type == null || !shaServiceType.IsAssignableFrom(type))
+            var shaServiceType = typeof(ApplicationService);
+            var controllerType = typeof(ControllerBase);
+            if (type == null || !shaServiceType.IsAssignableFrom(type) && !controllerType.IsAssignableFrom(type))
                 return;
 
             /*if (!AbpSession.UserId.HasValue)
@@ -54,7 +57,19 @@ namespace Shesha.Authorization
                 );
             }*/
 
-            var permission = await _permissionedObjectManager.GetAsync($"{type.FullName}@{methodInfo.Name}");
+            var isDynamic = type.GetInterfaces().Any(x =>
+                x.IsGenericType &&
+                x.GetGenericTypeDefinition() == typeof(IDynamicCrudAppService<,,>));
+
+            // ToDo: move to a provider/manager
+            var typeName = type.FullName;
+            if (isDynamic)
+            {
+                var entityType = type.FindBaseGenericType(typeof(AbpAsyncCrudAppService<,,,,,,,>))?.GetGenericArguments()[0];
+                typeName = $"{entityType?.Namespace}.Dynamic{entityType?.Name}CrudAppService";
+            }
+
+            var permission = await _permissionedObjectManager.GetAsync($"{typeName}@{methodInfo.Name}");
 
             if (permission != null && (
                 permission.ActualAccess == (int)RefListPermissionedAccess.Disable

@@ -18,7 +18,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Abp.Domain.Uow;
 using Abp.ObjectMapping;
+using Shesha.Extensions;
 using Shesha.Permissions;
+using Shesha.Services.VersionedFields;
 
 namespace Shesha.Permission
 {
@@ -26,15 +28,21 @@ namespace Shesha.Permission
     {
         private readonly IRepository<PermissionedObject, Guid> _permissionedObjectRepository;
         private readonly IObjectMapper _objectMapper;
+        private readonly IVersionedFieldManager _versionedFieldManager;
 
-        public PermissionedObjectsBootstrapper(IRepository<PermissionedObject, Guid> permissionedObjectRepository, IObjectMapper objectMapper)
+        public PermissionedObjectsBootstrapper(
+            IRepository<PermissionedObject, Guid> permissionedObjectRepository,
+            IObjectMapper objectMapper,
+            IVersionedFieldManager versionedFieldManager)
         {
             _permissionedObjectRepository = permissionedObjectRepository;
             _objectMapper = objectMapper;
+            _versionedFieldManager = versionedFieldManager;
         }
 
         public async Task Process()
         {
+            return;
             var providers = IocManager.Instance.ResolveAll<IPermissionedObjectProvider>();
             foreach (var permissionedObjectProvider in providers)
             {
@@ -53,7 +61,11 @@ namespace Shesha.Permission
                         .ToList();
                     foreach (var item in toAdd)
                     {
-                        await _permissionedObjectRepository.InsertAsync(_objectMapper.Map<PermissionedObject>(item));
+                        var obj = await _permissionedObjectRepository.InsertAsync(_objectMapper.Map<PermissionedObject>(item));
+                        foreach (var parameter in item.AdditionalParameters)
+                        {
+                            await _versionedFieldManager.SetVersionedFieldValueAsync<PermissionedObject, Guid>(obj, parameter.Key, parameter.Value, false);
+                        }
                     }
 
                     // ToDo: think how to update Protected objects in th bootstrapper
@@ -67,6 +79,10 @@ namespace Shesha.Permission
                         dbItem.Parent = item.Parent;
                         dbItem.Name = item.Name;
                         await _permissionedObjectRepository.UpdateAsync(dbItem);
+                        foreach (var parameter in item.AdditionalParameters)
+                        {
+                            await _versionedFieldManager.SetVersionedFieldValueAsync<PermissionedObject, Guid>(dbItem, parameter.Key, parameter.Value, false);
+                        }
                     }
 
                     // Inactivate deleted items
