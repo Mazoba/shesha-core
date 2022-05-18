@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Abp.AspNetCore;
 using Abp.AspNetCore.Configuration;
 using Abp.Dependency;
 using Abp.Localization.Dictionaries.Xml;
@@ -13,13 +14,11 @@ namespace Shesha
     /// <summary>
     /// This module extends module zero to add Firebase notifications.
     /// </summary>
-    [DependsOn(typeof(AbpZeroCommonModule))]
+    [DependsOn(typeof(AbpZeroCommonModule), typeof(AbpAspNetCoreModule))]
     public class SheshaFirebaseModule : AbpModule
     {
         public override void PreInitialize()
         {
-            //IocManager.Register<ISheshaFirebaseModuleConfig, SheshaFirebaseModuleConfig>();
-
             Configuration.Localization.Sources.Extensions.Add(
                 new LocalizationSourceExtensionInfo(
                     AbpZeroConsts.LocalizationSourceName,
@@ -30,6 +29,11 @@ namespace Shesha
             );
 
             Configuration.Settings.Providers.Add<FirebaseSettingProvider>();
+
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                this.GetType().Assembly,
+                moduleName: "SheshaFirebase",
+                useConventionalHttpVerbs: true);
         }
 
         public override void Initialize()
@@ -37,22 +41,6 @@ namespace Shesha
             IocManager.Register<FirebaseAppService, FirebaseAppService>(DependencyLifeStyle.Transient);
 
             IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());
-        }
-
-        public override void PostInitialize()
-        {
-            try
-            {
-                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                    this.GetType().Assembly,
-                    moduleName: "SheshaFirebase",
-                    useConventionalHttpVerbs: true);
-            }
-            catch
-            {
-                // note: we mute exceptions for unit tests only
-                // todo: refactor and remove this try-catch block
-            }
         }
     }
 }

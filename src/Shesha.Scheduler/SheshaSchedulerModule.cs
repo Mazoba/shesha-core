@@ -1,14 +1,17 @@
 ﻿using System.Reflection;
+using Abp.AspNetCore;
 using Abp.AspNetCore.Configuration;
 using Abp.AutoMapper;
 using Abp.Modules;
+using Abp.Reflection.Extensions;
 using Shesha.NHibernate;
 
 namespace Shesha.Scheduler
 {
-    [DependsOn(typeof(SheshaNHibernateModule))]
+    [DependsOn(typeof(SheshaNHibernateModule), typeof(AbpAspNetCoreModule))]
     public class SheshaSchedulerModule : AbpModule
     {
+        /// inheritedDoc
         public override void Initialize()
         {
             var thisAssembly = Assembly.GetExecutingAssembly();
@@ -20,25 +23,13 @@ namespace Shesha.Scheduler
             );
         }
 
-        public override void PostInitialize()
+        /// inheritedDoc
+        public override void PreInitialize()
         {
-            try
-            {
-                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                    typeof(SheshaSchedulerModule).Assembly,
-                    moduleName: "Scheduler",
-                    useConventionalHttpVerbs: true);
-
-                /*
-                var workManager = IocManager.Resolve<IBackgroundWorkerManager>();
-                workManager.Add(IocManager.Resolve<TestWorker>());
-                */
-            }
-            catch
-            {
-                // note: we mute exceptions for unit tests only
-                // todo: refactor and remove this try-catch block
-            }
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                typeof(SheshaSchedulerModule).GetAssembly(),
+                moduleName: "Scheduler",
+                useConventionalHttpVerbs: true);
         }
     }
 }

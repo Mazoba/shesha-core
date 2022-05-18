@@ -5,13 +5,14 @@ using Abp.Modules;
 using Abp.Zero;
 using Abp.AspNetCore.Configuration;
 using Shesha.Ldap.Configuration;
+using Abp.AspNetCore;
 
 namespace Shesha.Ldap
 {
     /// <summary>
     /// This module extends module zero to add LDAP authentication.
     /// </summary>
-    [DependsOn(typeof(AbpZeroCommonModule))]
+    [DependsOn(typeof(AbpZeroCommonModule), typeof(AbpAspNetCoreModule))]
     public class SheshaLdapModule : AbpModule
     {
         public override void PreInitialize()
@@ -28,27 +29,16 @@ namespace Shesha.Ldap
             );
 
             Configuration.Settings.Providers.Add<LdapSettingProvider>();
+
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                this.GetType().Assembly,
+                moduleName: "SheshaLdap",
+                useConventionalHttpVerbs: true);
         }
 
         public override void Initialize()
         {
             IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());
-        }
-
-        public override void PostInitialize()
-        {
-            try
-            {
-                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                    this.GetType().Assembly,
-                    moduleName: "SheshaLdap",
-                    useConventionalHttpVerbs: true);
-            }
-            catch
-            {
-                // note: we mute exceptions for unit tests only
-                // todo: refactor and remove this try-catch block
-            }
         }
     }
 }
