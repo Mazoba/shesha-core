@@ -206,7 +206,7 @@ namespace Shesha.Permissions
             // Check hidden, dependency and inherited
             if (obj != null)
             {
-                obj.ActualPermissions = obj.Permissions;
+                obj.ActualPermissions = obj.Access == (int)RefListPermissionedAccess.RequiresPermissions ? obj.Permissions : new ConcurrentHashSet<string>();
                 obj.ActualAccess = obj.Access;
 
                 // skip hidden
