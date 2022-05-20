@@ -91,7 +91,7 @@ namespace Shesha.Authorization
                 return;
 
             // ToDo: add RequireAll flag
-            PermissionChecker.Authorize(false , permission.ActualPermissions.ToArray());
+            await PermissionChecker.AuthorizeAsync(false , permission.ActualPermissions.ToArray());
         }
     }
 }
