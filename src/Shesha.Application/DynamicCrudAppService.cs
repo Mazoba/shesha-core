@@ -11,7 +11,7 @@ namespace Shesha
 {
     [DynamicControllerNameConvention]
     public class DynamicCrudAppService<TEntity, TDynamicDto, TPrimaryKey> : SheshaCrudServiceBase<TEntity,
-        TDynamicDto, TPrimaryKey, PagedAndSortedResultRequestDto, TDynamicDto, TDynamicDto>, ITransientDependency
+        TDynamicDto, TPrimaryKey, PagedAndSortedResultRequestDto, TDynamicDto, TDynamicDto>, IDynamicCrudAppService<TEntity, TDynamicDto, TPrimaryKey>, ITransientDependency
         where TEntity : class, IEntity<TPrimaryKey>
         where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
     {

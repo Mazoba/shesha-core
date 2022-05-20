@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Abp.Application.Services.Dto;
 using Abp.Authorization;
 using Abp.Domain.Repositories;
+using Microsoft.AspNetCore.Mvc;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 
@@ -91,6 +92,8 @@ namespace Shesha.Permissions
 
         public override async Task<PermissionedObjectDto> GetAsync(EntityDto<Guid> input)
         {
+            if (input.Id == Guid.Empty)
+                return null;
             var obj = await base.GetAsync(input);
             return await _permissionedObjectManager.GetAsync(obj.Object);
         }

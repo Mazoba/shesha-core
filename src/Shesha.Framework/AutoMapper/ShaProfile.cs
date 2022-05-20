@@ -2,6 +2,7 @@
 using Abp.Application.Services.Dto;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
+using Abp.Localization;
 using AutoMapper;
 using Shesha.AutoMapper.Dto;
 using Shesha.Services;
@@ -64,6 +65,12 @@ namespace Shesha.AutoMapper
 
             var repo = StaticContext.IocManager.Resolve<IRepository<T, Guid>>();
             return repo.Get(id.Value);
+        }
+
+        protected static string Localize(ILocalizableString str)
+        {
+            var lManager = StaticContext.IocManager.Resolve<ILocalizationManager>();
+            return str.Localize(lManager);
         }
     }
 }

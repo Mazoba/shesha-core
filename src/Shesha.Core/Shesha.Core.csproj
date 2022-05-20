@@ -33,7 +33,6 @@
     <Compile Remove="Domain\SheshaEntityPropertyChange_.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="Authorization\**" />
     <Compile Remove="Editions\**" />
     <Compile Remove="Features\**" />
     <Compile Remove="Identity\**" />
@@ -41,7 +40,6 @@
     <Compile Remove="MultiTenancy\**" />
     <Compile Remove="Reflection\**" />
     <Compile Remove="Utilities\**" />
-    <EmbeddedResource Remove="Authorization\**" />
     <EmbeddedResource Remove="Editions\**" />
     <EmbeddedResource Remove="Features\**" />
     <EmbeddedResource Remove="Identity\**" />
@@ -49,7 +47,6 @@
     <EmbeddedResource Remove="MultiTenancy\**" />
     <EmbeddedResource Remove="Reflection\**" />
     <EmbeddedResource Remove="Utilities\**" />
-    <None Remove="Authorization\**" />
     <None Remove="Editions\**" />
     <None Remove="Features\**" />
     <None Remove="Identity\**" />

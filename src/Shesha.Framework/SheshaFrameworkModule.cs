@@ -25,7 +25,7 @@ namespace Shesha
         public override void PreInitialize()
         {
             Configuration.Settings.Providers.Add<SheshaSettingProvider>();
-            IocManager.Register<IPermissionManager, IPermissionDefinitionContext, ShaPermissionManager>();
+            IocManager.Register<IPermissionManager, IShaPermissionManager, IPermissionDefinitionContext, ShaPermissionManager>();
         }
 
         public override void Initialize()
