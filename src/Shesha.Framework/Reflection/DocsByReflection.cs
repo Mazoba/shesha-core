@@ -154,7 +154,7 @@ namespace Shesha.Reflection
             catch (Exception exception)
             {
                 failCache[assembly] = exception;
-                throw exception;
+                throw;
             }
         }
 

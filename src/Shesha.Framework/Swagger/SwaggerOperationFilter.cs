@@ -114,7 +114,7 @@ namespace Shesha.Swagger
         /// <param name="memberInfo">MemberInfo</param>
         /// <param name="defaultValue">Default value (null as default)</param>
         /// <param name="inherit">Inherit attribute from base classes</param>
-        public static TAttribute GetSingleAttributeOfMemberOrDeclaringTypeOrDefault<TAttribute>(MemberInfo memberInfo, TAttribute defaultValue = default(TAttribute), bool inherit = true)
+        public static TAttribute GetSingleAttributeOfMemberOrDeclaringTypeOrDefault<TAttribute>(MemberInfo memberInfo, TAttribute defaultValue = default, bool inherit = true)
             where TAttribute : class
         {
             return memberInfo.GetCustomAttributes(true).OfType<TAttribute>().FirstOrDefault()

@@ -15,9 +15,12 @@ using Shesha.Services;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
+using Shesha.Utilities;
 
 namespace Shesha.Controllers
 {
@@ -130,6 +133,29 @@ namespace Shesha.Controllers
                 .ToList();
             
             return result;
+        }
+
+        [HttpGet]
+        [DontWrapResult]
+        public long CurrentRamUsage()
+        {
+            var process = Process.GetCurrentProcess();
+            process.Refresh();
+            return process.WorkingSet64;
+        }
+
+        [HttpGet]
+        [DontWrapResult]
+        public FileContentResult DynamicAssemblies()
+        {
+            var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            var assemblies = loadedAssemblies.Where(a => a.IsDynamic).OrderBy(a => a.FullName).ToList();
+
+            var assembliesText = assemblies.Select(a => $"{a.FullName};{a.IsDynamic}").Delimited("\r\n");
+            var bytes = Encoding.UTF8.GetBytes(assembliesText);
+
+            return new FileContentResult(bytes, "text/csv");
         }
     }
 }

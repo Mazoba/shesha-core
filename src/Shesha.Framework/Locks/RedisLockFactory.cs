@@ -77,6 +77,13 @@ namespace Shesha.Locks
         /// </summary>
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            // Cleanup
             _redLockFactory?.Dispose();
         }
     }

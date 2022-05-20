@@ -31,7 +31,7 @@ namespace Shesha.DynamicEntities
         /// </summary>
         /// <param name="type">Type of the dynamic DTO, <see cref="IDynamicDto{TEntity, TId}"/></param>
         /// <returns></returns>
-        public static Type GetDynamicDtoEntityType(Type type)
+        public static Type GetDynamicDtoEntityType(this Type type)
         {
             if (!type.IsDynamicDto())
                 return null;

@@ -28,7 +28,7 @@ namespace Shesha.DynamicEntities.Swagger
             // build list of properties for case-insensitive search
             var propNames = schema.Properties.Select(p => p.Key.ToLower()).ToList();
 
-            var dtoSchema = context.SchemaGenerator.GenerateSchema(dtoType, context.SchemaRepository);
+            context.SchemaGenerator.GenerateSchema(dtoType, context.SchemaRepository);
 
             var allProperties = dtoType.GetProperties();
             foreach (var property in allProperties) 

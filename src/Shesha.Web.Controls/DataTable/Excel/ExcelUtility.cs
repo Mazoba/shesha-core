@@ -143,118 +143,117 @@ namespace Shesha.Web.DataTable.Excel
         {
             var xmlStream = ReportingHelper.GetResourceStream("Shesha.Web.DataTable.Excel.template.xlsx", typeof(ExcelUtility).Assembly);
 
-            var document = SpreadsheetDocument.Open(xmlStream, true);
-            var workbookPart = document.WorkbookPart;
-            var worksheetPart = workbookPart.WorksheetParts.First();
-            var originalSheetId = workbookPart.GetIdOfPart(worksheetPart);
-
-            var replacementPart = workbookPart.AddNewPart<WorksheetPart>();
-            var replacementPartId = workbookPart.GetIdOfPart(replacementPart);
-
-            // Configure the spreadsheet
-            SetSheetName(sheetName, document);
-            SetStyleSheet(document);
-
-            // Fit to page
-            var sp = new SheetProperties(new PageSetupProperties());
-
-            var ws = worksheetPart.Worksheet;
-            ws.SheetProperties = sp;
-
-            // Set the FitToPage property to true
-            ws.SheetProperties.PageSetupProperties.FitToPage = BooleanValue.FromBoolean(true);
-
-            var pgOr = new PageSetup
+            using (var document = SpreadsheetDocument.Open(xmlStream, true))
             {
-                // Page size A4 landscape
-                PaperSize = 9,
-                Orientation = OrientationValues.Landscape,
-                // Scale to fit to page width
-                FitToWidth = 1,
-                FitToHeight = 0
-            };
-            ws.AppendChild(pgOr);
+                var workbookPart = document.WorkbookPart;
+                var worksheetPart = workbookPart.WorksheetParts.First();
+                var originalSheetId = workbookPart.GetIdOfPart(worksheetPart);
 
-            var maxWidth = 0;
+                var replacementPart = workbookPart.AddNewPart<WorksheetPart>();
+                var replacementPartId = workbookPart.GetIdOfPart(replacementPart);
 
-            if (columnWidths != null)
-            {
-                var idx = 1;
-                var columns =
-                    columnWidths
-                    .Select(
-                        w => new Column
-                        {
-                            CustomWidth = true,
-                            Min = Convert.ToUInt32(idx),
-                            Max = Convert.ToUInt32(idx++),
-                            Width = w,
-                            BestFit = false
-                        })
-                    .ToList();
-                var cols = new DocumentFormat.OpenXml.Spreadsheet.Columns(columns);
-                worksheetPart.Worksheet.InsertBefore(cols, worksheetPart.Worksheet.GetFirstChild<SheetData>());
-            }
-            else
-            {
-                maxWidth = headers.Select(h => h.Length).Max();
-                AddCellWidthStyles(Convert.ToUInt32(1), Convert.ToUInt32(headers.Count), maxWidth, document, worksheetPart);
-            }
+                // Configure the spreadsheet
+                SetSheetName(sheetName, document);
+                SetStyleSheet(document);
 
-            worksheetPart.Worksheet.Save();
-            document.WorkbookPart.Workbook.Save();
+                // Fit to page
+                var sp = new SheetProperties(new PageSetupProperties());
 
-            OpenXmlReader xmlReader = OpenXmlReader.Create(worksheetPart);
-            OpenXmlWriter xmlWriter = OpenXmlWriter.Create(replacementPart);
+                var ws = worksheetPart.Worksheet;
+                ws.SheetProperties = sp;
 
-            while (xmlReader.Read())
-            {
-                if (xmlReader.ElementType == typeof(SheetData))
+                // Set the FitToPage property to true
+                ws.SheetProperties.PageSetupProperties.FitToPage = BooleanValue.FromBoolean(true);
+
+                var pgOr = new PageSetup
                 {
-                    if (xmlReader.IsEndElement)
-                        continue;
-                    xmlWriter.WriteStartElement(new SheetData());
+                    // Page size A4 landscape
+                    PaperSize = 9,
+                    Orientation = OrientationValues.Landscape,
+                    // Scale to fit to page width
+                    FitToWidth = 1,
+                    FitToHeight = 0
+                };
+                ws.AppendChild(pgOr);
 
-                    var headerCell = new Cell(new CellValue());
-                    headerCell.DataType = new EnumValue<CellValues>(CellValues.String);
+                var maxWidth = 0;
 
-                    // write headers
-                    xmlWriter.WriteStartElement(new Row());
-                    SetHeaderStyle(document, headerCell);
-                    foreach (var header in headers)
-                    {
-                        headerCell.CellValue.Text = header;
-                        xmlWriter.WriteElement(headerCell);
-                    }
-                    xmlWriter.WriteEndElement();
-
-                    writeRows.Invoke(xmlWriter);
-
-                    xmlWriter.WriteEndElement();
+                if (columnWidths != null)
+                {
+                    var idx = 1;
+                    var columns =
+                        columnWidths
+                        .Select(
+                            w => new Column
+                            {
+                                CustomWidth = true,
+                                Min = Convert.ToUInt32(idx),
+                                Max = Convert.ToUInt32(idx++),
+                                Width = w,
+                                BestFit = false
+                            })
+                        .ToList();
+                    var cols = new DocumentFormat.OpenXml.Spreadsheet.Columns(columns);
+                    worksheetPart.Worksheet.InsertBefore(cols, worksheetPart.Worksheet.GetFirstChild<SheetData>());
                 }
                 else
                 {
-                    if (xmlReader.IsStartElement)
+                    maxWidth = headers.Select(h => h.Length).Max();
+                    AddCellWidthStyles(Convert.ToUInt32(1), Convert.ToUInt32(headers.Count), maxWidth, document, worksheetPart);
+                }
+
+                worksheetPart.Worksheet.Save();
+                document.WorkbookPart.Workbook.Save();
+
+                using (var xmlReader = OpenXmlReader.Create(worksheetPart))
+                {
+                    using (var xmlWriter = OpenXmlWriter.Create(replacementPart))
                     {
-                        xmlWriter.WriteStartElement(xmlReader);
-                    }
-                    else if (xmlReader.IsEndElement)
-                    {
-                        xmlWriter.WriteEndElement();
+                        while (xmlReader.Read())
+                        {
+                            if (xmlReader.ElementType == typeof(SheetData))
+                            {
+                                if (xmlReader.IsEndElement)
+                                    continue;
+                                xmlWriter.WriteStartElement(new SheetData());
+
+                                var headerCell = new Cell(new CellValue());
+                                headerCell.DataType = new EnumValue<CellValues>(CellValues.String);
+
+                                // write headers
+                                xmlWriter.WriteStartElement(new Row());
+                                SetHeaderStyle(document, headerCell);
+                                foreach (var header in headers)
+                                {
+                                    headerCell.CellValue.Text = header;
+                                    xmlWriter.WriteElement(headerCell);
+                                }
+                                xmlWriter.WriteEndElement();
+
+                                writeRows.Invoke(xmlWriter);
+
+                                xmlWriter.WriteEndElement();
+                            }
+                            else
+                            {
+                                if (xmlReader.IsStartElement)
+                                {
+                                    xmlWriter.WriteStartElement(xmlReader);
+                                }
+                                else if (xmlReader.IsEndElement)
+                                {
+                                    xmlWriter.WriteEndElement();
+                                }
+                            }
+                        }
                     }
                 }
+
+                var sheet = workbookPart.Workbook.Descendants<Sheet>().First(s => s.Id.Value.Equals(originalSheetId));
+
+                sheet.Id.Value = replacementPartId;
+                workbookPart.DeletePart(worksheetPart);
             }
-
-            xmlReader.Close();
-            xmlWriter.Close();
-
-            var sheet = workbookPart.Workbook.Descendants<Sheet>().First(s => s.Id.Value.Equals(originalSheetId));
-
-            sheet.Id.Value = replacementPartId;
-            workbookPart.DeletePart(worksheetPart);
-
-            document.Close();
-            document.Dispose();
 
             return xmlStream;
         }
