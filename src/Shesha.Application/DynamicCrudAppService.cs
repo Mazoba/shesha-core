@@ -52,7 +52,11 @@ namespace Shesha
 
             await Repository.InsertAsync(entity);
 
+            await UnitOfWorkManager.Current.SaveChangesAsync();
+
             await MapDynamicPropertiesToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
+            
+            await UnitOfWorkManager.Current.SaveChangesAsync();
 
             return await MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(entity);
         }
