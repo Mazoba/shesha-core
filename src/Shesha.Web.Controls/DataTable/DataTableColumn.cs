@@ -1,6 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using Abp.Domain.Entities;
 using Shesha.Configuration.Runtime;
 
 namespace Shesha.Web.DataTable
@@ -27,6 +29,7 @@ namespace Shesha.Web.DataTable
             StripHtml = false;
             AllowShowHide = true;
             IsEditable = true;
+            IsDynamic = false;
         }
 
         /// <summary>
@@ -144,7 +147,7 @@ namespace Shesha.Web.DataTable
         public string DataType =>
             GeneralDataType != null
                 ? DataTableHelper.GeneralDataType2ColumnDataType(GeneralDataType.Value)
-                : null;
+                : DataTableHelper.DataType2ColumnDataType(StandardDataType, DataFormat);
 
         /// <summary>
         /// General data type
@@ -173,7 +176,8 @@ namespace Shesha.Web.DataTable
         /// <param name="entity"></param>
         /// <param name="isExport"></param>
         /// <returns></returns>
-        public abstract object CellContent(object entity, bool isExport);
+        //public abstract object CellContent(object entity, bool isExport);
+        public abstract Task<object> CellContentAsync<TRow, TId>(TRow entity, bool isExport) where TRow : class, IEntity<TId>;
 
         #region to be implemented
 
@@ -207,5 +211,15 @@ namespace Shesha.Web.DataTable
         /// Function, returns true if the user is authorized to view this column
         /// </summary>
         public Func<bool> IsAuthorized { get; set; }
+
+        /// <summary>
+        /// If true, indicates that the column is sortable
+        /// </summary>
+        public bool IsDynamic { get; set; }
+    }
+
+    public abstract class DataTableColumn<TEntity, TId>: DataTableColumn
+    { 
+
     }
 }

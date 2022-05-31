@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using Abp.Domain.Entities;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -11,38 +13,12 @@ using Shesha.Utilities;
 
 namespace Shesha.Web.DataTable.Excel
 {
-    public delegate void WriteRowsDelegate(OpenXmlWriter xmlWriter);
+    public delegate Task WriteRowsDelegate(OpenXmlWriter xmlWriter);
 
     public static class ExcelUtility
     {
         #region Constants
         public const string DefaultSheetName = "Sheet1";
-        #endregion
-
-        #region Public extension methods
-
-        /// <summary>
-        /// Iterate through the list of entities and output the results in an Excel file as a stream
-        /// </summary>
-        public static MemoryStream ReadToExcelStream(this IList list, IList<DataTableColumn> columns)
-        {
-            return ReadToExcelStream(list, columns, DefaultSheetName);
-        }
-
-        /// <summary>
-        /// Iterate through the list of entities and output the results in an Excel file as byte array
-        /// </summary>
-        public static byte[] ReadToExcelBytes(this IList list, IList<DataTableColumn> columns)
-        {
-            return ReadToExcelStream(list, columns).ToArray();
-        }
-        /// <summary>
-        /// Iterate through the list of entities and output the results in an Excel file as byte array
-        /// </summary>
-        public static byte[] ReadToExcelBytes(this IList list, IList<DataTableColumn> columns, string sheetName)
-        {
-            return ReadToExcelStream(list, columns, sheetName).ToArray();
-        }
         #endregion
 
         #region Private methods
@@ -139,7 +115,7 @@ namespace Shesha.Web.DataTable.Excel
 
         #endregion
 
-        private static MemoryStream DataToExcelStream(WriteRowsDelegate writeRows, IList<String> headers, string sheetName, List<int> columnWidths = null)
+        private static async Task<MemoryStream> DataToExcelStreamAsync(WriteRowsDelegate writeRows, IList<String> headers, string sheetName, List<int> columnWidths = null)
         {
             var xmlStream = ReportingHelper.GetResourceStream("Shesha.Web.DataTable.Excel.template.xlsx", typeof(ExcelUtility).Assembly);
 
@@ -230,7 +206,7 @@ namespace Shesha.Web.DataTable.Excel
                                 }
                                 xmlWriter.WriteEndElement();
 
-                                writeRows.Invoke(xmlWriter);
+                                await writeRows.Invoke(xmlWriter);
 
                                 xmlWriter.WriteEndElement();
                             }
@@ -258,15 +234,10 @@ namespace Shesha.Web.DataTable.Excel
             return xmlStream;
         }
 
-        private static MemoryStream ReadToExcelStream(this IList list, IList<DataTableColumn> columns, string sheetName) 
-        {
-            return ReadToExcelStream(list, columns, sheetName, false);
-        }
-
         /// <summary>
         /// Iterate through the list of entities and output the results in an Excel file as a stream
         /// </summary>
-        public static MemoryStream ReadToExcelStream(this IList list, IList<DataTableColumn> columns, string sheetName, bool includeId)
+        public static async Task<MemoryStream> ReadToExcelStreamAsync<TRow, TId>(this IList<TRow> list, IList<DataTableColumn> columns, string sheetName = DefaultSheetName, bool includeId = false) where TRow: class, IEntity<TId>
         {
             var headers = columns
                 .Where(t => t.IsExportable /*&& (t.AuthorizationRules == null || t.AuthorizationRules.IsAuthorized())*/)
@@ -275,7 +246,7 @@ namespace Shesha.Web.DataTable.Excel
             if (includeId)
                 headers.Insert(0, "ID");
 
-            var result = DataToExcelStream(writer =>
+            var result = await DataToExcelStreamAsync(async writer =>
             {
                 var r = new Row();
                 var c = new Cell(new CellValue());
@@ -295,7 +266,7 @@ namespace Shesha.Web.DataTable.Excel
                         if (column.IsExportable
                             /*&& (columns[colNum].AuthorizationRules == null || columns[colNum].AuthorizationRules.IsAuthorized())*/)
                         {
-                            var strValue = column.CellContent(row, true)?.ToString() ?? "";
+                            var strValue = (await column.CellContentAsync<TRow, TId>(row, true))?.ToString() ?? "";
 
                             if (column.StripHtml && !string.IsNullOrWhiteSpace(strValue))
                                 strValue = strValue.StripHtml();

@@ -16,6 +16,7 @@ using Shesha.NHibernate.UoW;
 using Xunit;
 using Shesha.Configuration.Runtime;
 using Abp.Runtime.Caching;
+using Shesha.Services;
 
 namespace Shesha.Tests.DynamicEntities
 {
@@ -149,7 +150,10 @@ namespace Shesha.Tests.DynamicEntities
                     var personRepo = Resolve<IRepository<Person, Guid>>();
                     var dynamicPropertyManager = new DynamicPropertyManager(
                         Resolve<IRepository<EntityProperty, Guid>>(),
-                        Resolve<IRepository<EntityPropertyValue, Guid>>())
+                        Resolve<IRepository<EntityPropertyValue, Guid>>(),
+                        Resolve<IEntityConfigurationStore>(),
+                        Resolve<IDynamicRepository>()
+                        )
                     { DtoTypeBuilder = builder, SerializationManager = serializationManager };
 
                     // Create temporary entity

@@ -57,5 +57,15 @@ namespace Shesha.DynamicEntities
             where TEntity : class, IEntity<TId>
             where TDynamicDto : class, IDynamicDto<TEntity, TId>;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <typeparam name="TId"></typeparam>
+        /// <param name="entity"></param>
+        /// <param name="propertyName"></param>
+        /// <returns></returns>
+        Task<object> GetEntityPropertyAsync<TEntity, TId>(TEntity entity, string propertyName)
+            where TEntity : class, IEntity<TId>;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Shesha.Web.DataTable.Columns
 {
@@ -26,7 +27,7 @@ namespace Shesha.Web.DataTable.Columns
         protected Func<T, string> ContentFunc;
 
         /// inheritedDoc
-        public override object CellContent(object entity, bool isExport)
+        public override async Task<object> CellContentAsync<TRow, TId>(TRow entity, bool isExport)
         {
             return ContentFunc?.Invoke(entity as T);
         }
