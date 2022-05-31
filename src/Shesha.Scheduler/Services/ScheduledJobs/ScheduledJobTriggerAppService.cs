@@ -95,7 +95,7 @@ namespace Shesha.Scheduler.Services.ScheduledJobs
         }
 
         /// inheritedDoc
-        [HttpPost]
+        [HttpDelete]
         public override async Task DeleteAsync(EntityDto<Guid> input)
         {
             await base.DeleteAsync(input);
