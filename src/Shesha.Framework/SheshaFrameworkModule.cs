@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Abp.Authorization;
 using Abp.AutoMapper;
 using Abp.Dependency;
 using Abp.Modules;
@@ -6,7 +7,9 @@ using Castle.MicroKernel.Registration;
 using Microsoft.Extensions.Configuration;
 using Shesha.Authorization;
 using Shesha.Configuration;
+using Shesha.Extensions;
 using Shesha.Locks;
+using Shesha.Permissions;
 using Shesha.Services;
 using Shesha.Services.StoredFiles;
 
@@ -22,6 +25,7 @@ namespace Shesha
         public override void PreInitialize()
         {
             Configuration.Settings.Providers.Add<SheshaSettingProvider>();
+            IocManager.Register<IPermissionManager, IShaPermissionManager, IPermissionDefinitionContext, ShaPermissionManager>();
         }
 
         public override void Initialize()
@@ -34,7 +38,6 @@ namespace Shesha
             );
 
             IocManager.Register<IShaPermissionChecker, PermissionChecker>(DependencyLifeStyle.Transient);
-            
 
             IocManager.Register<ILockFactory, NamedLockFactory>(DependencyLifeStyle.Singleton);
 
@@ -55,8 +58,12 @@ namespace Shesha
             
             IocManager.RegisterAssemblyByConvention(thisAssembly);
         }
+
         public override void PostInitialize()
         {
+            IocManager.Resolve<ShaPermissionManager>().Initialize();
+
+            var def = IocManager.Resolve<IPermissionDefinitionContext>();
         }
     }
 }

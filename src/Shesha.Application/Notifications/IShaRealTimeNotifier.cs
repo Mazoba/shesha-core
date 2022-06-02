@@ -19,11 +19,6 @@ namespace Shesha.Notifications
         Task SendNotificationsAsync(List<NotificationMessageDto> notificationMessages);
 
         /// <summary>
-        /// Send template-based notifications
-        /// </summary>
-        void SendNotifications(List<NotificationMessageDto> notificationMessages);
-
-        /// <summary>
         /// Re-send <see cref="NotificationMessage"/> with the specified Id
         /// </summary>
         Task ResendMessageAsync(NotificationMessageDto notificationMessage);

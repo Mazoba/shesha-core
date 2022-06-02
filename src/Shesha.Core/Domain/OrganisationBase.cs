@@ -36,6 +36,11 @@ namespace Shesha.Domain
 
         [StringLength(30)]
         public virtual string VatRegistrationNo { get; set; }
+
+        [StringLength(200)]
+        public virtual string ContactEmail { get; set; }
+        [StringLength(50)]
+        public virtual string ContactMobileNo { get; set; }
     }
 
 

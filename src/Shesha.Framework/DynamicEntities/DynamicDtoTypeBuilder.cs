@@ -89,19 +89,6 @@ namespace Shesha.DynamicEntities
             return properties;
         }
 
-        /*
-        /// <summary>
-        /// Returns .Net type that is used to store data for the specified DTO property (according to the <paramref name="dataType"/> and <paramref name="dataFormat"/>)
-        /// </summary>
-        /// <param name="dataType"></param>
-        /// <param name="dataFormat"></param>
-        /// <returns></returns>
-        public async Task<Type> GetDtoPropertyTypeAsync(EntityPropertyDto propertyDto) 
-        {
-            return await GetDtoPropertyTypeAsync(propertyDto.DataType, propertyDto.DataFormat);
-        }
-        */
-
         /// <summary>
         /// Returns .Net type that is used to store data for the specified DTO property (according to the property settings)
         /// </summary>
@@ -234,12 +221,12 @@ namespace Shesha.DynamicEntities
             }
         }
 
-        private static TypeBuilder GetTypeBuilder(Type baseType, string typeName, IEnumerable<Type> interfaces)
+        private TypeBuilder GetTypeBuilder(Type baseType, string typeName, IEnumerable<Type> interfaces)
         {
             var assemblyName = new AssemblyName($"{typeName}Assembly");
             var moduleName = $"{typeName}Module";
-            
-            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+           
+            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(moduleName);
             var tb = moduleBuilder.DefineType(typeName,
                     TypeAttributes.Public |
@@ -327,7 +314,12 @@ namespace Shesha.DynamicEntities
 
         private string GetProxyTypeName(Type type, string suffix) 
         {
-            return $"{type.Name}{suffix}";
+            if (type.IsDynamicDto())
+            {
+                var entityType = type.GetDynamicDtoEntityType();
+                return $"DynamicDto_{entityType.Name}{suffix}";
+            } else
+                return $"{type.Name}{suffix}";
         }
 
         public async Task<Type> BuildDtoFullProxyTypeAsync(Type baseType, DynamicDtoTypeBuildingContext context)

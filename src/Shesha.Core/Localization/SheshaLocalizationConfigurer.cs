@@ -9,6 +9,8 @@ namespace Shesha.Localization
     {
         public static void Configure(ILocalizationConfiguration localizationConfiguration)
         {
+            localizationConfiguration.HumanizeTextIfNotFound = true;
+            localizationConfiguration.WrapGivenTextIfNotFound = false;
             localizationConfiguration.Sources.Add(
                 new DictionaryBasedLocalizationSource(SheshaConsts.LocalizationSourceName,
                     new XmlEmbeddedFileLocalizationDictionaryProvider(

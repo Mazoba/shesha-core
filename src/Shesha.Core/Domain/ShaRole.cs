@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Abp.Auditing;
 using Abp.Domain.Entities;
@@ -12,6 +13,11 @@ namespace Shesha.Domain
     [DisplayManyToManyAuditTrail(typeof(ShaRoleAppointedPerson), "Person", DisplayName = "Member")]
     public class ShaRole: FullPowerEntity
     {
+        public ShaRole()
+        {
+            Permissions = new List<ShaRolePermission>();
+        }
+
         [StringLength(200)]
         public virtual string NameSpace { get; set; }
 
@@ -24,6 +30,8 @@ namespace Shesha.Domain
         public virtual string Description { get; set; }
 
         public virtual int SortIndex { get; set; }
+
+        public virtual IList<ShaRolePermission> Permissions { get; set; }
 
         // note: to be removed! todo: convert tu custom params
         public virtual bool IsRegionSpecific { get; set; }

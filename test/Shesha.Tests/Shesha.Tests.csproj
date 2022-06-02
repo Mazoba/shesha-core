@@ -50,7 +50,7 @@
     <ProjectReference Include="..\..\src\Shesha.Scheduler\Shesha.Scheduler.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Abp.Castle.Log4Net" Version="5.0.0" />
+    <PackageReference Include="Abp.Castle.Log4Net" Version="6.6.2" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.9.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Include="Moq" Version="4.14.1" />
@@ -63,8 +63,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Abp.TestBase" Version="4.21.0" />
-    <PackageReference Include="Castle.Core" Version="4.4.0" />
+    <PackageReference Include="Abp.TestBase" Version="6.6.2" />
+    <PackageReference Include="Castle.Core" Version="4.4.1" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">
@@ -73,5 +73,8 @@
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Email\" />
   </ItemGroup>
 </Project>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Abp;
+using Abp.AspNetCore;
 using Abp.AspNetCore.Configuration;
 using Abp.Authorization.Users;
 using Abp.Configuration.Startup;
@@ -19,6 +20,7 @@ using NHibernate;
 using NHibernate.Cfg;
 using NHibernate.Dialect;
 using NHibernate.Driver;
+using NHibernate.Engine;
 using Shesha.Attributes;
 using Shesha.Bootstrappers;
 using Shesha.Configuration.Startup;
@@ -37,7 +39,7 @@ using Shesha.Services;
 
 namespace Shesha.NHibernate
 {
-    [DependsOn(typeof(AbpKernelModule))]
+    [DependsOn(typeof(AbpKernelModule), typeof(AbpAspNetCoreModule))]
     public class SheshaNHibernateModule : AbpModule
     {
         /* Used it tests to skip dbcontext registration */
@@ -59,6 +61,11 @@ namespace Shesha.NHibernate
             IocManager.Register<IShaNHibernateModuleConfiguration, ShaNHibernateModuleConfiguration>();
             Configuration.ReplaceService<IUnitOfWorkFilterExecuter, NhUnitOfWorkFilterExecuter>(DependencyLifeStyle.Transient);
             IocManager.IocContainer.Register(Component.For<IInterceptor>().ImplementedBy<SheshaNHibernateInterceptor>().LifestyleTransient());
+
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                this.GetType().Assembly,
+                moduleName: "Shesha",
+                useConventionalHttpVerbs: true);
 
             if (!SkipDbContextRegistration)
             {
@@ -120,11 +127,15 @@ namespace Shesha.NHibernate
             #region  from Abp
 
             var cfg = Configuration.Modules.ShaNHibernate().NhConfiguration;
-            
+           
             if (IocManager.IsRegistered<IInterceptor>())
                 cfg.SetInterceptor(IocManager.Resolve<IInterceptor>());
 
             cfg.SessionFactory().GenerateStatistics();
+
+            // ToDo: ABP662, some ABP entities (WebhookEvent, DynamicProperty) contain not virtual properties
+            cfg.Properties.Add("use_proxy_validator", "false");
+
             _sessionFactory = cfg.BuildSessionFactory();
 
             IocManager.IocContainer.Install(new NhRepositoryInstaller(_sessionFactory));
@@ -157,18 +168,6 @@ namespace Shesha.NHibernate
             if (!SkipDbSeed)
             {
                 SeedDatabase();
-            }
-            try
-            {
-                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                    this.GetType().Assembly,
-                    moduleName: "Shesha",
-                    useConventionalHttpVerbs: true);
-            }
-            catch
-            {
-                // note: we mute exceptions for unit tests only
-                // todo: refactor and remove this try-catch block
             }
         }
 

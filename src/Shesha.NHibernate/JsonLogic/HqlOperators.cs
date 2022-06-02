@@ -69,7 +69,7 @@ namespace Shesha.JsonLogic
 
             AddOperator("<=", (p, args, data) =>
             {
-                return ConvertArguments(p, args, data).Delimited(" <= ");
+                return SequenceConditions(ConvertArguments(p, args, data), " <= "); // ConvertArguments(p, args, data).Delimited(" <= ");
             }); 
 
             AddOperator(">", (p, args, data) =>
@@ -347,6 +347,22 @@ namespace Shesha.JsonLogic
                 }
             }));
              */
+        }
+
+        private string SequenceConditions(List<string> arguments, string @operator)
+        {
+            if (arguments.Count() < 2)
+                throw new Exception("Number of arguments should be 2 or more");
+
+            var result = "";
+            for (int i = 0; i < arguments.Count() - 1; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(result))
+                    result += " and ";
+                result += $"({arguments[i]} {@operator} {arguments[i + 1]})";
+            }
+            
+            return result;
         }
 
         private object GetValueByName(object data, string namePath)

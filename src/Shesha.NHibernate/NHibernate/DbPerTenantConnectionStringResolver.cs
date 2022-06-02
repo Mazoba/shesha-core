@@ -1,4 +1,5 @@
-﻿using Abp.Configuration.Startup;
+﻿using System.Threading.Tasks;
+using Abp.Configuration.Startup;
 using Abp.Domain.Uow;
 using Abp.Extensions;
 using Abp.MultiTenancy;
@@ -61,6 +62,11 @@ namespace Shesha.NHibernate
             }
 
             return tenantCacheItem.ConnectionString;
+        }
+
+        public async Task<string> GetNameOrConnectionStringAsync(DbPerTenantConnectionStringResolveArgs args)
+        {
+            return await Task.FromResult(GetNameOrConnectionString(args));
         }
 
         protected virtual int? GetCurrentTenantId()

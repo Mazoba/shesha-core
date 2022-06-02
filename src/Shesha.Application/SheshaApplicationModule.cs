@@ -22,6 +22,7 @@ using Shesha.Sms.Configuration;
 using Shesha.Startup;
 using System.Linq;
 using System.Reflection;
+using Abp.Authorization;
 
 namespace Shesha
 {
@@ -44,14 +45,16 @@ namespace Shesha
             Configuration.Notifications.Notifiers.Add<PushRealTimeNotifier>();
 
             Configuration.Authorization.Providers.Add<SheshaAuthorizationProvider>();
-            
+            Configuration.Authorization.Providers.Add<DbAuthorizationProvider>();
+
             // replace email sender
             Configuration.ReplaceService<ISmtpEmailSenderConfiguration, SmtpEmailSenderSettings>(DependencyLifeStyle.Transient);
 
             Configuration.Settings.Providers.Add<OtpSettingProvider>();
 
-            Configuration.Notifications.Distributers.Clear();
-            Configuration.Notifications.Distributers.Add<ShaNotificationDistributer>();
+            // ToDo: migrate Notification to ABP 6.6.2
+            //Configuration.Notifications.Distributers.Clear();
+            //Configuration.Notifications.Distributers.Add<ShaNotificationDistributer>();
 
             Configuration.ReplaceService<INotificationPublisher, ShaNotificationPublisher>(DependencyLifeStyle.Transient);
 

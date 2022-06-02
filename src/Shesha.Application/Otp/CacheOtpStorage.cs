@@ -25,7 +25,7 @@ namespace Shesha.Otp
 
             await InternalCache.SetAsync(input.OperationId, 
                 input, 
-                absoluteExpireTime: input.ExpiresOn.HasValue
+                slidingExpireTime: input.ExpiresOn.HasValue
                     ? input.ExpiresOn.Value - DateTime.Now
                     : (TimeSpan?)null);
         }

@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using Abp.Localization;
 using HtmlAgilityPack;
 
 namespace Shesha.Utilities
@@ -24,6 +25,18 @@ namespace Shesha.Utilities
     /// </summary>
     public static class StringHelper
     {
+
+        /// <summary>
+        /// Get localized text
+        /// </summary>
+        /// <param name="name">Text to localize</param>
+        /// <param name="localizationSourceName">Localization source name (SheshaConsts.LocalizationSourceName = "Shesha" by default)</param>
+        /// <returns></returns>
+        public static ILocalizableString L(this string name, string localizationSourceName = SheshaConsts.LocalizationSourceName)
+        {
+            return new LocalizableString(name ?? "", localizationSourceName);
+        }
+
         /// <summary>
         /// Remove common diacritics (accents) from a string (eg - Ë to E)
         /// </summary>

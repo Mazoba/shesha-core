@@ -46,6 +46,11 @@ namespace Shesha.NHibernate.Repositories
             return Session.Query<TEntity>();
         }
 
+        public override async Task<IQueryable<TEntity>> GetAllAsync()
+        {
+            return await Task.FromResult(GetAll());
+        }
+
         public override IQueryable<TEntity> GetAllIncluding(params Expression<Func<TEntity, object>>[] propertySelectors)
         {
             if (propertySelectors.IsNullOrEmpty())

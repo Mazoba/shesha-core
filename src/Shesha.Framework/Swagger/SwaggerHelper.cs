@@ -26,8 +26,6 @@ namespace Shesha.Swagger
         /// <param name="options"></param>
         public static void AddDocumentsPerService(this SwaggerGenOptions options)
         {
-            var names = new List<string>();
-
             var types = GetRegisteredControllerTypes();
 
             var assemblyFinder = StaticContext.IocManager.Resolve<IAssemblyFinder>();
@@ -43,7 +41,6 @@ namespace Shesha.Swagger
             foreach (var controller in controllers)
             {
                 var serviceName = MvcHelper.GetControllerName(controller);
-                names.Add(serviceName);
                 options.SwaggerDoc($"service:{serviceName}", new OpenApiInfo() { Title = $"{serviceName} (ControllerBase)", Version = "v1" });
             }
 
@@ -52,7 +49,6 @@ namespace Shesha.Swagger
             foreach (var service in appServices)
             {
                 var serviceName = MvcHelper.GetControllerName(service);
-                names.Add(serviceName);
                 options.SwaggerDoc($"service:{serviceName}", new OpenApiInfo() { Title = $"API {serviceName} (IApplicationService)", Version = "v1" });
             }
             options.DocInclusionPredicate((docName, description) => ApiExplorerGroupPerControllerConvention.GroupInclusionPredicate(docName, description));

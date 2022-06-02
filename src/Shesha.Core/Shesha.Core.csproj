@@ -33,7 +33,6 @@
     <Compile Remove="Domain\SheshaEntityPropertyChange_.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="Authorization\**" />
     <Compile Remove="Editions\**" />
     <Compile Remove="Features\**" />
     <Compile Remove="Identity\**" />
@@ -41,7 +40,6 @@
     <Compile Remove="MultiTenancy\**" />
     <Compile Remove="Reflection\**" />
     <Compile Remove="Utilities\**" />
-    <EmbeddedResource Remove="Authorization\**" />
     <EmbeddedResource Remove="Editions\**" />
     <EmbeddedResource Remove="Features\**" />
     <EmbeddedResource Remove="Identity\**" />
@@ -49,7 +47,6 @@
     <EmbeddedResource Remove="MultiTenancy\**" />
     <EmbeddedResource Remove="Reflection\**" />
     <EmbeddedResource Remove="Utilities\**" />
-    <None Remove="Authorization\**" />
     <None Remove="Editions\**" />
     <None Remove="Features\**" />
     <None Remove="Identity\**" />
@@ -59,12 +56,12 @@
     <None Remove="Utilities\**" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Abp.AutoMapper" Version="5.0.0" />
+    <PackageReference Include="Abp.AutoMapper" Version="6.6.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="3.1.2" />
-    <PackageReference Include="Castle.Windsor.MsDependencyInjection" Version="3.3.1" />
-    <PackageReference Include="NHibernate" Version="5.2.7" />
+    <PackageReference Include="Castle.Windsor.MsDependencyInjection" Version="3.4.0" />
+    <PackageReference Include="NHibernate" Version="5.3.12" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Shesha.Framework\Shesha.Framework.csproj" />

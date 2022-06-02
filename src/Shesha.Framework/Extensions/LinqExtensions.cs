@@ -25,7 +25,7 @@ namespace Shesha.Extensions
         /// <exception cref="T:System.ArgumentNullException"><paramref name="source" /> or <paramref name="selector" /> is <see langword="null" />.</exception>
         public static async Task<TResult> MaxOrDefaultAsync<TSource, TResult>(this IQueryable<TSource> source,
             Expression<Func<TSource, TResult>> selector, TResult defaultValue,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return await source.AnyAsync(cancellationToken)
                 ? await source.MaxAsync(selector, cancellationToken)

@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Abp.AspNetCore;
 using Abp.AspNetCore.Configuration;
 using Abp.AutoMapper;
 using Abp.Modules;
@@ -8,7 +9,8 @@ namespace Shesha.Import
 {
     [DependsOn(
         typeof(AbpAutoMapperModule),
-        typeof(SheshaSchedulerModule)
+        typeof(SheshaSchedulerModule),
+        typeof(AbpAspNetCoreModule)
     )]
     public class SheshaImportModule : AbpModule
     {
@@ -23,20 +25,12 @@ namespace Shesha.Import
             );
         }
 
-        public override void PostInitialize()
+        public override void PreInitialize()
         {
-            try
-            {
-                Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                    typeof(SheshaImportModule).Assembly,
-                    moduleName: "Import",
-                    useConventionalHttpVerbs: true);
-            }
-            catch
-            {
-                // note: we mute exceptions for unit tests only
-                // todo: refactor and remove this try-catch block
-            }
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                typeof(SheshaImportModule).Assembly,
+                moduleName: "Import",
+                useConventionalHttpVerbs: true);
         }
     }
 }

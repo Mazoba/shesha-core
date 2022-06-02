@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Reflection;
+using System.Threading.Tasks;
 using Abp.Data;
 using Abp.Dependency;
 using Abp.Extensions;
@@ -17,11 +18,21 @@ namespace Shesha.NHibernate
             _sessionProvider = sessionProvider;
         }
 
+        public async Task<IDbTransaction> GetActiveTransactionAsync(ActiveTransactionProviderArgs args)
+        {
+            return await Task.FromResult(GetActiveTransaction(args));
+        }
+
         public IDbTransaction GetActiveTransaction(ActiveTransactionProviderArgs args)
         {
             var adoTransaction = _sessionProvider.Session.Transaction.As<AdoTransaction>();
             var dbTransaction = GetFieldValue(typeof(AdoTransaction), adoTransaction, "trans").As<IDbTransaction>();
             return dbTransaction;
+        }
+
+        public async Task<IDbConnection> GetActiveConnectionAsync(ActiveTransactionProviderArgs args)
+        {
+            return await Task.FromResult(GetActiveConnection(args));
         }
 
         public IDbConnection GetActiveConnection(ActiveTransactionProviderArgs args)

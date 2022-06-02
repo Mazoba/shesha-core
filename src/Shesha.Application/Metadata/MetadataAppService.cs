@@ -1,16 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
-using Abp.ObjectMapping;
-using Abp.Runtime.Validation;
+﻿using Abp.Runtime.Validation;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.AutoMapper.Dto;
 using Shesha.Configuration.Runtime;
 using Shesha.DynamicEntities;
-using Shesha.DynamicEntities.Dtos;
 using Shesha.Metadata.Dtos;
+using Shesha.Metadata.Exceptions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Shesha.Metadata
 {
@@ -20,12 +19,24 @@ namespace Shesha.Metadata
         private readonly IEntityConfigurationStore _entityConfigurationStore;
         private readonly IMetadataProvider _metadataProvider;
         private readonly IModelConfigurationProvider _modelConfigurationProvider;
+        private readonly IEnumerable<IModelProvider> _modelProviders;
 
-        public MetadataAppService(IEntityConfigurationStore entityConfigurationStore, IMetadataProvider metadataProvider, IModelConfigurationProvider modelConfigurationProvider)
+        public MetadataAppService(IEntityConfigurationStore entityConfigurationStore, IMetadataProvider metadataProvider, IModelConfigurationProvider modelConfigurationProvider, IEnumerable<IModelProvider> modelProviders)
         {
             _entityConfigurationStore = entityConfigurationStore;
             _metadataProvider = metadataProvider;
             _modelConfigurationProvider = modelConfigurationProvider;
+            _modelProviders = modelProviders;
+        }
+
+        private async Task<List<ModelDto>> GetAllModelsAsync()
+        {
+            var models = new List<ModelDto>();
+            foreach (var provider in _modelProviders) 
+            {
+                models.AddRange(await provider.GetModelsAsync());
+            }
+            return models;
         }
 
         [HttpGet]
@@ -40,26 +51,42 @@ namespace Shesha.Metadata
         public async Task<List<AutocompleteItemDto>> EntityTypeAutocompleteAsync(string term, string selectedValue)
         {
             var isPreselection = string.IsNullOrWhiteSpace(term) && !string.IsNullOrWhiteSpace(selectedValue);
+            var models = await GetAllModelsAsync();
 
             var entities = isPreselection
-                ? _entityConfigurationStore.EntityTypes.Where(e => e.Key == selectedValue).ToList()
-                : _entityConfigurationStore.EntityTypes
-                .Where(e => string.IsNullOrWhiteSpace(term) || 
-                    e.Key.Contains(term, StringComparison.InvariantCultureIgnoreCase) || 
-                    e.Value.Name.Contains(term, StringComparison.InvariantCultureIgnoreCase))
-                .OrderBy(e => e.Value.Name)
+                ? models.Where(e => e.ClassName == selectedValue || e.Alias == selectedValue).ToList()
+                : models
+                .Where(e => string.IsNullOrWhiteSpace(term) ||
+                    !string.IsNullOrWhiteSpace(e.Alias) && e.Alias.Contains(term, StringComparison.InvariantCultureIgnoreCase) ||
+                    e.ClassName.Contains(term, StringComparison.InvariantCultureIgnoreCase))
+                .OrderBy(e => e.ClassName)
                 .Take(10)
                 .ToList();
 
             var result = entities
                 .Select(e => new AutocompleteItemDto
                 {
-                    DisplayText = $"{e.Value.Name} ({e.Key})",
-                    Value = e.Key
+                    DisplayText = !string.IsNullOrWhiteSpace(e.Alias)
+                        ? $"{e.ClassName} ({e.Alias})"
+                        : e.ClassName,
+                    Value = !string.IsNullOrWhiteSpace(e.Alias) 
+                        ? e.Alias 
+                        : e.ClassName
                 })
                 .ToList();
 
             return result;
+        }
+
+        private async Task<Type> GetContainerTypeAsync(string container) 
+        {
+            var allModels = await GetAllModelsAsync();
+            var models = allModels.Where(m => m.Alias == container || m.ClassName == container).ToList();
+
+            if (models.Count() > 1)
+                throw new DuplicateModelsException(models);
+
+            return models.FirstOrDefault()?.Type;
         }
 
         /// inheritedDoc
@@ -69,15 +96,12 @@ namespace Shesha.Metadata
             if (string.IsNullOrWhiteSpace(container))
                 throw new AbpValidationException($"'{nameof(container)}' is mandatory");
 
-            var containerType = _entityConfigurationStore.EntityTypes.ContainsKey(container)
-                ? _entityConfigurationStore.EntityTypes[container]
-                : null;
+            var containerType = await GetContainerTypeAsync(container);
+
             if (containerType == null)
                 return new List<PropertyMetadataDto>();
 
             var flags = BindingFlags.Public | BindingFlags.Instance;
-            //if (config.HideInherited)
-            //    flags = flags | BindingFlags.DeclaredOnly;
 
             var allProps = containerType.GetProperties(flags);
 
@@ -99,15 +123,12 @@ namespace Shesha.Metadata
             if (string.IsNullOrWhiteSpace(container))
                 throw new AbpValidationException($"'{nameof(container)}' is mandatory");
 
-            var containerType = _entityConfigurationStore.EntityTypes.ContainsKey(container)
-                ? _entityConfigurationStore.EntityTypes[container]
-                : null;
+            var containerType = await GetContainerTypeAsync(container);
+
             if (containerType == null)
                 return new List<PropertyMetadataDto>();
 
             var flags = BindingFlags.Public | BindingFlags.Instance;
-            //if (config.HideInherited)
-            //    flags = flags | BindingFlags.DeclaredOnly;
 
             var hardCodedProps = containerType.GetProperties(flags)
                 .Select(p => _metadataProvider.GetPropertyMetadata(p))

@@ -1,10 +1,6 @@
-﻿using System;
-using Abp.Dependency;
-using ElmahCore;
+﻿using ElmahCore;
 using log4net.Appender;
 using log4net.Core;
-using Microsoft.AspNetCore.Http;
-using Shesha.Services;
 
 namespace Shesha.Elmah
 {
@@ -20,14 +16,7 @@ namespace Shesha.Elmah
             if (exception == null || loggingEvent.ExceptionObject.IsExceptionLogged())
                 return;
 
-            var httpContextAccessor = StaticContext.IocManager.IsRegistered<IHttpContextAccessor>()
-                ? StaticContext.IocManager.Resolve<IHttpContextAccessor>()
-                : null;
-
-            if (httpContextAccessor?.HttpContext != null)
-                httpContextAccessor.HttpContext.RiseError(exception);
-            else
-                ElmahExtensions.RiseError(exception);
+            ElmahExtensions.RiseError(exception);
         }
 	}
 }

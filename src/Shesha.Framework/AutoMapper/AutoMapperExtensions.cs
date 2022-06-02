@@ -189,7 +189,7 @@ namespace Shesha.AutoMapper
             
             foreach (var item in refListProperties)
             {
-                expression.ForMember(item.DstProperty.Name, m => m.MapFrom(e => e != null ? GetRefListItemValue(item.SrcProperty.GetValue(e) as ReferenceListItemValueDto, item.SrcProperty.PropertyType) : null));
+                expression.ForMember(item.DstProperty.Name, m => m.MapFrom(e => e != null ? GetRefListItemValue(item.SrcProperty.GetValue(e) as ReferenceListItemValueDto, item.SrcProperty.PropertyType, item.DstProperty.PropertyType) : null));
             }
 
             return expression;
@@ -315,19 +315,23 @@ namespace Shesha.AutoMapper
             return null;
         }
 
-        private static object GetRefListItemValue(ReferenceListItemValueDto dto, Type propType)
+        private static object GetRefListItemValue(ReferenceListItemValueDto dto, Type srcPropType, Type dstPropType)
         {
             if (dto?.ItemValue == null)
                 return null;
 
-            if (propType.IsEnum)
-                return Enum.ToObject(propType, dto.ItemValue);
+            if (srcPropType.IsEnum)
+                return Enum.ToObject(srcPropType, dto.ItemValue);
 
-            return propType == typeof(byte)
-                ? Convert.ToByte(dto.ItemValue.Value)
-                : propType == typeof(Int64)
-                    ? Convert.ToInt64(dto.ItemValue.Value)
-                    : dto.ItemValue.Value;
+            var dstType = dstPropType.GetUnderlyingTypeIfNullable();
+
+            if (dstType.IsEnum) {
+                var enumUnderlayingType = dstType.GetEnumUnderlyingType();
+                var numericValue = System.Convert.ChangeType(dto.ItemValue.Value, enumUnderlayingType);
+                return Enum.ToObject(dstType, numericValue);
+            }
+                        
+            return System.Convert.ChangeType(dto.ItemValue.Value, dstType);
         }
     }
 }

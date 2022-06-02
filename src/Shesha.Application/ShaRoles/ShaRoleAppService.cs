@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Abp.Application.Services;
 using Abp.Application.Services.Dto;
@@ -6,6 +7,7 @@ using Abp.Authorization;
 using Abp.Domain.Repositories;
 using Shesha.Authorization;
 using Shesha.Domain;
+using Shesha.Permissions.Dtos;
 using Shesha.Roles.Dto;
 using Shesha.ShaRoles.Dto;
 using Shesha.Web.DataTable;
@@ -15,8 +17,14 @@ namespace Shesha.ShaRoles
     [AbpAuthorize(PermissionNames.Pages_Roles)]
     public class ShaRoleAppService : AsyncCrudAppService<ShaRole, ShaRoleDto, Guid, PagedRoleResultRequestDto, CreateShaRoleDto, ShaRoleDto>, IShaRoleAppService
     {
-        public ShaRoleAppService(IRepository<ShaRole, Guid> repository) : base(repository)
+        private readonly IShaPermissionChecker _shaPermissionChecker;
+
+        public ShaRoleAppService(
+            IRepository<ShaRole, Guid> repository,
+            IShaPermissionChecker shaPermissionChecker
+            ) : base(repository)
         {
+            _shaPermissionChecker = shaPermissionChecker;
         }
 
         /// <summary>
@@ -55,6 +63,8 @@ namespace Shesha.ShaRoles
             var role = await Repository.GetAsync(input.Id);
 
             ObjectMapper.Map(input, role);
+
+            await _shaPermissionChecker.ClearPermissionsCacheAsync();
 
             await Repository.UpdateAsync(role);
             await CurrentUnitOfWork.SaveChangesAsync();

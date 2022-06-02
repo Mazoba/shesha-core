@@ -369,14 +369,16 @@ namespace Shesha.NHibernate.EntityHistory
         private EntityPropertyChange CreateEntityPropertyChange(object oldValue, object newValue, PropertyInfo propertyInfo)
         {
             var proprtyName = propertyInfo.Name.TruncateWithPostfix(EntityPropertyChange.MaxPropertyNameLength);
-            return new EntityPropertyChange()
+            var propertyChange = new EntityPropertyChange()
             {
-                OriginalValue = oldValue?.ToJsonString().TruncateWithPostfix(EntityPropertyChange.MaxValueLength),
-                NewValue = newValue?.ToJsonString().TruncateWithPostfix(EntityPropertyChange.MaxValueLength),
                 PropertyName = proprtyName,
                 PropertyTypeFullName = propertyInfo.PropertyType.FullName.TruncateWithPostfix(EntityPropertyChange.MaxPropertyTypeFullNameLength),
                 TenantId = AbpSession.TenantId
             };
+            propertyChange.SetOriginalValue(oldValue?.ToJsonString());
+            propertyChange.SetNewValue(newValue?.ToJsonString());
+
+            return propertyChange;
         }
 
         public virtual EntityChangeSet CreateEntityChangeSet()

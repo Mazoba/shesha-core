@@ -2,12 +2,16 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Reflection;
+using System.Threading.Tasks;
 using Abp.Dependency;
+using Abp.Domain.Entities;
 using Abp.Runtime.Caching;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.Domain.Attributes;
+using Shesha.DynamicEntities;
+using Shesha.DynamicEntities.Cache;
+using Shesha.DynamicEntities.Dtos;
 using Shesha.Extensions;
 using Shesha.JsonLogic;
 using Shesha.Metadata;
@@ -20,23 +24,29 @@ using Shesha.Web.DataTable.Columns;
 namespace Shesha.Web.DataTable
 {
     /// inheritedDoc
-    public class DataTableHelper: IDataTableHelper, ITransientDependency
+    public class DataTableHelper : IDataTableHelper, ITransientDependency
     {
         private readonly IEntityConfigurationStore _entityConfigurationStore;
         private readonly IMetadataProvider _metadataProvider;
+        private readonly IEntityConfigCache _entityConfigCache;
+        private readonly IModelConfigurationProvider _modelConfigurationProvider;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="entityConfigurationStore"></param>
         /// <param name="metadataProvider"></param>
-        public DataTableHelper(IEntityConfigurationStore entityConfigurationStore, IMetadataProvider metadataProvider)
+        /// <param name="entityConfigCache"></param>
+        /// <param name="modelConfigurationProvider"></param>
+        public DataTableHelper(IEntityConfigurationStore entityConfigurationStore, IMetadataProvider metadataProvider, IEntityConfigCache entityConfigCache, IModelConfigurationProvider modelConfigurationProvider)
         {
             _entityConfigurationStore = entityConfigurationStore;
             _metadataProvider = metadataProvider;
+            _entityConfigCache = entityConfigCache;
+            _modelConfigurationProvider = modelConfigurationProvider;
         }
 
-        public void AppendQuickSearchCriteria(DataTableConfig tableConfig, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria) 
+        public void AppendQuickSearchCriteria(DataTableConfig tableConfig, QuickSearchMode searchMode, string sSearch, FilterCriteria filterCriteria)
         {
             AppendQuickSearchCriteria(tableConfig.RowType, tableConfig.Columns, searchMode, sSearch, filterCriteria, tableConfig.OnRequestToQuickSearch, tableConfig.Id);
         }
@@ -62,7 +72,7 @@ namespace Shesha.Web.DataTable
                 var addSubQuery = new Action<string, object>((q, v) =>
                 {
                     var queryParamName = "p" + filterCriteria.FilterParameters.Count.ToString();
-                    var criteria = string.Format((string) q, ":" + queryParamName);
+                    var criteria = string.Format((string)q, ":" + queryParamName);
                     subQueries.Add(criteria);
 
                     filterCriteria.FilterParameters.Add(queryParamName, v);
@@ -70,71 +80,24 @@ namespace Shesha.Web.DataTable
 
                 foreach (var prop in props)
                 {
-                    switch (prop.DataType)
+                    switch (prop.Value)
                     {
                         case GeneralDataType.Text:
                             {
-                                if (!prop.Name.Contains('.'))
+                                if (!prop.Key.Contains('.'))
                                 {
-                                    addSubQuery($"ent.{prop.Name} like {{0}}", "%" + sSearch + "%");
+                                    addSubQuery($"ent.{prop.Key} like {{0}}", "%" + sSearch + "%");
                                 }
                                 else
                                 {
                                     // use `exists` for nested entities because NH uses inner joins
-                                    var nestedEntity = prop.Name.LeftPart('.', ProcessDirection.RightToLeft);
-                                    var nestedProp = prop.Name.RightPart('.', ProcessDirection.RightToLeft);
+                                    var nestedEntity = prop.Key.LeftPart('.', ProcessDirection.RightToLeft);
+                                    var nestedProp = prop.Key.RightPart('.', ProcessDirection.RightToLeft);
 
                                     addSubQuery($@"exists (from ent.{nestedEntity} where {nestedProp} like {{0}})", "%" + sSearch + "%");
                                 }
                                 break;
                             }
-                        case GeneralDataType.EntityReference:
-                            {
-                                var nestedProperty = GetNestedProperty(rowType, prop.Name);
-                                if (nestedProperty != null)
-                                {
-                                    var nestedEntityConfig = _entityConfigurationStore.Get(nestedProperty.PropertyType);
-                                    if (nestedEntityConfig.DisplayNamePropertyInfo != null)
-                                    {
-                                        var nestedPropertyDisplayName = nestedEntityConfig.DisplayNamePropertyInfo.Name;
-
-                                        addSubQuery($@"exists (from ent.{prop.Name} where {nestedPropertyDisplayName} like {{0}})", "%" + sSearch + "%");
-                                    }
-                                }
-
-                                break;
-                            }
-                        case GeneralDataType.ReferenceList:
-                            {
-                                if (!string.IsNullOrWhiteSpace(prop.ReferenceListNamespace) && !string.IsNullOrWhiteSpace(prop.ReferenceListName))
-                                {
-                                    addSubQuery($@"exists (select 1 from {nameof(ReferenceListItem)} item where item.{nameof(ReferenceListItem.ItemValue)} = ent.{prop.Name} and item.{nameof(ReferenceListItem.Item)} like {{0}} and item.ReferenceList.Namespace = '{prop.ReferenceListNamespace}' and item.ReferenceList.Name = '{prop.ReferenceListName}')", "%" + sSearch + "%");
-                                }
-                                break;
-                            }
-                    }
-                }
-            }
-
-            if (searchMode == QuickSearchMode.FullText || searchMode == QuickSearchMode.Combined)
-            {
-                var fullTextAvailable = false;
-                /*
-                var fullTextAvailable = ReflectionHelper.IsSubclassOfRawGeneric(typeof(EntityWithTypedId<>), tableConfig.RowType) &&
-                                        FullText.IsIndexable(tableConfig.RowType) &&
-                                        FullText.IndexFilesAvailable(tableConfig.RowType);
-                */
-                if (fullTextAvailable)
-                {
-                    var idType = rowType.GetProperty("Id")?.PropertyType;
-                    if (idType == null)
-                        throw new Exception("Failed to retrieve a type of the Id property");
-
-                    var fullTextIds = GetFullTextIds(rowType, sSearch, 1000).ToList();
-                    if (fullTextIds.Any())
-                    {
-                        subQueries.Add("ent.Id in (:ids)");
-                        filterCriteria.FilterParameters.Add("ids", fullTextIds);
                     }
                 }
             }
@@ -143,7 +106,7 @@ namespace Shesha.Web.DataTable
             if (onRequestToQuickSearch != null)
             {
                 var quickSearchCriteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
-                
+
                 // copy parameters to fix numbering todo: review and make parameters unique
                 foreach (var paramName in filterCriteria.FilterParameters.Keys)
                 {
@@ -167,46 +130,10 @@ namespace Shesha.Web.DataTable
                 filterCriteria.FilterClauses.Add(subQueries.Delimited(" or "));
         }
 
-        private PropertyInfo GetNestedProperty(Type rowType, string propertyName)
-        {
-            var propTokens = propertyName.Split('.');
-            var currentType = rowType;
-
-            for (int i = 0; i < propTokens.Length; i++)
-            {
-                PropertyInfo propInfo;
-                var containerType = currentType.StripCastleProxyType();
-                try
-                {
-                    propInfo = containerType.GetProperty(propTokens[i]);
-                }
-                catch (AmbiguousMatchException)
-                {
-                    // Property may have been overriden using the 'new' keyword hence there are multiple properties with the same name.
-                    // Will look for the one declared at the highest level.
-                    propInfo = ReflectionHelper.FindHighestLevelProperty(propTokens[i], containerType);
-                }
-
-                if (propInfo == null)
-                    return null;
-
-                if (i == propTokens.Length - 1)
-                {
-                    return propInfo;
-                }
-                else
-                {
-                    currentType = propInfo.PropertyType;
-                }
-            }
-
-            return null;
-        }
-
         /// <summary>
         /// Returns a list of properties for the SQL quick search
         /// </summary>
-        public List<QuickSearchPropertyInfo> GetPropertiesForSqlQuickSearch(Type rowType, List<DataTableColumn> columns, string cacheKey)
+        public List<KeyValuePair<string, GeneralDataType>> GetPropertiesForSqlQuickSearch(Type rowType, List<DataTableColumn> columns, string cacheKey)
         {
             if (string.IsNullOrWhiteSpace(cacheKey))
                 return DoGetPropertiesForSqlQuickSearch(rowType, columns);
@@ -214,11 +141,11 @@ namespace Shesha.Web.DataTable
             var cacheManager = StaticContext.IocManager.Resolve<ICacheManager>();
 
             return cacheManager
-                .GetCache("MyCache")
-                .Get(cacheKey, () => DoGetPropertiesForSqlQuickSearch(rowType, columns));
+                .GetCache<string, List<KeyValuePair<string, GeneralDataType>>>("MyCache")
+                .Get(cacheKey, (s) => DoGetPropertiesForSqlQuickSearch(rowType, columns));
         }
 
-        private List<QuickSearchPropertyInfo> DoGetPropertiesForSqlQuickSearch(Type rowType, List<DataTableColumn> columns)
+        private List<KeyValuePair<string, GeneralDataType>> DoGetPropertiesForSqlQuickSearch(Type rowType, List<DataTableColumn> columns)
         {
             var entityConfig = _entityConfigurationStore.Get(rowType);
 
@@ -269,63 +196,15 @@ namespace Shesha.Web.DataTable
                     return new
                     {
                         Path = c.PropertyName,
-                        Property = property,
-                        ReferenceListNamespace = c.ReferenceListNamespace,
-                        ReferenceListName = c.ReferenceListName
+                        Property = property
                     };
                 })
                 .Where(i => i != null)
-                .Select(i => new QuickSearchPropertyInfo() 
-                { 
-                    Name = i.Path,
-                    DataType = i.Property.GeneralType,
-                    ReferenceListNamespace = i.ReferenceListNamespace,
-                    ReferenceListName = i.ReferenceListName
-                })
+                .Select(i => new KeyValuePair<string, GeneralDataType>(i.Path, i.Property.GeneralType))
                 .ToList();
 
             return props;
         }
-
-        private IEnumerable<string> GetFullTextIds(Type entityType, string searchText, int maxRows)
-        {
-            return new List<string>();
-            /* todo: review full text support
-            return FullText.Search(searchText, entityType, maxRows)
-                .OrderByDescending(sr => sr.SortDate)
-                .Select(sr => sr.Id);
-            */
-        }
-
-        //public static string GetColumnDataType(PropertyInfo propInfo)
-        //{
-        //    var generalType = EntityConfigurationLoaderByReflection.GetGeneralDataType(propInfo);
-        //    switch (generalType)
-        //    {
-        //        case GeneralDataType.Boolean:
-        //            return ColumnDataTypes.Boolean;
-
-        //        /*
-        //        case GeneralDataType.Date:
-        //            return ColumnDataTypes.Date;
-        //        case GeneralDataType.DateTime:
-        //            return ColumnDataTypes.DateTime;
-        //        */
-        //        case GeneralDataType.Date:
-        //        case GeneralDataType.DateTime:
-        //            return ColumnDataTypes.Date; // not supported by the client-side for now
-
-        //        case GeneralDataType.Time:
-        //            return ColumnDataTypes.Time;
-        //        case GeneralDataType.Numeric:
-        //            return ColumnDataTypes.Number;
-        //        case GeneralDataType.Text:
-        //            return ColumnDataTypes.String;
-
-        //        default:
-        //            return ColumnDataTypes.String;
-        //    }
-        //}
 
         /// <summary>
         /// Converts <see cref="Shesha.Configuration.Runtime.GeneralDataType"/> to data type for datatable column
@@ -358,6 +237,40 @@ namespace Shesha.Web.DataTable
                 case GeneralDataType.Numeric:
                     return ColumnDataTypes.Number;
                 case GeneralDataType.Text:
+                    return ColumnDataTypes.String;
+
+                default:
+                    return ColumnDataTypes.String;
+            }
+        }
+
+        public static string DataType2ColumnDataType(string dataType, string dataFormat)
+        {
+            switch (dataType)
+            {
+                case DataTypes.Boolean:
+                    return ColumnDataTypes.Boolean;
+
+                case DataTypes.ReferenceListItem:
+                    return ColumnDataTypes.ReferenceList;
+
+                    /*
+                case DataTypes.Array:
+                    return ColumnDataTypes.MultiValueReferenceList;
+                    */
+                case DataTypes.EntityReference:
+                    return ColumnDataTypes.EntityReference;
+
+                case DataTypes.Date:
+                    return ColumnDataTypes.Date;
+                case DataTypes.DateTime:
+                    return ColumnDataTypes.DateTime;
+
+                case DataTypes.Time:
+                    return ColumnDataTypes.Time;
+                case DataTypes.Number:
+                    return ColumnDataTypes.Number;
+                case DataTypes.String:
                     return ColumnDataTypes.String;
 
                 default:
@@ -418,12 +331,13 @@ namespace Shesha.Web.DataTable
         }
 
         /// inheritedDoc
-        public DataTablesDisplayPropertyColumn GetDisplayPropertyColumn(Type rowType, string propName, string name = null) 
+        [Obsolete]
+        public DataTablesDisplayPropertyColumn GetDisplayPropertyColumn(Type rowType, string propName, string name = null)
         {
             var prop = propName == null
                 ? null
                 : ReflectionHelper.GetProperty(rowType, propName);
-            //, out ownerEntity
+
             var displayAttribute = prop != null
                 ? prop.GetAttribute<DisplayAttribute>()
                 : null;
@@ -461,6 +375,21 @@ namespace Shesha.Web.DataTable
                 {
                     column.EntityReferenceTypeShortAlias = propConfig.EntityReferenceType.GetEntityConfiguration()?.SafeTypeShortAlias;
                     column.AllowInherited = propConfig.PropertyInfo.HasAttribute<AllowInheritedAttribute>();
+                }
+            }
+
+            if (prop == null)
+            {
+                var modelConfig = AsyncHelper.RunSync<ModelConfigurationDto>(() => _modelConfigurationProvider.GetModelConfigurationOrNullAsync(rowType.Namespace, rowType.Name));
+                var propertyConfig = modelConfig.Properties.FirstOrDefault(p => p.Name == propName);
+                if (propertyConfig != null) 
+                {
+                    column.IsDynamic = true;
+                    column.StandardDataType = propertyConfig.DataType;
+                    column.DataFormat = propertyConfig.DataFormat;
+                    column.Description = propertyConfig.Description;
+                    column.IsFilterable = false;
+                    column.IsSortable = false;
                 }
             }
 
@@ -507,12 +436,109 @@ namespace Shesha.Web.DataTable
             return column;
         }
 
-        public class QuickSearchPropertyInfo 
-        { 
-            public string Name { get; set; }
-            public GeneralDataType DataType { get; set; }
-            public string ReferenceListNamespace { get; set; }
-            public string ReferenceListName { get; set; }
+        /// inheritedDoc
+        public async Task<DataTablesDisplayPropertyColumn> GetDisplayPropertyColumnAsync(Type rowType, string propName, string name = null) 
+        {
+            var prop = propName == null
+                ? null
+                : ReflectionHelper.GetProperty(rowType, propName);
+
+            var displayAttribute = prop != null
+                ? prop.GetAttribute<DisplayAttribute>()
+                : null;
+
+            var caption = displayAttribute != null && !string.IsNullOrWhiteSpace(displayAttribute.Name)
+                ? displayAttribute.Name
+                : propName.ToFriendlyName();
+
+            var dataTypeInfo = prop != null
+                ? _metadataProvider.GetDataType(prop)
+                : new DataTypeInfo(null);
+            var column = new DataTablesDisplayPropertyColumn()
+            {
+                Name = (propName ?? "").Replace('.', '_'),
+                PropertyName = propName,
+                Caption = caption,
+                Description = prop?.GetDescription(),
+                StandardDataType = dataTypeInfo.DataType,
+                DataFormat = dataTypeInfo.DataFormat,
+
+                #region backward compatibility, to be removed
+                GeneralDataType = prop != null
+                    ? EntityConfigurationLoaderByReflection.GetGeneralDataType(prop)
+                    : (GeneralDataType?)null,
+                CustomDataType = prop?.GetAttribute<DataTypeAttribute>()?.CustomDataType,
+                #endregion
+            };
+            var entityConfig = prop?.DeclaringType.GetEntityConfiguration();
+            var propConfig = prop != null ? entityConfig?.Properties[prop.Name] : null;
+            if (propConfig != null)
+            {
+                column.ReferenceListName = propConfig.ReferenceListName;
+                column.ReferenceListNamespace = propConfig.ReferenceListNamespace;
+                if (propConfig.EntityReferenceType != null)
+                {
+                    column.EntityReferenceTypeShortAlias = propConfig.EntityReferenceType.GetEntityConfiguration()?.SafeTypeShortAlias;
+                    column.AllowInherited = propConfig.PropertyInfo.HasAttribute<AllowInheritedAttribute>();
+                }
+            }
+
+            if (prop == null)
+            {
+                var modelConfig = await _modelConfigurationProvider.GetModelConfigurationOrNullAsync(rowType.Namespace, rowType.Name);
+                var propertyConfig = modelConfig.Properties.FirstOrDefault(p => p.Name == propName);
+                if (propertyConfig != null)
+                {
+                    column.IsDynamic = true;
+                    column.StandardDataType = propertyConfig.DataType;
+                    column.DataFormat = propertyConfig.DataFormat;
+                    column.Description = propertyConfig.Description;
+                    column.IsFilterable = false;
+                    column.IsSortable = false;
+                }
+            }
+
+            // Set FilterCaption and FilterPropertyName
+            column.FilterCaption ??= column.Caption;
+            column.FilterPropertyName ??= column.PropertyName;
+
+            if (column.PropertyName == null)
+            {
+                column.PropertyName = column.FilterPropertyName;
+                column.Name = (column.PropertyName ?? "").Replace('.', '_');
+            }
+            column.Caption ??= column.FilterCaption;
+
+            // Check is the property mapped to the DB. If it's not mapped - make the column non sortable and non filterable
+            if (column.IsSortable && rowType.IsEntityType() && propName != null && propName != "Id")
+            {
+                var chain = propName.Split('.').ToList();
+
+                var container = rowType;
+                foreach (var chainPropName in chain)
+                {
+                    if (!container.IsEntityType())
+                        break;
+
+                    var containerConfig = container.GetEntityConfiguration();
+                    var propertyConfig = containerConfig.Properties.ContainsKey(chainPropName)
+                        ? containerConfig.Properties[chainPropName]
+                        : null;
+
+                    if (propertyConfig != null && !propertyConfig.IsMapped)
+                    {
+                        column.IsFilterable = false;
+                        column.IsSortable = false;
+                        break;
+                    }
+
+                    container = propertyConfig?.PropertyInfo.PropertyType;
+                    if (container == null)
+                        break;
+                }
+            }
+
+            return column;
         }
     }
 }

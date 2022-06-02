@@ -123,50 +123,9 @@ namespace Shesha.Notifications
         }
 
         /// inheritedDoc
-        public void SendNotifications(UserNotification[] userNotifications)
-        {
-            foreach (var userNotification in userNotifications)
-            {
-                var template = GetTemplate(userNotification.Notification.NotificationName, RefListNotificationType.Email);
-                if (template == null || !template.IsEnabled)
-                    continue;
-
-                if (template.SendType != RefListNotificationType.Email)
-                    throw new Exception($"Wrong type of template. Expected `{RefListNotificationType.Email}`, actual `{template.SendType}`");
-
-                var person = GetRecipient(userNotification);
-                var email = person?.AvailableEmail;
-                if (string.IsNullOrWhiteSpace(email))
-                    continue;
-
-                var subject = GenerateContent(template.Subject, userNotification.Notification.Data, true);
-                var body = GenerateContent(template.Body, userNotification.Notification.Data, template.BodyFormat == RefListNotificationTemplateType.PlainText);
-
-                if (string.IsNullOrWhiteSpace(subject) && string.IsNullOrWhiteSpace(body))
-                    continue;
-
-                var messageId = CreateNotificationMessage(template.Id, person.Id, message =>
-                {
-                    message.Subject = subject;
-                    message.Body = body;
-                    message.RecipientText = email;
-                });
-
-                // schedule sending
-                UowManager.Current.DoAfterTransaction(() => BackgroundJob.Enqueue(() => SendNotification(messageId)));
-            }
-        }
-
-        /// inheritedDoc
         public async Task SendNotificationsAsync(List<NotificationMessageDto> notificationMessages)
         {
             await SendNotificationsAsync(notificationMessages, RefListNotificationType.Email);
-        }
-
-        /// inheritedDoc
-        public void SendNotifications(List<NotificationMessageDto> notificationMessages)
-        {
-            SendNotifications(notificationMessages, RefListNotificationType.Email);
         }
 
         public Task ResendMessageAsync(Guid notificationMessageId)
