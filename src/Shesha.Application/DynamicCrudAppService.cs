@@ -5,6 +5,7 @@ using Abp.Domain.Repositories;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Dtos;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
 namespace Shesha
@@ -37,6 +38,8 @@ namespace Shesha
 
             await MapDynamicDtoToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
 
+            Validator.ValidateObject(entity, new ValidationContext(entity));
+
             await Repository.UpdateAsync(entity);
 
             return await MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(entity);
@@ -49,6 +52,8 @@ namespace Shesha
             var entity = Activator.CreateInstance<TEntity>();
 
             await MapStaticPropertiesToEntityDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
+
+            Validator.ValidateObject(entity, new ValidationContext(entity));
 
             await Repository.InsertAsync(entity);
 
