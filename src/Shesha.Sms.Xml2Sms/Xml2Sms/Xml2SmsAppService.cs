@@ -1,38 +1,27 @@
-﻿using System;
-using System.Threading.Tasks;
-using Abp.Configuration;
-using Abp.Dependency;
-using Microsoft.AspNetCore.Mvc;
-using Shesha.Configuration;
+﻿using Microsoft.AspNetCore.Mvc;
 using Shesha.Services;
+using System.Threading.Tasks;
 
 namespace Shesha.Sms.Xml2Sms
 {
     /// inheritDoc
     public class Xml2SmsAppService : IXml2SmsAppService
     {
-        private readonly ISettingManager _settingManager;
+        private readonly IXml2SmsGateway _gateway;
 
         /// <summary>
         /// Default constructor
         /// </summary>
-        public Xml2SmsAppService(ISettingManager settingManager)
+        public Xml2SmsAppService(IXml2SmsGateway gateway)
         {
-            _settingManager = settingManager;
+            _gateway = gateway;
         }
 
         /// inheritDoc
         [HttpPut, Route("api/Xml2Sms/Settings")]
         public async Task<bool> UpdateSettingsAsync(Xml2SmsSettingDto input)
         {
-            await _settingManager.ChangeSettingAsync(Xml2SmsSettingNames.Host, input.Xml2SmsHost);
-            await _settingManager.ChangeSettingAsync(Xml2SmsSettingNames.ApiPassword, input.Xml2SmsPassword);
-            await _settingManager.ChangeSettingAsync(Xml2SmsSettingNames.ApiUsername, input.Xml2SmsUsername);
-            await _settingManager.ChangeSettingAsync(Xml2SmsSettingNames.UseProxy, input.UseProxy.ToString());
-            await _settingManager.ChangeSettingAsync(Xml2SmsSettingNames.WebProxyAddress, input.WebProxyAddress);
-            await _settingManager.ChangeSettingAsync(Xml2SmsSettingNames.UseDefaultProxyCredentials, input.UseDefaultProxyCredentials.ToString());
-            await _settingManager.ChangeSettingAsync(Xml2SmsSettingNames.WebProxyUsername, input.WebProxyUsername);
-            await _settingManager.ChangeSettingAsync(Xml2SmsSettingNames.WebProxyPassword, input.WebProxyPassword);
+            await _gateway.SetTypedSettingsAsync(input);
 
             return true;
         }
@@ -41,19 +30,7 @@ namespace Shesha.Sms.Xml2Sms
         [HttpGet, Route("api/Xml2Sms/Settings")]
         public async Task<Xml2SmsSettingDto> GetSettingsAsync()
         {
-            var settings = new Xml2SmsSettingDto
-            {
-                Xml2SmsHost = await _settingManager.GetSettingValueAsync(Xml2SmsSettingNames.Host),
-                Xml2SmsPassword = await _settingManager.GetSettingValueAsync(Xml2SmsSettingNames.ApiPassword),
-                Xml2SmsUsername = await _settingManager.GetSettingValueAsync(Xml2SmsSettingNames.ApiUsername),
-                UseProxy = Boolean.Parse((ReadOnlySpan<char>)await _settingManager.GetSettingValueAsync(Xml2SmsSettingNames.UseProxy)),
-                WebProxyAddress = await _settingManager.GetSettingValueAsync(Xml2SmsSettingNames.WebProxyAddress),
-                UseDefaultProxyCredentials = Boolean.Parse((ReadOnlySpan<char>)await _settingManager.GetSettingValueAsync(Xml2SmsSettingNames.UseDefaultProxyCredentials)),
-                WebProxyUsername = await _settingManager.GetSettingValueAsync(Xml2SmsSettingNames.WebProxyUsername),
-                WebProxyPassword = await _settingManager.GetSettingValueAsync(Xml2SmsSettingNames.WebProxyPassword),
-            };
-
-            return settings;
+            return await _gateway.GetTypedSettingsAsync();
         }
 
         public async Task TestSms(string mobileNumber, string body)

@@ -34,6 +34,7 @@ namespace Shesha.Sms
                 .Select(t => new SmsGatewayDto
                 {
                     Uid = t.ClassAttribute.Uid,
+                    Alias = SmsUtils.GetGatewayAlias(t.Type),
                     Name = ReflectionHelper.GetDisplayName(t.Type),
                     Description = ReflectionHelper.GetDescription(t.Type)
                 })

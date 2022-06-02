@@ -1,8 +1,8 @@
-﻿using System.Reflection;
-using Abp.AspNetCore;
+﻿using Abp.AspNetCore;
 using Abp.AspNetCore.Configuration;
-using Abp.Dependency;
 using Abp.Modules;
+using Castle.MicroKernel.Registration;
+using System.Reflection;
 
 namespace Shesha.Sms.Xml2Sms
 {
@@ -23,7 +23,9 @@ namespace Shesha.Sms.Xml2Sms
         {
             IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());
 
-            IocManager.Register<Xml2SmsGateway, Xml2SmsGateway>(DependencyLifeStyle.Transient);
+            IocManager.IocContainer.Register(
+                Component.For<IXml2SmsGateway>().Forward<Xml2SmsGateway>().ImplementedBy<Xml2SmsGateway>().LifestyleTransient()
+            );
         }
     }
 }

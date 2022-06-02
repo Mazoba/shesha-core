@@ -19,6 +19,8 @@ namespace Shesha.Sms
 
         public ILogger Logger { get; set; }
 
+        public Type SettingsType => null;
+
         public NullSmsGateway()
         {
             Logger = NullLogger.Instance;
@@ -36,6 +38,16 @@ namespace Shesha.Sms
 
             // Do nothing
             return Task.CompletedTask;
+        }
+
+        public Task<object> GetSettingsAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SetSettingsAsync(object settings)
+        {
+            throw new NotImplementedException();
         }
     }
 }

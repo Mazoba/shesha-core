@@ -19,5 +19,10 @@
         /// Unique identifier of the Sms Gateway
         /// </summary>
         public string Uid { get; set; }
+
+        /// <summary>
+        /// Sms gateway alias. Can be used as a friendly identifier of the gateway
+        /// </summary>
+        public string Alias { get; set; }
     }
 }
