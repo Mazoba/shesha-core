@@ -2,9 +2,11 @@
 using Abp.Dependency;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
+using Abp.Runtime.Validation;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Dtos;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
@@ -38,7 +40,9 @@ namespace Shesha
 
             await MapDynamicDtoToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
 
-            Validator.ValidateObject(entity, new ValidationContext(entity));
+            var validationResults = new List<ValidationResult>();
+            if (!Validator.TryValidateObject(entity, new ValidationContext(entity), validationResults))
+                throw new AbpValidationException("Please correct the errors and try again", validationResults);
 
             await Repository.UpdateAsync(entity);
 
@@ -53,7 +57,9 @@ namespace Shesha
 
             await MapStaticPropertiesToEntityDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
 
-            Validator.ValidateObject(entity, new ValidationContext(entity));
+            var validationResults = new List<ValidationResult>();
+            if (!Validator.TryValidateObject(entity, new ValidationContext(entity), validationResults))
+                throw new AbpValidationException("Please correct the errors and try again", validationResults);
 
             await Repository.InsertAsync(entity);
 
