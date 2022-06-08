@@ -44,6 +44,9 @@ namespace Shesha.Sessions
             if (AbpSession.UserId.HasValue)
             {
                 var user = await GetCurrentUserAsync();
+
+                string homeUrl = await GetHomeUrl(user);
+
                 output.User = new UserLoginInfoDto
                 {
                     AccountFound = true,
@@ -53,12 +56,25 @@ namespace Shesha.Sessions
                     FullName = user.FullName,
                     Email = user.EmailAddress,
                     MobileNumber = user.PhoneNumber,
-                    GrantedPermissions = await GetGrantedPermissions()
+                    GrantedPermissions = await GetGrantedPermissions(),
+                    HomeUrl = homeUrl
                 };
                 //output.User = ObjectMapper.Map<UserLoginInfoDto>(await GetCurrentUserAsync());
             }
 
             return output;
+        }
+
+        private async Task<string> GetHomeUrl(Authorization.Users.User user)
+        {
+            string homeUrl = "";
+
+            var homePageRouter = IocManager.IsRegistered<IHomePageRouter>() // If no router is registered will use the default router based on the AppSettings
+                ? IocManager.Resolve<IHomePageRouter>()
+                : new ConfigHomePageRouter();
+
+            homeUrl = await homePageRouter.GetHomePageUrlAsync(user);
+            return homeUrl;
         }
 
         private async Task<List<string>> GetGrantedPermissions()
