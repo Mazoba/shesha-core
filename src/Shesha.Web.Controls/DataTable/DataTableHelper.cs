@@ -123,6 +123,14 @@ namespace Shesha.Web.DataTable
                                 }
                                 break;
                             }
+                        case GeneralDataType.MultiValueReferenceList:
+                            {
+                                if (!string.IsNullOrWhiteSpace(prop.ReferenceListNamespace) && !string.IsNullOrWhiteSpace(prop.ReferenceListName))
+                                {
+                                    addSubQuery($@"exists (select 1 from {nameof(ReferenceListItem)} item where (item.{nameof(ReferenceListItem.ItemValue)} & ent.{prop.Name}) > 0 and item.{nameof(ReferenceListItem.Item)} like {{0}} and item.ReferenceList.Namespace = '{prop.ReferenceListNamespace}' and item.ReferenceList.Name = '{prop.ReferenceListName}')", "%" + sSearch + "%");
+                                }
+                                break;
+                            }
                     }
                 }
             }
