@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Shesha.Applications
+namespace Shesha.FrontEndApps
 {
     /// <summary>
     /// A Front-end App represents the various front-end applications that build off this back-end. 
