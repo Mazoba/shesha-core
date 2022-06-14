@@ -22,6 +22,5 @@ namespace Shesha.Applications
         /// </summary>
         public virtual string Description { get; set; }
 
-
     }
 }
