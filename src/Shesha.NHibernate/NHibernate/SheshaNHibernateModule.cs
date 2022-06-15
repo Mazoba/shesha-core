@@ -145,7 +145,6 @@ namespace Shesha.NHibernate
             IocManager.IocContainer.Install(new SheshaNHibernateInstaller());
 
             IocManager.IocContainer.Register(
-                Component.For<IAsyncQueryableExecuter>().UsingFactoryMethod(f => NullAsyncQueryableExecuter.Instance),
                 Component.For<IConnectionStringResolver, IDbPerTenantConnectionStringResolver>()
                     .ImplementedBy<DbPerTenantConnectionStringResolver>()
                     .LifestyleTransient(),

@@ -5,13 +5,15 @@ using Abp.Reflection.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Shesha.Configuration;
+using Shesha.GraphQL;
 using Shesha.Web.FormsDesigner;
 
 namespace Shesha.Web.Host.Startup
 {
     [DependsOn(typeof(SheshaWebCoreModule), 
         typeof(SheshaFormsDesignerModule),
-        typeof(AbpHangfireAspNetCoreModule))]
+        typeof(AbpHangfireAspNetCoreModule),
+        typeof(SheshaGraphQLModule))]
     public class SheshaWebHostModule: AbpModule
     {
         private readonly IHostingEnvironment _env;

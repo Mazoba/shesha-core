@@ -5,6 +5,12 @@ using Abp.Extensions;
 using Castle.Facilities.Logging;
 using ElmahCore;
 using ElmahCore.Mvc;
+using GraphQL;
+using GraphQL.MicrosoftDI;
+using GraphQL.NewtonsoftJson;
+using GraphQL.Server;
+using GraphQL.Server.Transports.AspNetCore;
+using GraphQL.SystemTextJson;
 using Hangfire;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -16,18 +22,25 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
+using Shesha.Authorization;
 using Shesha.Configuration;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Swagger;
+using Shesha.GraphQL;
 using Shesha.Identity;
 using Shesha.Scheduler.Extensions;
 using Shesha.Swagger;
 using System;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using Abp.AspNetCore.Mvc.Authorization;
-using Shesha.Authorization;
+using System.Threading.Tasks;
+using Abp.Domain.Uow;
+using Shesha.GraphQL.Middleware;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Shesha.GraphQL.Provider.Queries;
+using GraphQL.Server;
+using Shesha.GraphQL.Provider.GraphTypes;
+using Abp.Application.Services.Dto;
 
 namespace Shesha.Web.Host.Startup
 {
@@ -136,6 +149,60 @@ namespace Shesha.Web.Host.Startup
                 options.Filters.AddService(typeof(SheshaAuthorizationFilter));
             });
 
+            //services.AddScoped<SheshaSchema>();
+
+            // Add GraphQL services and configure options
+            services.AddGraphQL(builder => builder
+                //.AddHttpMiddleware<SheshaSchema, GraphQLHttpMiddleware<SheshaSchema>>()
+                //.AddHttpMiddleware<EmptySchema, GraphQLHttpMiddleware<EmptySchema>>()
+                //.AddWebSocketsHttpMiddleware<SheshaSchema>()
+                // For subscriptions support
+                //.AddDocumentExecuter<SubscriptionDocumentExecuter>()
+                //.AddSchema<SheshaSchema>()
+                //.AddSchema<EmptySchema>()
+                .ConfigureExecutionOptions(options =>
+                {
+                    options.EnableMetrics = true;// Environment.IsDevelopment();
+                    var logger = options.RequestServices.GetRequiredService<ILogger<Startup>>();
+
+                    var unitOfWorkManager = options.RequestServices.GetRequiredService<IUnitOfWorkManager>();
+                    //options.Query.
+                    options.Listeners.Add(new GraphQLNhListener(unitOfWorkManager));
+
+                    options.UnhandledExceptionDelegate = ctx =>
+                    {
+                        logger.LogError("{Error} occurred", ctx.OriginalException.Message);
+                        return Task.CompletedTask;
+                    };
+                })
+                // Add required services for GraphQL request/response de/serialization
+                .AddSystemTextJson() // For .NET Core 3+
+                //.AddNewtonsoftJson() // For everything else
+                //.AddErrorInfoProvider(opt => opt.ExposeExceptionStackTrace = Environment.IsDevelopment())
+                .AddWebSockets() // Add required services for web socket support
+                //.AddDataLoader() // Add required services for DataLoader support
+                .AddGraphTypes(typeof(SheshaSchema).Assembly)
+                ); // Add all IGraphType implementors in assembly which ChatSchema exists 
+                                                                //.AddGraphTypes(ServiceLifetime.Scoped)
+                                                                //.AddUserContextBuilder(httpContext => httpContext.User)
+                                                                //.AddDataLoader();
+
+            services.AddSingleton<GraphQLMiddleware>();
+            services.AddSingleton(new GraphQLSettings
+            {
+                BuildUserContext = ctx => new GraphQLUserContext
+                {
+                    User = ctx.User
+                },
+                EnableMetrics = true
+            });
+            services.TryAddTransient(typeof(EntityQuery<,>));
+            services.TryAddTransient(typeof(GraphQLGenericType<>));
+            services.TryAddTransient(typeof(PagedResultDtoType<>));
+            services.TryAddTransient(typeof(PagedAndSortedResultRequestDto));
+            services.TryAddTransient(typeof(GraphQLInputGenericType<>));
+
+
             // Add ABP and initialize 
             // Configure Abp and Dependency Injection
             return services.AddAbp<SheshaWebHostModule>(
@@ -204,6 +271,13 @@ namespace Shesha.Web.Host.Startup
             }); // URL: /swagger
 
             app.UseHangfireDashboard();
+
+            app.UseMiddleware<GraphQLMiddleware>();
+            /*
+            app.UseGraphQL<SheshaSchema>(path: "/graphql/person");
+            app.UseGraphQL<EmptySchema>(path: "/graphql/empty");
+            */
+            app.UseGraphQLPlayground(); //to explorer API navigate https://*DOMAIN*/ui/playground
         }
     }
 }
