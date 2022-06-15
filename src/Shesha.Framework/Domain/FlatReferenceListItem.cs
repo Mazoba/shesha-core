@@ -10,6 +10,7 @@ namespace Shesha.Domain
     /// </summary>
     [Table("vw_Frwk_FlatReferenceListItems")]
     [ImMutable]
+    [Entity(GenerateApplicationService = false)]
     public class FlatReferenceListItem: Entity<Guid>, IMayHaveTenant
     {
         /// <summary>

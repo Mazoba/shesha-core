@@ -13,7 +13,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Entity property value (initially for Dynamic properties)
     /// </summary>
-    [Entity(TypeShortAlias = "Shesha.Framework.EntityPropertyValue")]
+    [Entity(TypeShortAlias = "Shesha.Framework.EntityPropertyValue", GenerateApplicationService = false)]
     public class EntityPropertyValue : FullPowerChildEntity
     {
         /// <summary>

@@ -9,7 +9,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Defines a list of user groups (Person/ShaRole/DistributionList/...) that can see the original entity.
     /// </summary>
-    [Entity(TypeShortAlias = "Shesha.Framework.EntityVisibility"), Table("Frwk_EntityVisibility")]
+    [Entity(TypeShortAlias = "Shesha.Framework.EntityVisibility", GenerateApplicationService = false), Table("Frwk_EntityVisibility")]
     public class EntityVisibility : FullPowerManyToManyLinkEntity
     {
         /// <summary>

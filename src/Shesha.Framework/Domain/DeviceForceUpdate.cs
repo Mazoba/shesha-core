@@ -3,9 +3,11 @@ using Abp.Domain.Entities.Auditing;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain
 {
+    [Entity(GenerateApplicationService = false)]
     public class DeviceForceUpdate : FullAuditedEntity<Guid>
     {
         public virtual string Name { get; set; }

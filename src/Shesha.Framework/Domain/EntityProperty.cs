@@ -13,7 +13,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Configuration of the entity property
     /// </summary>
-    [Entity(TypeShortAlias = "Shesha.Framework.EntityProperty")]
+    [Entity(TypeShortAlias = "Shesha.Framework.EntityProperty", GenerateApplicationService = false)]
     public class EntityProperty: FullAuditedEntity<Guid>
     {
         /// <summary>

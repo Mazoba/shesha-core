@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain
 {
     /// <summary>
     /// Version definition of a versioned field
     /// </summary>
+    [Entity(GenerateApplicationService = false)]
     public class VersionedFieldVersion : FullPowerEntity
     {
         /// <summary>

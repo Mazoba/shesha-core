@@ -16,7 +16,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Stored file
     /// </summary>
-    [Entity(TypeShortAlias = "Shesha.Framework.StoredFile")]
+    [Entity(TypeShortAlias = "Shesha.Framework.StoredFile", GenerateApplicationService = false)]
     public class StoredFile : FullAuditedEntity<Guid>, IHasOwningEntityLink, IMayHaveTenant
     {
         /// <summary>

@@ -9,7 +9,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Entity configuration
     /// </summary>
-    [Entity(TypeShortAlias = "Shesha.Framework.EntityConfig")]
+    [Entity(TypeShortAlias = "Shesha.Framework.EntityConfig", GenerateApplicationService = false)]
     public class EntityConfig : FullAuditedEntity<Guid>
     {
         [EntityDisplayName]

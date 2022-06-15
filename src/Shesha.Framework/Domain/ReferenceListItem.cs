@@ -6,7 +6,7 @@ using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain
 {
-    [Entity(TypeShortAlias = "Shesha.Framework.ReferenceListItem")]
+    [Entity(TypeShortAlias = "Shesha.Framework.ReferenceListItem", GenerateApplicationService = false)]
     public class ReferenceListItem : FullAuditedEntity<Guid>, IMayHaveTenant
     {
         [Required(AllowEmptyStrings = false), StringLength(300)]

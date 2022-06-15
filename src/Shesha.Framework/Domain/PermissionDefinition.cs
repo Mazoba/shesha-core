@@ -4,7 +4,7 @@ using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain
 {
-    [Entity(TypeShortAlias = "Shesha.Framework.PermissionDefinition")]
+    [Entity(TypeShortAlias = "Shesha.Framework.PermissionDefinition", GenerateApplicationService = false)]
     public class PermissionDefinition : FullAuditedEntity<Guid>
     {
         /// <summary>
