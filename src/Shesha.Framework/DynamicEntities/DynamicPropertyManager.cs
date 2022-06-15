@@ -11,6 +11,8 @@ using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.DynamicEntities.Dtos;
+using Shesha.Metadata;
+using Shesha.Services;
 using Shesha.Services.VersionedFields;
 
 namespace Shesha.DynamicEntities
@@ -20,17 +22,23 @@ namespace Shesha.DynamicEntities
     {
         private readonly IRepository<EntityProperty, Guid> _entityPropertyRepository;
         private readonly IRepository<EntityPropertyValue, Guid> _entityPropertyValueRepository;
-        
+        private readonly IEntityConfigurationStore _entityConfigurationStore;
+        private readonly IDynamicRepository _dynamicRepository;
+
         public IDynamicDtoTypeBuilder DtoTypeBuilder { get; set; }
         public ISerializationManager SerializationManager { get; set; }
 
         public DynamicPropertyManager(
             IRepository<EntityProperty, Guid> entityPropertyRepository,
-            IRepository<EntityPropertyValue, Guid> entityPropertyValueRepository
+            IRepository<EntityPropertyValue, Guid> entityPropertyValueRepository,
+            IEntityConfigurationStore entityConfigurationStore,
+            IDynamicRepository dynamicRepository
             )
         {
             _entityPropertyRepository = entityPropertyRepository;
             _entityPropertyValueRepository = entityPropertyValueRepository;
+            _entityConfigurationStore = entityConfigurationStore;
+            _dynamicRepository = dynamicRepository;
         }
 
         public async Task<string> GetValueAsync<TId>(IEntity<TId> entity, EntityPropertyDto property)
@@ -110,5 +118,77 @@ namespace Shesha.DynamicEntities
                 }
             }
         }
-    }
+
+        public async Task<object> GetEntityPropertyAsync<TEntity, TId>(TEntity entity, string propertyName)
+            where TEntity : class, IEntity<TId>
+        {
+            var dynamicProperty = (await DtoTypeBuilder.GetEntityPropertiesAsync(entity.GetType()))
+                .FirstOrDefault(p => p.Source == MetadataSourceType.UserDefined && p.Name == propertyName);
+
+            if (dynamicProperty == null)
+                return null;
+
+            var serializedValue = await GetValueAsync(entity, dynamicProperty);
+            if (serializedValue == null)
+                return null;
+
+            Type simpleType = null;
+            switch (dynamicProperty.DataType) 
+            {
+                case DataTypes.EntityReference:
+                    {
+                        var entityConfig = _entityConfigurationStore.Get(dynamicProperty.EntityType);
+                        var id = SerializationManager.DeserializeProperty(entityConfig.IdType, serializedValue);
+                        if (id == null)
+                            return null;
+
+                        return await _dynamicRepository.GetAsync(entityConfig.EntityType, id.ToString());
+                    }
+                case DataTypes.Boolean:
+                    simpleType = typeof(bool?);
+                    break;
+                case DataTypes.Guid:
+                    simpleType = typeof(Guid?);
+                    break;
+                case DataTypes.String:
+                    simpleType = typeof(string);
+                    break;
+                case DataTypes.Date:
+                case DataTypes.DateTime:
+                    simpleType = typeof(DateTime?);
+                    break;
+                case DataTypes.Number:
+                    {
+                        switch (dynamicProperty.DataFormat) 
+                        {
+                            case NumberFormats.Int32:
+                                simpleType = typeof(int?);
+                                break;
+                            case NumberFormats.Int64:
+                                simpleType = typeof(Int64?);
+                                break;
+                            case NumberFormats.Double:
+                                simpleType = typeof(double?);
+                                break;
+                            case NumberFormats.Float:
+                                simpleType = typeof(float?);
+                                break;
+                        }
+                        break;
+                    }
+                case DataTypes.Time:
+                    simpleType = typeof(TimeSpan?);
+                    break;
+                case DataTypes.Object:
+                    simpleType = typeof(string);
+                    break;
+            }
+
+            var rawValue = serializedValue != null && simpleType != null
+                ? SerializationManager.DeserializeProperty(simpleType, serializedValue)
+                : null;
+
+            return rawValue;
+        }
+     }
 }

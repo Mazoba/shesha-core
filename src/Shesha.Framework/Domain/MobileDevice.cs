@@ -3,12 +3,14 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Abp.Domain.Entities.Auditing;
 using Shesha.Authorization.Users;
+using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain
 {
     /// <summary>
     /// Registered mobile device. Is used to restrict access and identify 
     /// </summary>
+    [Entity(GenerateApplicationService = false)]
     public class MobileDevice: FullAuditedEntity<Guid>
     {
         /// <summary>

@@ -12,7 +12,7 @@ namespace Shesha.Domain
     /// <summary>
     /// A many-to-many relation because of each filter is normally applicable to one or more containers (such as report or a data table)
     /// </summary>
-    [Entity(TypeShortAlias = "Shesha.Framework.StoredFilterContainer", FriendlyName = "Filter per container object relation")]
+    [Entity(TypeShortAlias = "Shesha.Framework.StoredFilterContainer", GenerateApplicationService = false, FriendlyName = "Filter per container object relation")]
     public class StoredFilterContainer : FullPowerChildEntity
     {
         /// <summary>

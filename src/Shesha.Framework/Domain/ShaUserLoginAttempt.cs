@@ -7,10 +7,12 @@ using Abp.Domain.Entities.Auditing;
 using Abp.MultiTenancy;
 using Abp.Timing;
 using Shesha.Authorization;
-
+using Shesha.Domain.Attributes
+;
 namespace Shesha.Domain
 {
     [Table("Frwk_UserLoginAttempts")]
+    [Entity(GenerateApplicationService = false)]
     public class ShaUserLoginAttempt : Entity<Guid>, IHasCreationTime, IMayHaveTenant
     {
         /// <summary>

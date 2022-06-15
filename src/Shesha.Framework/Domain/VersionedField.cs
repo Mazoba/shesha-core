@@ -5,6 +5,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Versioned field definition
     /// </summary>
+    [Entity(GenerateApplicationService = false)]
     public class VersionedField : FullPowerChildEntity
     {
         /// <summary>

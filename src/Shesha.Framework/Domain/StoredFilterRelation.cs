@@ -8,7 +8,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Sub-filters. JsonLogic is preferable, we may only need to create sub-filters if we'd like to reuse some parts of more complex filters
     /// </summary>
-    [Entity(TypeShortAlias = "Shesha.Framework.StoredFilterRelation", FriendlyName = "Filter to sub-filter relation")]
+    [Entity(TypeShortAlias = "Shesha.Framework.StoredFilterRelation", GenerateApplicationService = false, FriendlyName = "Filter to sub-filter relation")]
     public class StoredFilterRelation : FullPowerEntity
     {
         /// <summary>

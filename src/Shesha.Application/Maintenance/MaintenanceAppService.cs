@@ -43,7 +43,7 @@ namespace Shesha.Maintenance
         /// </summary>
         public static DataTableConfig BackupFilesIndex()
         {
-            var table = new DataTableConfig<BackupFileDto>("BackupFiles_Index", p => p.Id);
+            var table = new DataTableConfig<BackupFileDto, int>("BackupFiles_Index");
 
             table.AddProperty(e => e.FileName);
             return table;

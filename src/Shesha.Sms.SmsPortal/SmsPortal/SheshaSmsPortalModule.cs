@@ -1,8 +1,8 @@
-﻿using Abp.AspNetCore.Configuration;
+﻿using Abp.AspNetCore;
+using Abp.AspNetCore.Configuration;
 using Abp.Modules;
+using Castle.MicroKernel.Registration;
 using System.Reflection;
-using Abp.Dependency;
-using Abp.AspNetCore;
 
 namespace Shesha.Sms.SmsPortal
 {
@@ -23,7 +23,9 @@ namespace Shesha.Sms.SmsPortal
         {
             IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());
 
-            IocManager.Register<SmsPortalGateway, SmsPortalGateway>(DependencyLifeStyle.Transient);
+            IocManager.IocContainer.Register(
+                Component.For<ISmsPortalGateway>().Forward<SmsPortalGateway>().ImplementedBy<SmsPortalGateway>().LifestyleTransient()
+            );
         }
     }
 }

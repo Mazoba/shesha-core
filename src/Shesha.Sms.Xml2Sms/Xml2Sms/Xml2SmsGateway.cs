@@ -1,4 +1,8 @@
-﻿using System;
+﻿using Castle.Core.Logging;
+using Shesha.Attributes;
+using Shesha.Configuration;
+using Shesha.Utilities;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Net;
@@ -6,24 +10,17 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Xml;
-using Abp.Configuration;
-using Castle.Core.Logging;
-using Shesha.Attributes;
-using Shesha.Utilities;
 
 namespace Shesha.Sms.Xml2Sms
 {
     [ClassUid("EA33034D-73C6-4D3D-94F0-EE0D4C56D97C")]
     [Display(Name = "Xml2Sms")]
-    public class Xml2SmsGateway : ISmsGateway
+    public class Xml2SmsGateway : ConfigurableSmsGateway<Xml2SmsSettingDto>, IXml2SmsGateway
     {
-
         public ILogger Logger { get; set; }
-        private readonly ISettingManager _settingManager;
 
-        public Xml2SmsGateway(ISettingManager settingManager)
+        public Xml2SmsGateway()
         {
-            _settingManager = settingManager;
             Logger = NullLogger.Instance;
         }
 
@@ -32,7 +29,7 @@ namespace Shesha.Sms.Xml2Sms
         /// </summary>
         /// <param name="mobileNumber">Mobile number to send message to. Must be a South African number.</param>
         /// <param name="body">Message to be sent.</param>
-        public async Task SendSmsAsync(string mobileNumber, string body)
+        public async override Task SendSmsAsync(string mobileNumber, string body)
         {
             if (string.IsNullOrEmpty(mobileNumber))
                 throw new Exception("Can't send message, your mobile number is empty");
@@ -58,9 +55,9 @@ namespace Shesha.Sms.Xml2Sms
             if (mobileNumber.StartsWith("0"))
                 mobileNumber = "27" + mobileNumber.Substring(1);
 
-            var smsHost = await _settingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.Host);
-            var smsUsername = await _settingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.ApiUsername);
-            var smsPassword = await _settingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.ApiPassword);
+            var smsHost = await SettingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.Host);
+            var smsUsername = await SettingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.ApiUsername);
+            var smsPassword = await SettingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.ApiPassword);
 
             var sb = new StringBuilder();
             sb.Append("http://" + smsHost + "/send/?username=");
@@ -111,11 +108,11 @@ namespace Shesha.Sms.Xml2Sms
         {
             var request = WebRequest.Create(url);
 
-            var useProxy = await _settingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.UseProxy) == true.ToString();
+            var useProxy = await SettingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.UseProxy) == true.ToString();
 
             if (useProxy)
             {
-                var proxyAddress = await _settingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.WebProxyAddress);
+                var proxyAddress = await SettingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.WebProxyAddress);
 
                 var proxy = new WebProxy
                 {
@@ -123,7 +120,7 @@ namespace Shesha.Sms.Xml2Sms
                 };
                 request.Proxy = proxy;
 
-                var useDefaultCredentials = await _settingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.UseDefaultProxyCredentials) == true.ToString();
+                var useDefaultCredentials = await SettingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.UseDefaultProxyCredentials) == true.ToString();
                 if (useDefaultCredentials)
                 {
                     proxy.Credentials = CredentialCache.DefaultCredentials;
@@ -131,8 +128,8 @@ namespace Shesha.Sms.Xml2Sms
                 }
                 else
                 {
-                    var username = await _settingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.WebProxyUsername);
-                    var password = await _settingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.WebProxyPassword);
+                    var username = await SettingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.WebProxyUsername);
+                    var password = await SettingManager.GetSettingValueForApplicationAsync(Xml2SmsSettingNames.WebProxyPassword);
 
                     proxy.Credentials =new NetworkCredential(username, password);
                 }
@@ -151,6 +148,35 @@ namespace Shesha.Sms.Xml2Sms
                     return strResponse;
                 }
             }
+        }
+
+        public override async Task<Xml2SmsSettingDto> GetTypedSettingsAsync()
+        {
+            var settings = new Xml2SmsSettingDto
+            {
+                Xml2SmsHost = await SettingManager.GetSettingValueAsync(Xml2SmsSettingNames.Host),
+                Xml2SmsPassword = await SettingManager.GetSettingValueAsync(Xml2SmsSettingNames.ApiPassword),
+                Xml2SmsUsername = await SettingManager.GetSettingValueAsync(Xml2SmsSettingNames.ApiUsername),
+                UseProxy = Boolean.Parse((ReadOnlySpan<char>)await SettingManager.GetSettingValueAsync(Xml2SmsSettingNames.UseProxy)),
+                WebProxyAddress = await SettingManager.GetSettingValueAsync(Xml2SmsSettingNames.WebProxyAddress),
+                UseDefaultProxyCredentials = Boolean.Parse((ReadOnlySpan<char>)await SettingManager.GetSettingValueAsync(Xml2SmsSettingNames.UseDefaultProxyCredentials)),
+                WebProxyUsername = await SettingManager.GetSettingValueAsync(Xml2SmsSettingNames.WebProxyUsername),
+                WebProxyPassword = await SettingManager.GetSettingValueAsync(Xml2SmsSettingNames.WebProxyPassword),
+            };
+
+            return settings;
+        }
+
+        public override async Task SetTypedSettingsAsync(Xml2SmsSettingDto settings)
+        {
+            await SettingManager.ChangeSettingAsync(Xml2SmsSettingNames.Host, settings.Xml2SmsHost);
+            await SettingManager.ChangeSettingAsync(Xml2SmsSettingNames.ApiPassword, settings.Xml2SmsPassword);
+            await SettingManager.ChangeSettingAsync(Xml2SmsSettingNames.ApiUsername, settings.Xml2SmsUsername);
+            await SettingManager.ChangeSettingAsync(Xml2SmsSettingNames.UseProxy, settings.UseProxy.ToString());
+            await SettingManager.ChangeSettingAsync(Xml2SmsSettingNames.WebProxyAddress, settings.WebProxyAddress);
+            await SettingManager.ChangeSettingAsync(Xml2SmsSettingNames.UseDefaultProxyCredentials, settings.UseDefaultProxyCredentials.ToString());
+            await SettingManager.ChangeSettingAsync(Xml2SmsSettingNames.WebProxyUsername, settings.WebProxyUsername);
+            await SettingManager.ChangeSettingAsync(Xml2SmsSettingNames.WebProxyPassword, settings.WebProxyPassword);
         }
     }
 }

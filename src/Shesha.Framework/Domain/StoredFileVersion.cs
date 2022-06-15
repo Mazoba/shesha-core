@@ -9,7 +9,7 @@ namespace Shesha.Domain
     /// <summary>
     /// Version of the <see cref="StoredFile"/>
     /// </summary>
-    [Entity(TypeShortAlias = "Shesha.Framework.StoredFileVersion")]
+    [Entity(TypeShortAlias = "Shesha.Framework.StoredFileVersion", GenerateApplicationService = false)]
     public class StoredFileVersion : FullAuditedEntity<Guid>, IMayHaveTenant
     {
 

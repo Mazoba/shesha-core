@@ -1,8 +1,8 @@
-﻿using System.Reflection;
-using Abp.AspNetCore;
+﻿using Abp.AspNetCore;
 using Abp.AspNetCore.Configuration;
-using Abp.Dependency;
 using Abp.Modules;
+using Castle.MicroKernel.Registration;
+using System.Reflection;
 
 namespace Shesha.Sms.Clickatell
 {
@@ -23,7 +23,9 @@ namespace Shesha.Sms.Clickatell
         {
             IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());
 
-            IocManager.Register<ClickatellSmsGateway, ClickatellSmsGateway>(DependencyLifeStyle.Transient);
+            IocManager.IocContainer.Register(
+                Component.For<IClickatellSmsGateway>().Forward<ClickatellSmsGateway>().ImplementedBy<ClickatellSmsGateway>().LifestyleTransient()
+            );
         }
     }
 }

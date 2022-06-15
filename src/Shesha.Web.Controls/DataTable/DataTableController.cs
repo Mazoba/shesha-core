@@ -102,7 +102,7 @@ namespace Shesha.Web.DataTable
         /// Columns configuration is merged on the client side with configurable values
         /// </summary>
         [HttpPost]
-        public List<DataTableColumnDto> GetColumns(GetColumnsInput input, CancellationToken cancellationToken)
+        public async Task<List<DataTableColumnDto>> GetColumnsAsync(GetColumnsInput input, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(input.EntityType))
                 throw new AbpValidationException($"'{nameof(input.EntityType)}' must not be null");
@@ -113,18 +113,21 @@ namespace Shesha.Web.DataTable
             if (entityType == null)
                 throw new AbpValidationException($"Entity of type `{input.EntityType}` not found");
 
-            var columns = GetColumnsForProperties(entityType.EntityType, input.Properties);
-            // DataTableColumnDto
+            var columns = await GetColumnsForPropertiesAsync(entityType.EntityType, input.Properties);
+            
             var dtos = columns.Select(c => _objectMapper.Map<DataTableColumnDto>(c)).ToList();
 
             return dtos;
         }
 
-        private List<DataTableColumn> GetColumnsForProperties(Type rowType, List<string> properties) 
+        private async Task<List<DataTableColumn>> GetColumnsForPropertiesAsync(Type rowType, List<string> properties) 
         {
-            var columns = properties.Select(p => _helper.GetDisplayPropertyColumn(rowType, p, p))
-                .Cast<DataTableColumn>()
-                .ToList();
+            var columns = new List<DataTableColumn>();
+            foreach (var property in properties) 
+            {
+                var column = await _helper.GetDisplayPropertyColumnAsync(rowType, property, property);
+                columns.Add(column);
+            }
 
             return columns;
         }
@@ -136,7 +139,6 @@ namespace Shesha.Web.DataTable
         [HttpPost]
         public async Task<DataTableData> GetData(DataTableGetDataInput input, CancellationToken cancellationToken)
         {
-
             if (!string.IsNullOrWhiteSpace(input.Id))
             {
                 // support of table configurations, may be removed later
@@ -215,7 +217,7 @@ namespace Shesha.Web.DataTable
                 if (data == null)
                     throw new Exception("Failed to export to Excel");
 
-                return GetExcelResult(data.Rows, tableConfig.Columns);
+                return await GetExcelResultAsync(data.Rows, tableConfig.Columns);
             }
             else
             if (!string.IsNullOrWhiteSpace(input.EntityType))
@@ -240,18 +242,24 @@ namespace Shesha.Web.DataTable
                     throw new Exception("Failed to export to Excel");
 
                 var columns = GetColumnsFromInput(input);
-                return GetExcelResult(data.Rows, columns);
+                return await GetExcelResultAsync(data.Rows, columns);
             }
             else
                 throw new AbpValidationException($"'{nameof(input.Id)}' or '{nameof(input.EntityType)}' must be specified");
         }
 
-        private FileStreamResult GetExcelResult(IList rows, IList<DataTableColumn> columns) 
+        private async Task<FileStreamResult> GetExcelResultAsync(IList rows, IList<DataTableColumn> columns) 
         {
             var excelFileName = "Export.xlsx";
             HttpContext.Response.Headers.Add("content-disposition", $"attachment;filename={excelFileName}");
 
-            var stream = ExcelUtility.ReadToExcelStream(rows, columns);
+            var rowType = rows.GetType().GetGenericArguments().FirstOrDefault();
+            var idType = rowType.GetProperty(nameof(IEntity.Id))?.PropertyType;
+
+            var method = typeof(ExcelUtility).GetMethod(nameof(ExcelUtility.ReadToExcelStreamAsync));
+            var genericMethod = method.MakeGenericMethod(rowType, idType);
+
+            var stream = await (Task<MemoryStream>)genericMethod.Invoke(null, parameters: new object[]{ rows, columns, ExcelUtility.DefaultSheetName, false });
 
             stream.Seek(0, SeekOrigin.Begin);
 
@@ -282,7 +290,7 @@ namespace Shesha.Web.DataTable
             var queryData = await GetTableQueryDataAsync<TEntity, TPrimaryKey>(input, cancellationToken);
 
             var columns = GetColumnsFromInput(input);
-            return GetTableDataWithPaging(queryData, columns, input.PageSize, cancellationToken);
+            return await GetTableDataWithPagingAsync(queryData, columns, input.PageSize, cancellationToken);
         }
 
         public async Task<QueryDataDto<TEntity, TPrimaryKey>> GetTableQueryDataAsync<TEntity, TPrimaryKey>(DataTableGetDataInput input, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
@@ -340,9 +348,9 @@ namespace Shesha.Web.DataTable
             }
         }
 
-        private DataTableData GetTableDataWithPaging<TEntity, TPrimaryKey>(QueryDataDto<TEntity, TPrimaryKey> queryData, List<DataTableColumn> columns, int pageSize, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
+        private async Task<DataTableData> GetTableDataWithPagingAsync<TEntity, TPrimaryKey>(QueryDataDto<TEntity, TPrimaryKey> queryData, List<DataTableColumn> columns, int pageSize, CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>
         {
-            var dataRows = MapDataRows(queryData.Rows, columns, cancellationToken);
+            var dataRows = await MapDataRowsAsync<TEntity, TPrimaryKey>(queryData.Entities, columns, cancellationToken);
 
             var totalPages = (int)Math.Ceiling((double)queryData.TotalRows / pageSize);
 
@@ -357,7 +365,7 @@ namespace Shesha.Web.DataTable
             return result;
         }            
 
-        private List<Dictionary<string, object>> MapDataRows(IList queryDataRows, List<DataTableColumn> columns, CancellationToken cancellationToken) 
+        private async Task<List<Dictionary<string, object>>> MapDataRowsAsync<TEntity, TPrimaryKey>(IList<TEntity> queryDataRows, List<DataTableColumn> columns, CancellationToken cancellationToken) where TEntity: class, IEntity<TPrimaryKey>
         {
             var dataRows = new List<Dictionary<string, object>>();
             foreach (var item in queryDataRows)
@@ -371,7 +379,7 @@ namespace Shesha.Web.DataTable
                     try
                     {
                         var value = item != null
-                            ? col.CellContent(item, false)
+                            ? await col.CellContentAsync<TEntity, TPrimaryKey>(item, false)
                             : null;
 
                         value ??= string.Empty;
@@ -864,17 +872,6 @@ namespace Shesha.Web.DataTable
             var personService = StaticContext.IocManager.Resolve<IRepository<Person, Guid>>();
             var person = personService.FirstOrDefault(c => c.User.Id == abpSession.GetUserId());
             return person;
-        }
-
-        private string GetChildEntitySortProperty(DataTablesDisplayPropertyColumn column) 
-        {
-            if (column?.GeneralDataType != GeneralDataType.EntityReference)
-                return null;
-
-            if (string.IsNullOrWhiteSpace(column.EntityReferenceTypeShortAlias))
-                return null;
-
-            return _entityConfigStore.Get(column.EntityReferenceTypeShortAlias)?.DisplayNamePropertyInfo?.Name ?? "Id";
         }
 
         private void AppendOrderBy(DataTableQueryBuildingContext context, bool userSortingDisabled)

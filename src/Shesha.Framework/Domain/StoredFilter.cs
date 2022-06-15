@@ -13,7 +13,7 @@ namespace Shesha.Domain
     /// <summary>
     /// A stored filter definition. This is used for both data table filters (index view selectors, saved filters and pre-defined filters) and the reporting framework report filters
     /// </summary>
-    [Entity(TypeShortAlias = "Shesha.Framework.StoredFilter", FriendlyName = "Stored Filter")]
+    [Entity(TypeShortAlias = "Shesha.Framework.StoredFilter", FriendlyName = "Stored Filter", GenerateApplicationService = false)]
     public class StoredFilter : FullPowerEntity
     {
         /// <summary>

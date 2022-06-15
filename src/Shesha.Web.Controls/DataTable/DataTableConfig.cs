@@ -166,25 +166,6 @@ namespace Shesha.Web.DataTable
             var filterRegistration = Activator.CreateInstance<TFilter>();
             CodeFilters.Add(filterRegistration);
         }
-
-        /// <summary>
-        /// Utility method to add a PropertyDisplayTableColumn (which is by far the most common) to the Columns collection.
-        /// </summary>
-        public virtual DataTableColumn AddProperty(string propName, string displayName, Action<DataTableColumnFluentConfig> transform = null)
-        {
-            var helper = StaticContext.IocManager.Resolve<IDataTableHelper>();
-            var column = helper.GetDisplayPropertyColumn(RowType, propName);
-            column.DataTableConfig = this;
-            Columns.Add(column);
-
-            if (!string.IsNullOrWhiteSpace(displayName))
-                column.Fluent.Caption(displayName);
-
-            // Custom configuration
-            transform?.Invoke(column.Fluent);
-
-            return column;
-        }
     }
 
     /// <summary>
@@ -192,7 +173,7 @@ namespace Shesha.Web.DataTable
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="TId"></typeparam>
-    public class DataTableConfig<T, TId> : DataTableConfig where T : class, IEntity<TId>
+    public class DataTableConfig<T, TId> : DataTableConfig where T : class/*, IEntity<TId>*/
     {
         /// <summary>
         /// Constructor
@@ -205,7 +186,8 @@ namespace Shesha.Web.DataTable
             IdType = typeof(TId);
 
             // Add Id column to each configuration by default
-            AddProperty(e => e.Id, c => c.Visible(false).IsFilterable(false).Exportable(false));
+            if (RowType.GetProperty(nameof(IEntity.Id)) != null)
+                AddProperty(nameof(IEntity.Id), nameof(IEntity.Id), c => c.Visible(false).IsFilterable(false).Exportable(false));
         }
 
         private EntityConfiguration _entityConfig;
@@ -281,91 +263,25 @@ namespace Shesha.Web.DataTable
                     : ReflectionHelper.GetPropertyName(property);
             return AddProperty(propName, displayName, transform);
         }
-    }
-
-    /// <summary>
-    /// Generic data table config
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class DataTableConfig<T> : DataTableConfig where T : class
-    {
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="idProperty"></param>
-        public DataTableConfig(string id, Expression<Func<T, object>> idProperty)
-            : base(id)
-        {
-            RowType = typeof(T);
-
-            // Add Id column to each configuration by default
-            AddProperty(idProperty, c => c.Visible(false).IsFilterable(false).Exportable(false));
-        }
 
         /// <summary>
-        /// Add custom column
+        /// Utility method to add a PropertyDisplayTableColumn (which is by far the most common) to the Columns collection.
         /// </summary>
-        /// <param name="name">Column name</param>
-        /// <param name="expression">Content expression</param>
-        /// <param name="transform">Fluent configuration</param>
-        /// <returns></returns>
-        public DataTableColumn AddCustomColumn(string name, Func<T, string> expression, Action<DataTableColumnFluentConfig> transform = null)
+        public virtual DataTableColumn AddProperty(string propName, string displayName, Action<DataTableColumnFluentConfig> transform = null)
         {
-            if (Columns.Any(c => c.PropertyName != null && c.PropertyName.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
-                throw new Exception("Column with this name already exists in the table configuration");
-
-            var column = new DataTablesCustomColumn<T>(expression)
-            {
-                DataTableConfig = this,
-                PropertyName = name,
-                Name = name,
-                Caption = name
-            };
-            transform?.Invoke(column.Fluent);
+            var helper = StaticContext.IocManager.Resolve<IDataTableHelper>();
+            var column = helper.GetDisplayPropertyColumn(RowType, propName);
+            column.DataTableConfig = this;
             Columns.Add(column);
+
+            if (!string.IsNullOrWhiteSpace(displayName))
+                column.Fluent.Caption(displayName);
+
+            // Custom configuration
+            transform?.Invoke(column.Fluent);
+
             return column;
         }
 
-        /// <summary>
-        /// Add property
-        /// </summary>
-        /// <typeparam name="TValue">Type of value</typeparam>
-        /// <param name="property">Property accessor</param>
-        /// <param name="transform">Fluent configuration</param>
-        /// <returns></returns>
-        public DataTableColumn AddProperty<TValue>(Expression<Func<T, TValue>> property, Action<DataTableColumnFluentConfig> transform = null)
-        {
-            return AddProperty<TValue>(property, null, transform);
-        }
-
-        /// <summary>
-        /// Add property
-        /// </summary>
-        /// <param name="property">Property accessor</param>
-        /// <param name="transform">Fluent configuration</param>
-        /// <returns></returns>
-        public DataTableColumn AddProperty(Expression<Func<T, object>> property, Action<DataTableColumnFluentConfig> transform = null)
-        {
-            return AddProperty<object>(property, null, transform);
-        }
-
-        /// <summary>
-        /// Add property
-        /// </summary>
-        /// <typeparam name="TValue">Type of value</typeparam>
-        /// <param name="property">Property accessor</param>
-        /// <param name="displayName">Column display name</param>
-        /// <param name="transform">Fluent configuration</param>
-        /// <returns></returns>
-        public DataTableColumn AddProperty<TValue>(Expression<Func<T, TValue>> property, string displayName,
-            Action<DataTableColumnFluentConfig> transform = null)
-        {
-            var propName =
-                property == null
-                    ? null
-                    : ReflectionHelper.GetPropertyName(property);
-            return AddProperty(propName, displayName, transform);
-        }
     }
 }

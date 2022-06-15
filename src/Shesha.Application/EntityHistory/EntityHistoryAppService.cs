@@ -81,7 +81,7 @@ namespace Shesha.EntityHistory
         /// </summary>
         public static DataTableConfig IndexTableFull()
         {
-            var table = new DataTableConfig<EntityHistoryItemDto>("EntityHistoryFull_Index", p => p.Id);
+            var table = new DataTableConfig<EntityHistoryItemDto, int>("EntityHistoryFull_Index");
 
             table.AddProperty(e => e.EventText, p => p.WidthPixels(185));
             table.AddProperty(e => e.ExtendedDescription);

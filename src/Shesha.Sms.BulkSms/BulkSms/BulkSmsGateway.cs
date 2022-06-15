@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Castle.Core.Logging;
+using Shesha.Attributes;
+using Shesha.Configuration;
+using System;
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
@@ -6,26 +9,21 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
-using Abp.Configuration;
-using Castle.Core.Logging;
-using Shesha.Attributes;
 
 namespace Shesha.Sms.BulkSms
 {
     [ClassUid("e77da5f3-a406-4b8a-bb6f-e3c2d5d20c8a")]
     [Display(Name = "Bulk Sms")]
-    public class BulkSmsGateway : ISmsGateway
+    public class BulkSmsGateway : ConfigurableSmsGateway<BulkSmsSettingsDto>, IBulkSmsGateway
     {
         public ILogger Logger { get; set; }
-        private readonly ISettingManager _settingManager;
 
-        public BulkSmsGateway(ISettingManager settingManager)
+        public BulkSmsGateway()
         {
-            _settingManager = settingManager;
             Logger = NullLogger.Instance;
         }
 
-        public async Task SendSmsAsync(string mobileNumber, string body)
+        public override async Task SendSmsAsync(string mobileNumber, string body)
         {
             if (string.IsNullOrEmpty(mobileNumber))
                 throw new Exception("Can't send message, mobile number is empty");
@@ -33,9 +31,9 @@ namespace Shesha.Sms.BulkSms
             if (string.IsNullOrEmpty(body))
                 throw new Exception("Can't send empty message");
 
-            var bulkSmsUrl = await _settingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.ApiUrl);
-            var bulkSmsUsername = await _settingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.ApiUsername);
-            var bulkSmsPassword = await _settingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.ApiPassword);
+            var bulkSmsUrl = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.ApiUrl);
+            var bulkSmsUsername = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.ApiUsername);
+            var bulkSmsPassword = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.ApiPassword);
             if (string.IsNullOrWhiteSpace(bulkSmsUrl) || string.IsNullOrWhiteSpace(bulkSmsUsername) || string.IsNullOrWhiteSpace(bulkSmsPassword))
                 throw new Exception("Bulk SMS Gateway is not configured properly, please check settings");
 
@@ -125,11 +123,11 @@ namespace Shesha.Sms.BulkSms
             {
                 var request = (HttpWebRequest)WebRequest.Create(url);
 
-                var useProxy = await _settingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.UseProxy) == true.ToString();
+                var useProxy = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.UseProxy) == true.ToString();
 
                 if (useProxy)
                 {
-                    var proxyAddress = await _settingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.WebProxyAddress);
+                    var proxyAddress = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.WebProxyAddress);
 
                     var proxy = new WebProxy
                     {
@@ -137,7 +135,7 @@ namespace Shesha.Sms.BulkSms
                     };
                     request.Proxy = proxy;
 
-                    var useDefaultCredentials = await _settingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.UseDefaultProxyCredentials) == true.ToString();
+                    var useDefaultCredentials = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.UseDefaultProxyCredentials) == true.ToString();
                     if (useDefaultCredentials)
                     {
                         proxy.Credentials = CredentialCache.DefaultCredentials;
@@ -145,8 +143,8 @@ namespace Shesha.Sms.BulkSms
                     }
                     else
                     {
-                        var username = await _settingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.WebProxyUsername);
-                        var password = await _settingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.WebProxyPassword);
+                        var username = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.WebProxyUsername);
+                        var password = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.WebProxyPassword);
 
                         proxy.Credentials = new NetworkCredential(username, password);
                     }
@@ -245,6 +243,37 @@ namespace Shesha.Sms.BulkSms
                 hex += String.Format("{0:x4}", (uint)System.Convert.ToUInt32(tmp.ToString()));
             }
             return hex;
+        }
+
+        public override async Task<BulkSmsSettingsDto> GetTypedSettingsAsync()
+        {
+            var settings = new BulkSmsSettingsDto
+            {
+                ApiUrl = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.ApiUrl),
+                ApiUsername = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.ApiUsername),
+                ApiPassword = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.ApiPassword),
+
+                UseProxy = Boolean.Parse((ReadOnlySpan<char>)await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.UseProxy)),
+                WebProxyAddress = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.WebProxyAddress),
+                UseDefaultProxyCredentials = Boolean.Parse((ReadOnlySpan<char>)await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.UseDefaultProxyCredentials)),
+                WebProxyUsername = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.WebProxyUsername),
+                WebProxyPassword = await SettingManager.GetSettingValueForApplicationAsync(BulkSmsSettingNames.WebProxyPassword),
+            };
+
+            return settings;
+        }
+
+        public override async Task SetTypedSettingsAsync(BulkSmsSettingsDto input)
+        {
+            await SettingManager.ChangeSettingAsync(BulkSmsSettingNames.ApiUrl, input.ApiUrl);
+            await SettingManager.ChangeSettingAsync(BulkSmsSettingNames.ApiUsername, input.ApiUsername);
+            await SettingManager.ChangeSettingAsync(BulkSmsSettingNames.ApiPassword, input.ApiPassword);
+
+            await SettingManager.ChangeSettingAsync(BulkSmsSettingNames.UseProxy, input.UseProxy.ToString());
+            await SettingManager.ChangeSettingAsync(BulkSmsSettingNames.WebProxyAddress, input.WebProxyAddress);
+            await SettingManager.ChangeSettingAsync(BulkSmsSettingNames.UseDefaultProxyCredentials, input.UseDefaultProxyCredentials.ToString());
+            await SettingManager.ChangeSettingAsync(BulkSmsSettingNames.WebProxyUsername, input.WebProxyUsername);
+            await SettingManager.ChangeSettingAsync(BulkSmsSettingNames.WebProxyPassword, input.WebProxyPassword);
         }
     }
 }
