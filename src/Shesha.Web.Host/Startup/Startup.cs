@@ -41,6 +41,10 @@ using Shesha.GraphQL.Provider.Queries;
 using GraphQL.Server;
 using Shesha.GraphQL.Provider.GraphTypes;
 using Abp.Application.Services.Dto;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using Microsoft.Extensions.Options;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace Shesha.Web.Host.Startup
 {
@@ -93,49 +97,7 @@ namespace Shesha.Web.Host.Startup
 
             services.AddCors();
 
-            // Swagger - Enable this line and the related lines in Configure method to enable swagger UI
-            services.AddSwaggerGen(options =>
-            {
-                options.DescribeAllParametersInCamelCase();
-                options.IgnoreObsoleteActions();
-                options.AddXmlDocuments();
-
-                options.OperationFilter<SwaggerOperationFilter>();
-                
-                options.CustomSchemaIds(type => SwaggerHelper.GetSchemaId(type));
-                
-                options.CustomOperationIds(desc => desc.ActionDescriptor is ControllerActionDescriptor d 
-                    ? d.ControllerName.ToCamelCase() + d.ActionName.ToPascalCase()
-                    : null);
-                options.SwaggerDoc("v1", new OpenApiInfo() { Title = "Shesha API", Version = "v1" });
-                options.DocInclusionPredicate((docName, description) => true);
-
-                options.AddDocumentsPerService();
-
-                // Define the BearerAuth scheme that's in use
-                options.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme()
-                {
-                    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-                    Name = "Authorization",
-                    In = ParameterLocation.Header,
-                    Type = SecuritySchemeType.ApiKey
-                });
-
-                options.SchemaFilter<DynamicDtoSchemaFilter>();
-            });
-
-            //services.AddApiVersioning(options =>
-            //{
-            //    options.AssumeDefaultVersionWhenUnspecified = true;
-            //    options.DefaultApiVersion = ApiVersion.Default;
-            //    options.ReportApiVersions = true;
-            //});
-
-            //services.AddVersionedApiExplorer(options =>
-            //{
-            //    options.GroupNameFormat = "'v'VVV";
-            //    options.SubstituteApiVersionInUrl = true;
-            //});
+            AddApiVersioning(services);
 
             services.AddHttpContextAccessor();
             services.AddHangfire(config =>
@@ -278,6 +240,56 @@ namespace Shesha.Web.Host.Startup
             app.UseGraphQL<EmptySchema>(path: "/graphql/empty");
             */
             app.UseGraphQLPlayground(); //to explorer API navigate https://*DOMAIN*/ui/playground
+        }
+
+        private void AddApiVersioning(IServiceCollection services)
+        {
+            services.Replace(ServiceDescriptor.Singleton<IApiControllerSpecification, AbpAppServiceApiVersionSpecification>());
+            services.Configure<OpenApiInfo>(_appConfiguration.GetSection(nameof(OpenApiInfo)));
+
+            services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
+
+            //Swagger - Enable this line and the related lines in Configure method to enable swagger UI
+            services.AddSwaggerGen(options =>
+            {
+                options.DescribeAllParametersInCamelCase();
+                options.IgnoreObsoleteActions();
+                options.AddXmlDocuments();
+
+                options.SchemaFilter<DynamicDtoSchemaFilter>();
+
+                options.CustomSchemaIds(type => SwaggerHelper.GetSchemaId(type));
+
+                options.CustomOperationIds(desc => desc.ActionDescriptor is ControllerActionDescriptor d
+                    ? d.ControllerName.ToCamelCase() + d.ActionName.ToPascalCase()
+                    : null);
+
+                options.AddDocumentsPerService();
+
+                // Define the BearerAuth scheme that's in use
+                options.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme()
+                {
+                    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey
+                });
+                //options.SchemaFilter<DynamicDtoSchemaFilter>();
+            });
+            services.Replace(ServiceDescriptor.Transient<ISwaggerProvider, CachingSwaggerProvider>());
+
+            services.AddApiVersioning(options =>
+            {
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                options.DefaultApiVersion = ApiVersion.Default;
+                options.ReportApiVersions = true;
+            });
+
+            services.AddVersionedApiExplorer(options =>
+            {
+                options.GroupNameFormat = "'v'VVV";
+                options.SubstituteApiVersionInUrl = true;
+            });
         }
     }
 }

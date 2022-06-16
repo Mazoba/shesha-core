@@ -1,8 +1,10 @@
 ﻿using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Abp.Linq;
+using FluentAssertions;
 using Newtonsoft.Json.Linq;
 using Shesha.Domain;
+using Shesha.Extensions;
 using Shesha.JsonLogic;
 using System;
 using System.Collections.Generic;
@@ -29,7 +31,7 @@ namespace Shesha.Tests.JsonLogic
             return expression;
         }
 
-        private async Task<List<T>> TryFetchData<T, TId>(string jsonLogicExpression) where T: class, IEntity<TId>
+        private async Task<List<T>> TryFetchData<T, TId>(string jsonLogicExpression, Func<IQueryable<T>, IQueryable<T>> prepareQueryable = null, Action<List<T>> assertions = null) where T: class, IEntity<TId>
         {
             var expression = ConvertToExpression<T>(jsonLogicExpression);
 
@@ -41,10 +43,15 @@ namespace Shesha.Tests.JsonLogic
             await WithUnitOfWorkAsync(async () => {
                 var query = personRepository.GetAll().Where(expression);
 
+                if (prepareQueryable != null)
+                    query = prepareQueryable.Invoke(query);
+
                 data = await asyncExecuter.ToListAsync(query);
+
+                assertions?.Invoke(data);
             });
 
-            return data;                
+            return data;
         }
 
         #region string operations
@@ -464,6 +471,50 @@ namespace Shesha.Tests.JsonLogic
             var data = await TryFetchData<Person, Guid>(_entityReference_Equals_expression);
             Assert.NotNull(data);
         }
+
+        #endregion
+
+        #region sorting
+
+        [Fact]
+        public async Task ComplexExpression_Fetch_SortBy_FirstName_Asc()
+        {
+            var data = await TryFetchData<Person, Guid>(_entityReference_Equals_expression, queryable => 
+                queryable.OrderBy(nameof(Person.FirstName))
+            );
+
+            Assert.NotNull(data);
+
+            data.Should().BeInAscendingOrder(e => e.FirstName);
+        }
+
+        [Fact]
+        public async Task ComplexExpression_Fetch_SortBy_FirstName_Desc()
+        {
+            var data = await TryFetchData<Person, Guid>(_entityReference_Equals_expression, queryable =>
+                queryable.OrderByDescending(nameof(Person.FirstName))
+            );
+
+            Assert.NotNull(data);
+
+            data.Should().BeInDescendingOrder(e => e.FirstName);
+        }
+
+        [Fact]
+        public async Task ComplexExpression_Fetch_SortBy_User_Username_Asc()
+        {
+            await TryFetchData<Person, Guid>(_entityReference_Equals_expression, 
+                queryable => queryable.OrderBy($"{nameof(Person.User)}.{nameof(Person.User.UserName)}"),
+                data => {
+                    Assert.NotNull(data);
+                    
+                    var userNames = data.Select(e => e.User?.UserName).ToList();
+                    userNames.Should().BeInAscendingOrder(e => e);
+                }
+            );
+        }
+
+        // sort by reference list
 
         #endregion
     }
