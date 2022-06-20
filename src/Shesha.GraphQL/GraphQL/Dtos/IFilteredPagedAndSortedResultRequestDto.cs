@@ -11,5 +11,10 @@ namespace Shesha.GraphQL.Dtos
         /// Filter string in JsonLogic format
         /// </summary>
         string Filter { get; set; }
+
+        /// <summary>
+        /// Quick search string. Is used to search entities by text
+        /// </summary>
+        string QuickSearch { get; set; }
     }
 }

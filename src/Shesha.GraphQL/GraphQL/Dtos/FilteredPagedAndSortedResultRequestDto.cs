@@ -9,5 +9,8 @@ namespace Shesha.GraphQL.Dtos
     {
         /// inheritedDoc
         public string Filter { get; set; }
+        
+        /// inheritedDoc
+        public string QuickSearch { get; set; }
     }
 }

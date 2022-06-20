@@ -29,6 +29,7 @@ using Shesha.Locks;
 using Shesha.NHibernate.Configuration;
 using Shesha.NHibernate.Filters;
 using Shesha.NHibernate.Interceptors;
+using Shesha.NHibernate.Linq;
 using Shesha.NHibernate.Maps;
 using Shesha.NHibernate.Repositories;
 using Shesha.NHibernate.Session;
@@ -89,6 +90,9 @@ namespace Shesha.NHibernate
                     })
                     .SetProperty("hbm2ddl.keywords", "auto-quote")
                     .CurrentSessionContext<UnitOfWorkSessionContext>();
+
+                // register linq extensions
+                _nhConfig.LinqToHqlGeneratorsRegistry<SheshaLinqToHqlGeneratorsRegistry>();
 
                 // register filters
                 _nhConfig.AddFilterDefinition(SoftDeleteFilter.GetDefinition());

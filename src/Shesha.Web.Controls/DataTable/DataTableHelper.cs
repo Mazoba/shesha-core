@@ -17,6 +17,7 @@ using Shesha.Extensions;
 using Shesha.JsonLogic;
 using Shesha.Metadata;
 using Shesha.Metadata.Dtos;
+using Shesha.QuickSearch;
 using Shesha.Reflection;
 using Shesha.Services;
 using Shesha.Utilities;
@@ -616,14 +617,6 @@ namespace Shesha.Web.DataTable
             }
 
             return column;
-        }
-
-        public class QuickSearchPropertyInfo
-        {
-            public string Name { get; set; }
-            public GeneralDataType DataType { get; set; }
-            public string ReferenceListNamespace { get; set; }
-            public string ReferenceListName { get; set; }
         }
     }
 }

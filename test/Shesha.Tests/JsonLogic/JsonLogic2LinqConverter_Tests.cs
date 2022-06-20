@@ -3,9 +3,14 @@ using Abp.Domain.Repositories;
 using Abp.Linq;
 using FluentAssertions;
 using Newtonsoft.Json.Linq;
+using NHibernate;
+using NHibernate.SqlCommand;
 using Shesha.Domain;
+using Shesha.Domain.Enums;
 using Shesha.Extensions;
 using Shesha.JsonLogic;
+using Shesha.NHibernate;
+using Shesha.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -304,7 +309,7 @@ namespace Shesha.Tests.JsonLogic
         {
           ""var"": ""IsLocked""
         },
-        false
+        true
       ]
     }
   ]
@@ -314,7 +319,7 @@ namespace Shesha.Tests.JsonLogic
         {
             var expression = ConvertToExpression<Person>(_booleanField_NotEquals_expression);
 
-            Assert.Equal(@"ent => (ent.IsLocked != False)", expression.ToString());
+            Assert.Equal(@"ent => (ent.IsLocked != True)", expression.ToString());
         }
 
         [Fact]
@@ -514,7 +519,34 @@ namespace Shesha.Tests.JsonLogic
             );
         }
 
-        // sort by reference list
+        [Fact]
+        public async Task ComplexExpression_Fetch_SortBy_Title_Asc()
+        {
+            await TryFetchData<Person, Guid>(_booleanField_NotEquals_expression,
+                queryable => queryable.OrderBy($"{nameof(Person.Title)}"),
+                data => {
+                    Assert.NotNull(data);
+
+                    var refListHelper = Resolve<IReferenceListHelper>();
+                    
+                    var titlesWithDisplayText = data.Select(e =>
+                        {
+                            var displayText = e.Title.HasValue
+                                ? refListHelper.GetItemDisplayText("Shesha.Core", "PersonTitles", (Int64)e.Title.Value)
+                                : null;
+
+
+                            return new { 
+                                ItemValue = (Int64?)e.Title,
+                                ItemText = displayText
+                            };
+                        })
+                        .ToList();
+
+                    titlesWithDisplayText.Should().BeInAscendingOrder(e => e.ItemText);
+                }
+            );
+        }
 
         #endregion
     }
