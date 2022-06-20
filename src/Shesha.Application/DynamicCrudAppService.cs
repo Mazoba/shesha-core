@@ -9,6 +9,7 @@ using Shesha.DynamicEntities.Dtos;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Shesha
@@ -71,6 +72,31 @@ namespace Shesha
             await UnitOfWorkManager.Current.SaveChangesAsync();
 
             return await MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(entity);
+        }
+
+        public override async Task<PagedResultDto<TDynamicDto>> GetAllAsync(FilteredPagedAndSortedResultRequestDto input)
+        {
+            CheckGetAllPermission();
+
+            var query = CreateFilteredQuery(input);
+
+            var totalCount = await AsyncQueryableExecuter.CountAsync(query);
+
+            query = ApplySorting(query, input);
+            query = ApplyPaging(query, input);
+
+            var entities = await AsyncQueryableExecuter.ToListAsync(query);
+
+            var list = new List<TDynamicDto>();
+            foreach (var entity in entities)
+            {
+                list.Add(await MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(entity));
+            }
+
+            return new PagedResultDto<TDynamicDto>(
+                totalCount,
+                list
+            );
         }
     }
 }
