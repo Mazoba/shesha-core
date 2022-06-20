@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Abp;
+﻿using Abp;
 using Abp.BackgroundJobs;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
@@ -13,11 +8,14 @@ using NHibernate.Linq;
 using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
-using Shesha.Email;
 using Shesha.Notifications.Dto;
 using Shesha.Services;
-using Shesha.Utilities;
 using Shesha.Web.DataTable;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Shesha.Notifications
 {

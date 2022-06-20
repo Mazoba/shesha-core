@@ -7,8 +7,8 @@ using GraphQL;
 using GraphQL.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
+using Shesha.Application.Services.Dto;
 using Shesha.Extensions;
-using Shesha.GraphQL.Dtos;
 using Shesha.GraphQL.Provider.GraphTypes;
 using Shesha.JsonLogic;
 using Shesha.Utilities;
@@ -23,7 +23,7 @@ namespace Shesha.GraphQL.Provider.Queries
     /// </summary>
     public class EntityQuery<TEntity, TId> : ObjectGraphType, ITransientDependency where TEntity : class, IEntity<TId>
     {
-        private IJsonLogic2LinqConverter _jsonLogicConverter;
+        private readonly IJsonLogic2LinqConverter _jsonLogicConverter;
 
         protected EntityQuery(IJsonLogic2LinqConverter jsonLogicConverter)
         {

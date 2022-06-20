@@ -1,11 +1,11 @@
 ﻿using Abp.Application.Services.Dto;
 
-namespace Shesha.GraphQL.Dtos
+namespace Shesha.Application.Services.Dto
 {
     /// <summary>
     /// Standard request of a filtered, paged and sorted list.
     /// </summary>
-    public interface IFilteredPagedAndSortedResultRequestDto: IPagedAndSortedResultRequest
+    public interface IFilteredPagedAndSortedResultRequestDto : IPagedAndSortedResultRequest
     {
         /// <summary>
         /// Filter string in JsonLogic format

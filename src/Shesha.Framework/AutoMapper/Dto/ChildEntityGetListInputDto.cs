@@ -1,12 +1,13 @@
 ﻿using System;
 using Abp.Application.Services.Dto;
+using Shesha.Application.Services.Dto;
 
 namespace Shesha.AutoMapper.Dto
 {
     /// <summary>
     /// Generic Dto for getting list of child entities by owner
     /// </summary>
-    public class ChildEntityGetListInputDto : PagedResultRequestDto
+    public class ChildEntityGetListInputDto : FilteredPagedAndSortedResultRequestDto
     {
         /// <summary>
         /// Id of the owner entity

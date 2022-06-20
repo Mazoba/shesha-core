@@ -1,23 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
-using Abp.Application.Services;
-using Abp.Application.Services.Dto;
-using Abp.Authorization;
+﻿using Abp.Authorization;
 using Abp.Domain.Repositories;
-using Abp.IdentityFramework;
 using Abp.Runtime.Validation;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using NHibernate.Linq;
+using Shesha.Application.Services.Dto;
 using Shesha.Authorization;
 using Shesha.Authorization.Users;
 using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.Web.DataTable;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Shesha.Persons
 {
@@ -26,7 +23,7 @@ namespace Shesha.Persons
     /// Person Application Service
     /// </summary>
     [AbpAuthorize(PermissionNames.Pages_Users)]
-    public class PersonAppService : AbpAsyncCrudAppService<Person, PersonAccountDto, Guid, PagedAndSortedResultRequestDto, CreatePersonAccountDto, PersonAccountDto>, IPersonAppService
+    public class PersonAppService : SheshaCrudServiceBase<Person, PersonAccountDto, Guid, FilteredPagedAndSortedResultRequestDto, CreatePersonAccountDto, PersonAccountDto>, IPersonAppService
     {
         private readonly UserManager _userManager;
         private readonly IRepository<ShaRoleAppointedPerson, Guid> _rolePersonRepository;

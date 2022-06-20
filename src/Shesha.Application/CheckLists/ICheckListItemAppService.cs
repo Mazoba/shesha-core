@@ -1,14 +1,14 @@
-﻿using System;
-using Abp.Application.Services;
-using Abp.Application.Services.Dto;
+﻿using Abp.Application.Services;
+using Shesha.Application.Services.Dto;
 using Shesha.CheckLists.Dtos;
+using System;
 
 namespace Shesha.CheckLists
 {
     /// <summary>
     /// Checklist item application service
     /// </summary>
-    public interface ICheckListItemAppService : IAsyncCrudAppService<CheckListItemDto, Guid, PagedAndSortedResultRequestDto, CheckListItemDto, CheckListItemDto>
+    public interface ICheckListItemAppService : IAsyncCrudAppService<CheckListItemDto, Guid, FilteredPagedAndSortedResultRequestDto, CheckListItemDto, CheckListItemDto>
     {
 
     }

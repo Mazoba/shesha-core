@@ -1,25 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Abp.Application.Services.Dto;
-using Abp.Domain.Repositories;
+﻿using Abp.Domain.Repositories;
 using Abp.Runtime.Validation;
 using Microsoft.AspNetCore.Mvc;
 using NHibernate.Linq;
+using Shesha.Application.Services.Dto;
 using Shesha.CheckLists.Dtos;
 using Shesha.CheckLists.Models;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.Utilities;
 using Shesha.Web.DataTable;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Shesha.CheckLists
 {
     /// <summary>
     /// Check list application service
     /// </summary>
-    public class CheckListAppService : SheshaCrudServiceBase<CheckList, CheckListDto, Guid, PagedAndSortedResultRequestDto, CheckListDto, CheckListDto>, ICheckListAppService
+    public class CheckListAppService : SheshaCrudServiceBase<CheckList, CheckListDto, Guid, FilteredPagedAndSortedResultRequestDto, CheckListDto, CheckListDto>, ICheckListAppService
     {
         private readonly IRepository<CheckListItemSelection, Guid> _selectionRepository;
 

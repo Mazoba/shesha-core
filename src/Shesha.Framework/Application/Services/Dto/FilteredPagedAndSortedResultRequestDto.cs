@@ -1,6 +1,6 @@
 ﻿using Abp.Application.Services.Dto;
 
-namespace Shesha.GraphQL.Dtos
+namespace Shesha.Application.Services.Dto
 {
     /// <summary>
     /// Filtered, pages and sorted request DTO
@@ -9,7 +9,7 @@ namespace Shesha.GraphQL.Dtos
     {
         /// inheritedDoc
         public string Filter { get; set; }
-        
+
         /// inheritedDoc
         public string QuickSearch { get; set; }
     }

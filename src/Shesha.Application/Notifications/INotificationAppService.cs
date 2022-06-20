@@ -1,18 +1,17 @@
-﻿using System;
+﻿using Abp.Notifications;
+using Shesha.Domain;
+using Shesha.Notifications.Dto;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Abp.Application.Services;
-using Abp.Notifications;
-using Shesha.Domain;
-using Shesha.Notifications.Dto;
 
 namespace Shesha.Notifications
 {
     /// <summary>
     /// Notification service
     /// </summary>
-    public interface INotificationAppService: IAsyncCrudAppService<NotificationDto, Guid>
+    public interface INotificationAppService: ISheshaCrudAppService<NotificationDto, Guid>
     {
         /// <summary>
         /// Publish new notification

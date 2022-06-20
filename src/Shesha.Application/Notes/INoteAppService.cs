@@ -1,11 +1,11 @@
-﻿using System;
-using Abp.Application.Services;
+﻿using Abp.Application.Services;
+using Shesha.Application.Services.Dto;
 using Shesha.Notes.Dto;
-using Shesha.Roles.Dto;
+using System;
 
 namespace Shesha.Notes
 {
-    public interface INoteAppService : IAsyncCrudAppService<NoteDto, Guid, PagedRoleResultRequestDto, CreateNoteDto, UpdateNoteDto>
+    public interface INoteAppService : IAsyncCrudAppService<NoteDto, Guid, FilteredPagedAndSortedResultRequestDto, CreateNoteDto, UpdateNoteDto>
     {
     }
 }

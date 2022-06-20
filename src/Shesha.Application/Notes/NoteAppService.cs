@@ -1,16 +1,16 @@
-﻿using System;
+﻿using Abp.Domain.Repositories;
+using NHibernate.Linq;
+using Shesha.Application.Services.Dto;
+using Shesha.Domain;
+using Shesha.Notes.Dto;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Abp.Domain.Repositories;
-using NHibernate.Linq;
-using Shesha.Domain;
-using Shesha.Notes.Dto;
-using Shesha.Roles.Dto;
 
 namespace Shesha.Notes
 {
-    public class NoteAppService : SheshaCrudServiceBase<Note, NoteDto, Guid, PagedRoleResultRequestDto, CreateNoteDto, UpdateNoteDto>, INoteAppService
+    public class NoteAppService : SheshaCrudServiceBase<Note, NoteDto, Guid, FilteredPagedAndSortedResultRequestDto, CreateNoteDto, UpdateNoteDto>, INoteAppService
     {
         public NoteAppService(IRepository<Note, Guid> repository): base(repository)
         {
