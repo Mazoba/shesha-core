@@ -3,13 +3,9 @@ using Abp.Domain.Repositories;
 using Abp.Linq;
 using FluentAssertions;
 using Newtonsoft.Json.Linq;
-using NHibernate;
-using NHibernate.SqlCommand;
 using Shesha.Domain;
-using Shesha.Domain.Enums;
 using Shesha.Extensions;
 using Shesha.JsonLogic;
-using Shesha.NHibernate;
 using Shesha.Services;
 using System;
 using System.Collections.Generic;
@@ -40,13 +36,13 @@ namespace Shesha.Tests.JsonLogic
         {
             var expression = ConvertToExpression<T>(jsonLogicExpression);
 
-            var personRepository = LocalIocManager.Resolve<IRepository<T, TId>>();
+            var repository = LocalIocManager.Resolve<IRepository<T, TId>>();
             var asyncExecuter = LocalIocManager.Resolve<IAsyncQueryableExecuter>();
 
             List<T> data = null;
             
             await WithUnitOfWorkAsync(async () => {
-                var query = personRepository.GetAll().Where(expression);
+                var query = repository.GetAll().Where(expression);
 
                 if (prepareQueryable != null)
                     query = prepareQueryable.Invoke(query);
@@ -61,7 +57,7 @@ namespace Shesha.Tests.JsonLogic
 
         #region string operations
 
-        private string _stringField_Equals_expression = @"{
+        private readonly string _stringField_Equals_expression = @"{
   ""and"": [
     {
       ""=="": [
@@ -89,7 +85,7 @@ namespace Shesha.Tests.JsonLogic
         }
 
 
-        private string _stringField_NotEquals_expression = @"{
+        private readonly string _stringField_NotEquals_expression = @"{
   ""and"": [
     {
       ""!="": [
@@ -115,7 +111,7 @@ namespace Shesha.Tests.JsonLogic
             Assert.NotNull(data);
         }
 
-        private string _stringField_Like_expression = @"{
+        private readonly string _stringField_Like_expression = @"{
   ""and"": [
     {
       ""in"": [
@@ -141,7 +137,7 @@ namespace Shesha.Tests.JsonLogic
             Assert.NotNull(data);
         }
 
-        private string _stringField_NotLike_expression = @"{
+        private readonly string _stringField_NotLike_expression = @"{
   ""and"": [
     {
       ""!"": {
@@ -170,7 +166,7 @@ namespace Shesha.Tests.JsonLogic
             Assert.NotNull(data);
         }
 
-        private string _stringField_IsEmpty_expression = @"{
+        private readonly string _stringField_IsEmpty_expression = @"{
   ""and"": [
     {
       ""!"": {
@@ -193,7 +189,7 @@ namespace Shesha.Tests.JsonLogic
             Assert.NotNull(data);
         }
 
-        private string _stringField_IsNotEmpty_expression = @"{
+        private readonly string _stringField_IsNotEmpty_expression = @"{
   ""and"": [
     {
       ""!!"": {
@@ -217,7 +213,7 @@ namespace Shesha.Tests.JsonLogic
             Assert.NotNull(data);
         }
 
-        private string _stringField_StartsWith_expression = @"{
+        private readonly string _stringField_StartsWith_expression = @"{
   ""and"": [
     {
       ""startsWith"": [
@@ -244,7 +240,7 @@ namespace Shesha.Tests.JsonLogic
             Assert.NotNull(data);
         }
 
-        private string _stringField_EndsWith_expression = @"{
+        private readonly string _stringField_EndsWith_expression = @"{
   ""and"": [
     {
       ""endsWith"": [
@@ -275,7 +271,7 @@ namespace Shesha.Tests.JsonLogic
 
         #region bool operations
 
-        private string _booleanField_Equals_expression = @"{
+        private readonly string _booleanField_Equals_expression = @"{
   ""and"": [
     {
       ""=="": [
@@ -302,7 +298,7 @@ namespace Shesha.Tests.JsonLogic
             Assert.NotNull(data);
         }
 
-        private string _booleanField_NotEquals_expression = @"{
+        private readonly string _booleanField_NotEquals_expression = @"{
   ""and"": [
     {
       ""!="": [
@@ -333,7 +329,7 @@ namespace Shesha.Tests.JsonLogic
 
         #region nested columns resolving
 
-        private string _nestedColumnResolver_expression = @"{
+        private readonly string _nestedColumnResolver_expression = @"{
   ""and"": [
     {
       ""=="": [
@@ -365,7 +361,7 @@ namespace Shesha.Tests.JsonLogic
 
         #region datetime
 
-        private string _datetimeField_NotEquals_Test_expression = @"{
+        private readonly string _datetimeField_NotEquals_Test_expression = @"{
   ""and"": [
     {
       "">"": [
@@ -397,7 +393,7 @@ namespace Shesha.Tests.JsonLogic
 
         #region entity reference
 
-        private string _entityReference_Equals_expression = @"{
+        private readonly string _entityReference_Equals_expression = @"{
   ""and"": [
     {
       ""=="": [
@@ -429,7 +425,7 @@ namespace Shesha.Tests.JsonLogic
 
         #region complex expression (with `or` and `and`)
 
-        private string _complex_expression = @"{
+        private readonly string _complex_expression = @"{
   ""or"": [
     {
       ""=="": [

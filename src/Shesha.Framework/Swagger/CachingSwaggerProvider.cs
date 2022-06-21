@@ -17,7 +17,7 @@ namespace Shesha.Swagger
         private readonly SwaggerGenerator _swaggerGenerator;
 
         /// <summary>
-        /// Cache of the ReferenceListItems
+        /// Cache of the Swagger docs
         /// </summary>
         protected ITypedCache<string, OpenApiDocument> SwaggerCache => _cacheManager.GetCache<string, OpenApiDocument>("SwaggerCache");
 

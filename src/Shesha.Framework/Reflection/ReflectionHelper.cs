@@ -143,11 +143,6 @@ namespace Shesha.Reflection
             return GetProperty(entity, null, propertyName, out var propertyEntity);
         }
 
-        public static PropertyInfo GetProperty(Type type, string propertyName)
-        {
-            return GetProperty(null, type, propertyName, out var propertyEntity);
-        }
-
         private static PropertyInfo GetProperty(object entity, Type type, string propertyName, out object propertyEntity)
         {
             var propTokens = propertyName.Split('.');
@@ -667,6 +662,48 @@ namespace Shesha.Reflection
                 ? displayAttributes[0].GetAutoGenerateField()
                 : null;
             return autoGenerateValue ?? true; // By default, show all items
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="propertyName"></param>
+        /// <returns></returns>
+        public static PropertyInfo GetProperty(this Type type, string propertyName)
+        {
+            var propTokens = propertyName.Split('.');
+            var currentType = type;
+
+            for (int i = 0; i < propTokens.Length; i++)
+            {
+                PropertyInfo propInfo;
+                var containerType = currentType.StripCastleProxyType();
+                try
+                {
+                    propInfo = containerType.GetProperty(propTokens[i]);
+                }
+                catch (AmbiguousMatchException)
+                {
+                    // Property may have been overriden using the 'new' keyword hence there are multiple properties with the same name.
+                    // Will look for the one declared at the highest level.
+                    propInfo = ReflectionHelper.FindHighestLevelProperty(propTokens[i], containerType);
+                }
+
+                if (propInfo == null)
+                    return null;
+
+                if (i == propTokens.Length - 1)
+                {
+                    return propInfo;
+                }
+                else
+                {
+                    currentType = propInfo.PropertyType;
+                }
+            }
+
+            return null;
         }
     }
 }
