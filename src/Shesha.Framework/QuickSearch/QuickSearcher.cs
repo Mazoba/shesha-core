@@ -167,8 +167,7 @@ namespace Shesha.QuickSearch
                                     }
                                 );
 
-                                var refListRepo = StaticContext.IocManager.Resolve<IRepository<ReferenceListItem, Guid>>();
-                                var query = refListRepo.GetAll();
+                                var query = _refListItemRepository.GetAll();
 
                                 var anyGeneric = queryableAnyMethod.MakeGenericMethod(typeof(ReferenceListItem));
 

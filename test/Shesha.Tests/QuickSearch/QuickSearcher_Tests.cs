@@ -1,6 +1,10 @@
 ﻿using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Abp.Linq;
+using Abp.Runtime.Caching;
+using FluentAssertions;
+using Moq;
+using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.Domain.Attributes;
 using Shesha.Domain.Enums;
@@ -114,6 +118,56 @@ namespace Shesha.Tests.QuickSearch
             Assert.Equal(@"ent => value(NHibernate.Linq.NhQueryable`1[Shesha.Domain.ReferenceListItem]).Any(entContactMethods => ((((entContactMethods.ReferenceList.Namespace == ""Shesha.Core"") AndAlso (entContactMethods.ReferenceList.Name == ""PreferredContactMethod"")) AndAlso ((Convert(ent.ContactMethods, Nullable`1) & Convert(entContactMethods.ItemValue, Nullable`1)) > Convert(0, Nullable`1))) AndAlso entContactMethods.Item.Contains(""email"")))", expression.ToString());
         }
 
+        [Fact]
+        public async Task SearchTest_Organisation_MultiValueRefList_Fetch_Test()
+        {
+            var orgRepoMock = new Mock<IRepository<TestOrganisation, Guid>>();
+
+            var testOrganisations = new List<TestOrganisation> {
+                new TestOrganisation { Id = Guid.NewGuid(), Name = "Boxfusion", ContactMethods = (Int64)(TestContactMethod.Email | TestContactMethod.Sms | TestContactMethod.Fax) },
+                new TestOrganisation { Id = Guid.NewGuid(), Name = "Microsoft", ContactMethods = (Int64)(TestContactMethod.Email | TestContactMethod.Fax) },
+                new TestOrganisation { Id = Guid.NewGuid(), Name = "Google", ContactMethods = (Int64)(TestContactMethod.Fax | TestContactMethod.Sms) },
+                new TestOrganisation { Id = Guid.NewGuid(), Name = "Hali-Gali Comp", ContactMethods = (Int64)(TestContactMethod.Fax) },
+                new TestOrganisation { Id = Guid.NewGuid(), Name = "Supa-Drupa Int", ContactMethods = (Int64)(TestContactMethod.Email | TestContactMethod.Sms) },
+            };
+
+            orgRepoMock.Setup(s => s.GetAll()).Returns(() => testOrganisations.AsQueryable());
+
+            var refList = new ReferenceList { Namespace = "Shesha.Core", Name = "PreferredContactMethod" };
+            var refListItems = new List<ReferenceListItem>();
+            var enumValues = Enum.GetValues(typeof(TestContactMethod));
+            foreach (var enumValue in enumValues)
+            {
+                refListItems.Add(new ReferenceListItem
+                {
+                    Id = Guid.NewGuid(),
+                    ReferenceList = refList,
+                    Item = Enum.GetName(typeof(TestContactMethod), enumValue),
+                    ItemValue = (Int64)enumValue
+                });
+            }
+
+            var rliRepoMock = new Mock<IRepository<ReferenceListItem, Guid>>();
+            rliRepoMock.Setup(s => s.GetAll()).Returns(() => refListItems.AsQueryable());
+
+            var quickSearcher = new QuickSearcher(Resolve<IEntityConfigurationStore>(), rliRepoMock.Object, Resolve<ICacheManager>());
+
+            var expression = quickSearcher.GetQuickSearchExpression<TestOrganisation>("Email", new List<string> {
+                nameof(TestOrganisation.ContactMethods)
+            });
+
+            var query = orgRepoMock.Object.GetAll();
+
+            query = query.Where(expression);
+
+            var data = query.ToList();
+
+            // query expected list
+            var expected = testOrganisations.Where(o => (o.ContactMethods & (Int64)TestContactMethod.Email) > 0).ToList();
+            // and compare with results of quick search
+            data.Should().BeEquivalentTo(expected);
+        }
+
         #region private methods
 
         private async Task<List<T>> TryFetchData<T, TId>(Func<IQueryable<T>, IQueryable<T>> prepareQueryable = null, Action<List<T>> assertions = null) where T : class, IEntity<TId>
@@ -159,5 +213,13 @@ namespace Shesha.Tests.QuickSearch
         
         [MultiValueReferenceList("Shesha.Core", "PreferredContactMethod")]
         public virtual Int64? ContactMethods { get; set; }
+    }
+
+    [Flags]
+    public enum TestContactMethod: Int64
+    { 
+        Email = 1,
+        Sms = 2,
+        Fax = 4,
     }
 }
