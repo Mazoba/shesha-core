@@ -8,6 +8,6 @@ namespace Boxfusion.Authorization
         /// <summary>
         /// Data Administrator
         /// </summary>
-        public const string DataAdministrator = "Data Administrator";
+        public const string SystemAdministrator = "System Administrator";
     }
 }
