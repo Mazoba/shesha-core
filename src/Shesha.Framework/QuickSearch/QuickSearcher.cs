@@ -59,6 +59,18 @@ namespace Shesha.QuickSearch
         }
 
         /// <summary>
+        /// Get quick search linq expression. Uses root level properties of the specified entity
+        /// </summary>
+        /// <typeparam name="T">Type of entity</typeparam>
+        /// <param name="quickSearch">Quick search text</param>
+        /// <returns></returns>
+        public Expression<Func<T, bool>> GetQuickSearchExpression<T>(string quickSearch)
+        {
+            var properties = GetTopLevelProperties<T>();
+            return GetQuickSearchExpression<T>(quickSearch, properties);
+        }
+
+        /// <summary>
         /// Get quick search expression for the specified entity type <typeparamref name="T"/>
         /// </summary>
         /// <typeparam name="T">Type of entity</typeparam>
@@ -189,11 +201,31 @@ namespace Shesha.QuickSearch
             return CombineExpressions(subExpressions, Expression.OrElse, parameter);
         }
 
-        /// inheritedDoc
-        public IQueryable<TEntity> ApplyQuickSearch<TEntity>(IQueryable<TEntity> query, string quickSearch, List<string> properties) 
+        /// <summary>
+        /// Apply quick search to a specified <paramref name="queryable"/>
+        /// </summary>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <param name="queryable">Queryable to be filtered</param>
+        /// <param name="quickSearch">Quick search text</param>
+        /// <param name="properties">List of properties to search. Supports dot notation (e.g. User.Username)</param>
+        /// <returns></returns>
+        public IQueryable<TEntity> ApplyQuickSearch<TEntity>(IQueryable<TEntity> queryable, string quickSearch, List<string> properties) 
         {
             var expression = GetQuickSearchExpression<TEntity>(quickSearch, properties);
-            return query.Where(expression);
+            return queryable.Where(expression);
+        }
+
+        /// <summary>
+        /// Apply quick search to a specified <paramref name="queryable"/>. Searches by root level properties of the specified entity
+        /// </summary>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <param name="queryable">Queryable to be filtered</param>
+        /// <param name="quickSearch">Quick search text</param>
+        /// <returns></returns>
+        public IQueryable<TEntity> ApplyQuickSearch<TEntity>(IQueryable<TEntity> queryable, string quickSearch)
+        {
+            var expression = GetQuickSearchExpression<TEntity>(quickSearch);
+            return queryable.Where(expression);
         }
 
         #region private declarations
@@ -360,6 +392,17 @@ namespace Shesha.QuickSearch
                 .ToList();
 
             return props;
+        }
+
+        /// <summary>
+        /// Get names of the root level properties
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <returns></returns>
+        public List<string> GetTopLevelProperties<TEntity>() 
+        {
+            var entityConfig = _entityConfigurationStore.Get(typeof(TEntity));
+            return entityConfig.Properties.Select(p => p.Key).ToList();
         }
 
         #endregion

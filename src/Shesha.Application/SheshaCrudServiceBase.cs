@@ -3,6 +3,7 @@ using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Shesha.Application.Services.Dto;
 using Shesha.Extensions;
+using Shesha.QuickSearch;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -61,6 +62,8 @@ namespace Shesha
         where TUpdateInput : IEntityDto<TPrimaryKey>
         where TGetAllInput: FilteredPagedAndSortedResultRequestDto
     {
+        public IQuickSearcher QuickSearcher { get; set; }
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -72,7 +75,12 @@ namespace Shesha
 
         protected override IQueryable<TEntity> CreateFilteredQuery(TGetAllInput input)
         {
-            return Repository.GetAll().ApplyFilter<TEntity, TPrimaryKey>(input.Filter);
+            var query = Repository.GetAll().ApplyFilter<TEntity, TPrimaryKey>(input.Filter);
+
+            if (this.QuickSearcher != null && !string.IsNullOrWhiteSpace(input.QuickSearch))
+                query = this.QuickSearcher.ApplyQuickSearch(query, input.QuickSearch);
+
+            return query;
         }
 
         public override async Task<PagedResultDto<TEntityDto>> GetAllAsync(TGetAllInput input)
