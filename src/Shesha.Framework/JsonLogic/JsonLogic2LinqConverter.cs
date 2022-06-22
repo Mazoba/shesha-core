@@ -416,8 +416,6 @@ namespace Shesha.JsonLogic
                 conditions = conditions.ReduceAndCheck();
             }
 
-            Console.WriteLine(conditions.ToString());
-
             var query = Expression.Lambda<Func<T, bool>>(conditions, itemExpression);
             return query;
         }

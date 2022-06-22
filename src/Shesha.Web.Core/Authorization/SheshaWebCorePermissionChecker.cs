@@ -36,7 +36,7 @@ namespace Boxfusion.Authorization
                 return false;
 
             // system administrator has all rights
-            if (await IsInAnyOfRoles(person, RoleNames.DataAdministrator))
+            if (await IsInAnyOfRoles(person, RoleNames.SystemAdministrator))
                 return true;
 
             // add custom permission checks here...
@@ -58,7 +58,7 @@ namespace Boxfusion.Authorization
         /// <returns></returns>
         public async Task<bool> IsDataAdministrator(Person person)
         {
-            return await IsInAnyOfRoles(person, RoleNames.DataAdministrator);
+            return await IsInAnyOfRoles(person, RoleNames.SystemAdministrator);
         }
 
         public bool IsGranted(long userId, string permissionName)

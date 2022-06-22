@@ -102,7 +102,7 @@ namespace Shesha.Web.DataTable
                             }
                         case GeneralDataType.EntityReference:
                             {
-                                var nestedProperty = GetNestedProperty(rowType, prop.Name);
+                                var nestedProperty = ReflectionHelper.GetProperty(rowType, prop.Name);
                                 if (nestedProperty != null)
                                 {
                                     var nestedEntityConfig = _entityConfigurationStore.Get(nestedProperty.PropertyType);
@@ -162,42 +162,6 @@ namespace Shesha.Web.DataTable
 
             if (subQueries.Any())
                 filterCriteria.FilterClauses.Add(subQueries.Delimited(" or "));
-        }
-
-        private PropertyInfo GetNestedProperty(Type rowType, string propertyName)
-        {
-            var propTokens = propertyName.Split('.');
-            var currentType = rowType;
-
-            for (int i = 0; i < propTokens.Length; i++)
-            {
-                PropertyInfo propInfo;
-                var containerType = currentType.StripCastleProxyType();
-                try
-                {
-                    propInfo = containerType.GetProperty(propTokens[i]);
-                }
-                catch (AmbiguousMatchException)
-                {
-                    // Property may have been overriden using the 'new' keyword hence there are multiple properties with the same name.
-                    // Will look for the one declared at the highest level.
-                    propInfo = ReflectionHelper.FindHighestLevelProperty(propTokens[i], containerType);
-                }
-
-                if (propInfo == null)
-                    return null;
-
-                if (i == propTokens.Length - 1)
-                {
-                    return propInfo;
-                }
-                else
-                {
-                    currentType = propInfo.PropertyType;
-                }
-            }
-
-            return null;
         }
 
         /// <summary>

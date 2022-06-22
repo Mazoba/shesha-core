@@ -363,11 +363,7 @@ namespace Shesha.Users
             }
             long currentUserId = _abpSession.UserId.Value;
             var currentUser = await _userManager.GetUserByIdAsync(currentUserId);
-            var loginAsync = await _logInManager.LoginAsync(currentUser.UserName, input.AdminPassword, shouldLockout: false);
-            if (loginAsync.Result != ShaLoginResultType.Success)
-            {
-                throw new UserFriendlyException("Your 'Admin Password' did not match the one on record.  Please try again.");
-            }
+            
             if (currentUser.IsDeleted || !currentUser.IsActive)
             {
                 return false;
@@ -382,10 +378,15 @@ namespace Shesha.Users
             if (user != null)
             {
                 user.AddHistoryEvent("Password reset", "Password reset");
-                _personRepository.GetAll().FirstOrDefault(x => x.User == user)?.AddHistoryEvent("Password reset", "Password reset");
+                var person = await _personRepository.FirstOrDefaultAsync(x => x.User == user);
+                person?.AddHistoryEvent("Password reset", "Password reset");
 
                 user.Password = _passwordHasher.HashPassword(user, input.NewPassword);
-                CurrentUnitOfWork.SaveChanges();
+                user.IsActive = true;
+                if (user.LockoutEndDateUtc.HasValue && user.LockoutEndDateUtc > DateTime.Now)
+                    user.LockoutEndDateUtc = DateTime.Now;
+                await _userManager.UpdateAsync(user);
+                await CurrentUnitOfWork.SaveChangesAsync();
             }
 
             return true;
