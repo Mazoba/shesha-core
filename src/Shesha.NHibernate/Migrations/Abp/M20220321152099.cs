@@ -20,7 +20,15 @@ namespace Shesha.Migrations.Abp
         {
             #region 20191216011543_Upgraded_To_Abp_5_1_0
 
+            var indexExists = Schema.Table("AbpUserLoginAttempts").Index("IX_AbpUserLoginAttempts_TenancyName_UserNameOrEmailAddress_Result").Exists();
+            if (indexExists)
+                Delete.Index("IX_AbpUserLoginAttempts_TenancyName_UserNameOrEmailAddress_Result").OnTable("AbpUserLoginAttempts");
+
             Alter.Column("UserNameOrEmailAddress").OnTable("AbpUserLoginAttempts").AsString(256).Nullable();
+
+            if (indexExists)
+                Execute.Sql($"CREATE INDEX IX_AbpUserLoginAttempts_TenancyName_UserNameOrEmailAddress_Result ON AbpUserLoginAttempts(TenancyName, UserNameOrEmailAddress, Result)");
+
             //Alter.Column("Value").OnTable("AbpSettings").AsString(256).Nullable();
 
             #endregion
