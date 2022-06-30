@@ -45,6 +45,7 @@ using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Swagger;
+using Shesha.Specifications;
 
 namespace Shesha.Web.Host.Startup
 {
@@ -82,6 +83,7 @@ namespace Shesha.Web.Host.Startup
 
                     options.EnableDynamicDtoBinding();
                     options.AddDynamicAppServices(services);
+                    options.Filters.AddService(typeof(SpecificationsActionFilter));
                 })
                 .AddApiExplorer()
                 .AddNewtonsoftJson(options =>
@@ -143,7 +145,7 @@ namespace Shesha.Web.Host.Startup
                 //.AddErrorInfoProvider(opt => opt.ExposeExceptionStackTrace = Environment.IsDevelopment())
                 .AddWebSockets() // Add required services for web socket support
                 //.AddDataLoader() // Add required services for DataLoader support
-                .AddGraphTypes(typeof(SheshaSchema).Assembly)
+                //.AddGraphTypes(typeof(SheshaSchema).Assembly)
                 ); // Add all IGraphType implementors in assembly which ChatSchema exists 
                                                                 //.AddGraphTypes(ServiceLifetime.Scoped)
                                                                 //.AddUserContextBuilder(httpContext => httpContext.User)
