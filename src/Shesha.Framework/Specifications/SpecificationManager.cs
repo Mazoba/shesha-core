@@ -5,7 +5,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Disposables;
 using System.Threading;
 
 namespace Shesha.Specifications
@@ -106,12 +105,14 @@ namespace Shesha.Specifications
         {
             var specifications = specificationType.SelectMany(t => SpecificationsHelper.GetSpecificationsInfo(t)).ToList();
 
-            var result = new CompositeDisposable();
-            foreach (var specificationInfo in specifications) 
-            {
-                result.Add(Use(specificationInfo.SpecificationsType, specificationInfo.EntityType));
-            }
-            return result;
+            var stack = new Stack<IDisposable>();
+            foreach (var specification in specifications) 
+                stack.Push(Use(specification.SpecificationsType, specification.EntityType));
+
+            return new DisposeAction(() => {
+                while (stack.TryPop(out var disposable))
+                    disposable.Dispose();
+            });
         }
 
         private ISpecificationsContext Use(Type specificationType, Type entityType)
