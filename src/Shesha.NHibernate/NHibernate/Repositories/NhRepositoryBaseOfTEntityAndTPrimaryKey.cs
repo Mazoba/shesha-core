@@ -4,6 +4,7 @@ using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
 using NHibernate;
 using NHibernate.Linq;
+using Shesha.Specifications;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,6 +31,11 @@ namespace Shesha.NHibernate.Repositories
         /// </summary>
         public ICurrentUnitOfWorkProvider CurrentUnitOfWorkProvider { get; set; }
 
+        /// <summary>
+        /// Reference to the specifications manager.
+        /// </summary>
+        public ISpecificationManager SpecificationManager { get; set; }
+
         private readonly ISessionProvider _sessionProvider;
 
         /// <summary>
@@ -43,7 +49,9 @@ namespace Shesha.NHibernate.Repositories
 
         public override IQueryable<TEntity> GetAll()
         {
-            return Session.Query<TEntity>();
+            var query = Session.Query<TEntity>();
+
+            return SpecificationManager.ApplySpecifications<TEntity>(query);
         }
 
         public override async Task<IQueryable<TEntity>> GetAllAsync()

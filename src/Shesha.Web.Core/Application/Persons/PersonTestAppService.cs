@@ -5,6 +5,7 @@ using Abp.Domain.Repositories;
 using Shesha.Domain;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Dtos;
+using Shesha.Specifications;
 using System;
 using System.Threading.Tasks;
 
@@ -31,5 +32,15 @@ namespace Shesha.Application.Persons
             return await MapToCustomDynamicDtoAsync<DynamicDto<Person, Guid>, Person, Guid>(entity, new DynamicMappingSettings { UseDtoForEntityReferences = true });
         }
 
+        public async Task GetUnfilteredAsync() 
+        {
+            var persons = await AsyncQueryableExecuter.ToListAsync(Repository.GetAll());
+        }
+
+        [ApplySpecifications(typeof(Age18PlusSpecification), typeof(HasNoAccountSpecification))]
+        public async Task GetFilteredAsync()
+        {
+            var persons = await AsyncQueryableExecuter.ToListAsync(Repository.GetAll());
+        }
     }
 }

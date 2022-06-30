@@ -27,6 +27,7 @@ using Shesha.Domain;
 namespace Shesha
 {
     [DependsOn(
+        typeof(SheshaFrameworkModule),
         typeof(SheshaApplicationModule),
         typeof(SheshaNHibernateModule),
         typeof(AbpAspNetCoreModule),
@@ -72,6 +73,14 @@ namespace Shesha
                     .ForMember(u => u.Email, options => options.MapFrom(input => input.EmailAddress));
             });
             */
+            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
+                this.GetType().Assembly,
+                moduleName: "Shesha",
+                useConventionalHttpVerbs: true);
+
+            Configuration.Modules.ShaApplication().CreateAppServicesForEntities(
+                this.GetType().Assembly,
+                "Shesha");
         }
 
         private void ConfigureTokenAuth()
@@ -93,18 +102,6 @@ namespace Shesha
               Component.For<ICustomPermissionChecker>().Forward<ISheshaWebCorePermissionChecker>().Forward<SheshaWebCorePermissionChecker>().ImplementedBy<SheshaWebCorePermissionChecker>().LifestyleTransient()
             );
             IocManager.Register<IBootstrapper, SouthAfricaLanguagesCreator>();
-        }
-
-        public override void PostInitialize()
-        {
-            Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(
-                this.GetType().Assembly,
-                moduleName: "Shesha",
-                useConventionalHttpVerbs: true);
-
-            Configuration.Modules.ShaApplication().CreateAppServicesForEntities(
-                this.GetType().Assembly,
-                "Shesha");
         }
     }
 }
