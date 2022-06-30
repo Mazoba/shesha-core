@@ -32,7 +32,13 @@ namespace Shesha.Application.Persons
             return await MapToCustomDynamicDtoAsync<DynamicDto<Person, Guid>, Person, Guid>(entity, new DynamicMappingSettings { UseDtoForEntityReferences = true });
         }
 
+        [DisableSpecifications]
         public async Task GetUnfilteredAsync() 
+        {
+            var persons = await AsyncQueryableExecuter.ToListAsync(Repository.GetAll());
+        }
+
+        public async Task GetDefaultFilteredAsync()
         {
             var persons = await AsyncQueryableExecuter.ToListAsync(Repository.GetAll());
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Abp.Specifications;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,7 +21,7 @@ namespace Shesha.Specifications
         /// <summary>
         /// Used to apply specifications to any call of IRepository.GetAll()
         /// </summary>
-        /// <param name="specificationTypes">Types of specifications (<see cref="ISpecification<T>"/>)</param>
+        /// <param name="specificationTypes">Types of specifications (<see cref="ISpecification{T}"/>)</param>
         public ApplySpecificationsAttribute(params Type[] specificationTypes)
         {
             SpecificationTypes = specificationTypes;

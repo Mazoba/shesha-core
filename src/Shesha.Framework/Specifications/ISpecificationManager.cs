@@ -45,5 +45,11 @@ namespace Shesha.Specifications
         /// </summary>
         /// <param name="specificationType">Type of specifications</param>
         IDisposable Use(params Type[] specificationType);
+
+        /// <summary>
+        /// Disables all specifications activate using current specifications manager
+        /// </summary>
+        /// <returns></returns>
+        IDisposable DisableSpecifications();
     }
 }

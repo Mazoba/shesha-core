@@ -19,7 +19,7 @@ namespace Shesha.Specifications
         public static List<SpecificationInfo> GetSpecificationsInfo(Type specificationType) 
         {
             var entityTypes = specificationType.GetInterfaces()
-                        .Where(i => i.GetGenericTypeDefinition() == typeof(ISpecification<>))
+                        .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ISpecification<>))
                         .Select(i => i.GenericTypeArguments.First())
                         .ToList();
             return entityTypes.Select(et => new SpecificationInfo

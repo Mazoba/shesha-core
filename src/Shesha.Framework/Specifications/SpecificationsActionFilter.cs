@@ -26,7 +26,18 @@ namespace Shesha.Specifications
                 return;
             }
 
-            var specifications = context.ActionDescriptor.GetMethodInfo().GetCustomAttributes(true)
+            var attributes = context.ActionDescriptor.GetMethodInfo().GetCustomAttributes(true);
+            var disabled = attributes.OfType<DisableSpecificationsAttribute>().Any();
+            if (disabled)
+            {
+                using (_specificationsManager.DisableSpecifications()) 
+                {
+                    await next();
+                    return;
+                }
+            }
+
+            var specifications = attributes
                 .OfType<ApplySpecificationsAttribute>()
                 .SelectMany(a => a.SpecificationTypes)
                 .ToArray();
