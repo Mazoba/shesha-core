@@ -15,4 +15,8 @@
     <ProjectReference Include="..\Shesha.Framework\Shesha.Framework.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="GraphQL\Json\" />
+  </ItemGroup>
+
 </Project>

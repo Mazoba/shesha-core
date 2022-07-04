@@ -1,5 +1,4 @@
-﻿using Abp.Application.Services.Dto;
-using Abp.Authorization;
+﻿using Abp.Authorization;
 using Abp.Dependency;
 using Abp.Domain.Repositories;
 using Shesha.Domain;
@@ -23,13 +22,19 @@ namespace Shesha.Application.Persons
             return await base.UpdateAsync(input);
         }
 
-        public override async Task<DynamicDto<Person, Guid>> GetAsync(EntityDto<Guid> input)
+        public override async Task<DynamicDto<Person, Guid>> GetAsync(GetDynamicEntityInput<Guid> input)
         {
             CheckGetAllPermission();
 
-            var entity = await Repository.GetAsync(input.Id);
+            if (!string.IsNullOrWhiteSpace(input.Properties))
+            {
+                throw new NotImplementedException();
+            }
+            else {
+                var entity = await Repository.GetAsync(input.Id);
 
-            return await MapToCustomDynamicDtoAsync<DynamicDto<Person, Guid>, Person, Guid>(entity, new DynamicMappingSettings { UseDtoForEntityReferences = true });
+                return await MapToCustomDynamicDtoAsync<DynamicDto<Person, Guid>, Person, Guid>(entity, new DynamicMappingSettings { UseDtoForEntityReferences = true });
+            }
         }
 
         [DisableSpecifications]

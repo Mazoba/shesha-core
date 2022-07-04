@@ -3,9 +3,15 @@ using Abp.Dependency;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Abp.Runtime.Validation;
+using GraphQL;
+using Microsoft.AspNetCore.Mvc;
 using Shesha.Application.Services.Dto;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Dtos;
+using Shesha.GraphQL.Middleware;
+using Shesha.GraphQL.Mvc;
+using Shesha.GraphQL.Provider;
+using Shesha.Web;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -16,7 +22,7 @@ namespace Shesha
 {
     [DynamicControllerNameConvention]
     public class DynamicCrudAppService<TEntity, TDynamicDto, TPrimaryKey> : SheshaCrudServiceBase<TEntity,
-        TDynamicDto, TPrimaryKey, FilteredPagedAndSortedResultRequestDto, TDynamicDto, TDynamicDto>, IDynamicCrudAppService<TEntity, TDynamicDto, TPrimaryKey>, ITransientDependency
+        TDynamicDto, TPrimaryKey, FilteredPagedAndSortedResultRequestDto, TDynamicDto, TDynamicDto, GetDynamicEntityInput<TPrimaryKey>>, IDynamicCrudAppService<TEntity, TDynamicDto, TPrimaryKey>, ITransientDependency
         where TEntity : class, IEntity<TPrimaryKey>
         where TDynamicDto : class, IDynamicDto<TEntity, TPrimaryKey>
     {
@@ -24,9 +30,9 @@ namespace Shesha
         {
         }
 
-        public override async Task<TDynamicDto> GetAsync(EntityDto<TPrimaryKey> input)
+        public override async Task<TDynamicDto> GetAsync(GetDynamicEntityInput<TPrimaryKey> input)
         {
-            CheckGetAllPermission();
+            CheckGetPermission();
 
             var entity = await Repository.GetAsync(input.Id);
 
@@ -68,7 +74,7 @@ namespace Shesha
             await UnitOfWorkManager.Current.SaveChangesAsync();
 
             await MapDynamicPropertiesToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
-            
+
             await UnitOfWorkManager.Current.SaveChangesAsync();
 
             return await MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(entity);
@@ -98,5 +104,117 @@ namespace Shesha
                 list
             );
         }
+
+        #region GraphQL
+
+        /// <summary>
+        /// GraphQL document executer
+        /// </summary>
+        public IDocumentExecuter DocumentExecuter { get; set; }
+        public ISchemaContainer SchemaContainer { get; set; }
+        public IGraphQLSerializer Serializer { get; set; }
+
+        [HttpGet]
+        public virtual async Task<object> QueryAsync(GetDynamicEntityInput<Guid> input)
+        {
+            CheckGetAllPermission();
+
+            if (!string.IsNullOrWhiteSpace(input.Properties))
+            {
+                var schemaName = Abp.Extensions.StringExtensions.ToCamelCase(typeof(TEntity).Name);
+
+                var schema = await SchemaContainer.GetOrDefaultAsync(schemaName);
+                var httpContext = AppContextHelper.Current;
+
+                var result = await DocumentExecuter.ExecuteAsync(s =>
+                {
+                    s.Schema = schema;
+                    s.Query = GenerateGqlGetQuery(input.Id, input.Properties);
+
+                    if (httpContext != null)
+                    {
+                        s.RequestServices = httpContext.RequestServices;
+                        s.UserContext = new GraphQLUserContext
+                        {
+                            User = httpContext.User,
+                        };
+                        s.CancellationToken = httpContext.RequestAborted;
+                    }
+                });
+
+                if (result.Errors != null)
+                    throw new AbpValidationException("", result.Errors.Select(e => new ValidationResult(e.Message)).ToList());
+
+                return new GraphQLDataResult(result);
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        [HttpGet]
+        public virtual async Task<object> QueryAllAsync(PropsFilteredPagedAndSortedResultRequestDto input)
+        {
+            CheckGetAllPermission();
+
+            var schemaName = Abp.Extensions.StringExtensions.ToCamelCase(typeof(TEntity).Name);
+
+            var schema = await SchemaContainer.GetOrDefaultAsync(schemaName);
+            var httpContext = AppContextHelper.Current;
+
+            var result = await DocumentExecuter.ExecuteAsync(s =>
+            {
+                s.Schema = schema;
+
+                s.Query = $@"query getAll($filter: String, $quickSearch: String, $sorting: String, $skipCount: Int, $maxResultCount: Int){{
+  personList(input: {{ filter: $filter, quickSearch: $quickSearch, sorting: $sorting, skipCount: $skipCount, maxResultCount: $maxResultCount }}){{
+    totalCount
+    items {{
+        {input.Properties}
+    }}
+  }}
+}}";
+                s.Variables = new Inputs(new Dictionary<string, object> {
+                    { "filter", input.Filter },
+                    { "quickSearch", input.QuickSearch },
+                    { "sorting", input.Sorting },
+                    { "skipCount", input.SkipCount },
+                    { "maxResultCount", input.MaxResultCount },
+                });
+
+                if (httpContext != null)
+                {
+                    s.RequestServices = httpContext.RequestServices;
+                    s.UserContext = new GraphQLUserContext
+                    {
+                        User = httpContext.User,
+                    };
+                    s.CancellationToken = httpContext.RequestAborted;
+                }
+            });
+
+            if (result.Errors != null)
+                throw new AbpValidationException("", result.Errors.Select(e => new ValidationResult(e.Message)).ToList());
+
+            return new GraphQLDataResult(result);
+        }
+
+
+        private string GenerateGqlGetQuery(Guid id, string properties)
+        {
+            return $@"query{{
+  person(id: ""{id}"") {{
+    {properties}
+  }}
+}}";
+        }
+
+        #endregion
+    }
+
+    public class GetDynamicEntityInput<TId> : EntityDto<TId>
+    {
+        public string Properties { get; set; }
     }
 }

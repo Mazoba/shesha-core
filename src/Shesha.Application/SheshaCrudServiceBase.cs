@@ -50,20 +50,35 @@ namespace Shesha
         */
     }
 
+
     /// <summary>
     /// CRUD service base
     /// </summary>
-    /// <typeparam name="TEntity"></typeparam>
-    /// <typeparam name="TEntityDto"></typeparam>
-    /// <typeparam name="TPrimaryKey"></typeparam>
-    /// <typeparam name="TGetAllInput"></typeparam>
-    /// <typeparam name="TCreateInput"></typeparam>
-    /// <typeparam name="TUpdateInput"></typeparam>
-    public abstract class SheshaCrudServiceBase<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput> : AbpAsyncCrudAppService<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput, EntityDto<TPrimaryKey>>
+    public abstract class SheshaCrudServiceBase<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput> : SheshaCrudServiceBase<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput, EntityDto<TPrimaryKey>>
+        where TEntity : class, IEntity<TPrimaryKey>
+        where TEntityDto : IEntityDto<TPrimaryKey>
+        where TUpdateInput : IEntityDto<TPrimaryKey>
+        where TGetAllInput : FilteredPagedAndSortedResultRequestDto
+    {
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="repository"></param>
+        protected SheshaCrudServiceBase(IRepository<TEntity, TPrimaryKey> repository)
+            : base(repository)
+        {
+        }
+    }
+
+    /// <summary>
+    /// CRUD service base
+    /// </summary>
+    public abstract class SheshaCrudServiceBase<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput, TGetInput> : AbpAsyncCrudAppService<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput, TGetInput>
         where TEntity : class, IEntity<TPrimaryKey>
         where TEntityDto : IEntityDto<TPrimaryKey>
         where TUpdateInput : IEntityDto<TPrimaryKey>
         where TGetAllInput: FilteredPagedAndSortedResultRequestDto
+        where TGetInput : IEntityDto<TPrimaryKey>
     {
         public IQuickSearcher QuickSearcher { get; set; }
 
