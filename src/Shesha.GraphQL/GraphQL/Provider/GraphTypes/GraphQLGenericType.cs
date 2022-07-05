@@ -1,4 +1,5 @@
-﻿using GraphQL;
+﻿using Abp.Domain.Uow;
+using GraphQL;
 using GraphQL.Types;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Cache;
@@ -19,12 +20,14 @@ namespace Shesha.GraphQL.Provider.GraphTypes
         private readonly IDynamicPropertyManager _dynamicPropertyManager;
         private readonly IEntityConfigCache _entityConfigCache;
         private readonly IDynamicDtoTypeBuilder _dynamicDtoTypeBuilder;
+        private readonly IUnitOfWorkManager _unitOfWorkManager;
 
-        public GraphQLGenericType(IDynamicPropertyManager dynamicPropertyManager, IEntityConfigCache entityConfigCache, IDynamicDtoTypeBuilder dynamicDtoTypeBuilder)
+        public GraphQLGenericType(IDynamicPropertyManager dynamicPropertyManager, IEntityConfigCache entityConfigCache, IDynamicDtoTypeBuilder dynamicDtoTypeBuilder, IUnitOfWorkManager unitOfWorkManager)
         {
             _dynamicPropertyManager = dynamicPropertyManager;
             _entityConfigCache = entityConfigCache;
             _dynamicDtoTypeBuilder = dynamicDtoTypeBuilder;
+            _unitOfWorkManager = unitOfWorkManager;
 
             var genericType = typeof(TModel);
 
@@ -64,24 +67,28 @@ namespace Shesha.GraphQL.Provider.GraphTypes
             if (typeof(TModel).IsEntityType()) 
             {
                 AsyncHelper.RunSync(async () => {
-                    var properties = await _entityConfigCache.GetEntityPropertiesAsync(typeof(TModel));
-                    var dynamicProps = properties.Where(p => p.Source == Domain.Enums.MetadataSourceType.UserDefined).ToList();
-                    foreach (var dynamicProp in dynamicProps) 
+                    using (var uow = _unitOfWorkManager.Begin())
                     {
-                        var propType = await _dynamicDtoTypeBuilder.GetDtoPropertyTypeAsync(dynamicProp, new DynamicDtoTypeBuildingContext());
-                        FieldAsync(GraphTypeMapper.GetGraphType(propType, isInput: false), dynamicProp.Name, dynamicProp.Description,
-                            resolve: async context => {
-                                try
-                                {
-                                    var value = await _dynamicPropertyManager.GetPropertyAsync(context.Source, dynamicProp.Name);
-                                    return value;
+                        var properties = await _entityConfigCache.GetEntityPropertiesAsync(typeof(TModel));
+                        var dynamicProps = properties.Where(p => p.Source == Domain.Enums.MetadataSourceType.UserDefined).ToList();
+                        foreach (var dynamicProp in dynamicProps)
+                        {
+                            var propType = await _dynamicDtoTypeBuilder.GetDtoPropertyTypeAsync(dynamicProp, new DynamicDtoTypeBuildingContext());
+                            FieldAsync(GraphTypeMapper.GetGraphType(propType, isInput: false), dynamicProp.Name, dynamicProp.Description,
+                                resolve: async context => {
+                                    try
+                                    {
+                                        var value = await _dynamicPropertyManager.GetPropertyAsync(context.Source, dynamicProp.Name);
+                                        return value;
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        throw;
+                                    }
                                 }
-                                catch (Exception e) 
-                                {
-                                    throw;
-                                }
-                            }
-                        );
+                            );
+                        }
+                        await uow.CompleteAsync();
                     }
                 });
             }

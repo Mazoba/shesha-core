@@ -1,31 +1,31 @@
 ﻿using GraphQL;
+using GraphQL.Execution;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Shesha.GraphQL.NewtonsoftJson;
-using System.Net;
-using System.Threading.Tasks;
 
 namespace Shesha.GraphQL.Mvc
 {
     /// <summary>
     /// GraphQL data result
     /// </summary>
-    public class GraphQLDataResult : IActionResult
+    public class GraphQLDataResult : JsonResult
     {
-        private readonly ExecutionResult _executionResult;
-
-        public GraphQLDataResult(ExecutionResult executionResult)
+        public GraphQLDataResult(ExecutionResult executionResult): base(executionResult)
         {
-            _executionResult = executionResult;
-        }
-
-        public async Task ExecuteResultAsync(ActionContext context)
-        {
-            var serializer = context.HttpContext.RequestServices.GetRequiredService<IGraphQLDataSerializer>();
-            var response = context.HttpContext.Response;
-            response.ContentType = "application/json";
-            response.StatusCode = _executionResult.Executed ? (int)HttpStatusCode.OK : (int)HttpStatusCode.BadRequest;
-            await serializer.WriteAsync(response.Body, _executionResult, context.HttpContext.RequestAborted);
+            var errorInfoProvider = new ErrorInfoProvider();
+            SerializerSettings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.Indented,
+                ContractResolver = new ShaGraphQLContractResolver(errorInfoProvider) {
+                    NamingStrategy = new CamelCaseNamingStrategy
+                    {
+                        ProcessDictionaryKeys = true,
+                        OverrideSpecifiedNames = true
+                    }
+                },
+            };
         }
     }
 }
