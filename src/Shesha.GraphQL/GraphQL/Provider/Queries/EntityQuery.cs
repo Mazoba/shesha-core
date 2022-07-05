@@ -45,6 +45,7 @@ namespace Shesha.GraphQL.Provider.Queries
                 arguments: new QueryArguments(new QueryArgument(MakeGetInputType()) { Name = nameof(IEntity.Id) }),
                 resolve: async context => {
                     var id = context.GetArgument<TId>(nameof(IEntity.Id));
+
                     return await repository.GetAsync(id);
                 }                    
             );

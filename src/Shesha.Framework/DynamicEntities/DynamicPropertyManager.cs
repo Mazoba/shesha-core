@@ -11,6 +11,7 @@ using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.DynamicEntities.Dtos;
+using Shesha.Extensions;
 using Shesha.Metadata;
 using Shesha.Services;
 using Shesha.Services.VersionedFields;
@@ -116,6 +117,27 @@ namespace Shesha.DynamicEntities
                 {
                     await action(entity, dto, property, dtoProp);
                 }
+            }
+        }
+
+        public Task<object> GetPropertyAsync(object entity, string propertyName) 
+        {
+            try 
+            {
+                if (entity == null)
+                    return null;
+
+                var getterMethod = this.GetType().GetMethod(nameof(GetEntityPropertyAsync));
+                var entityType = entity.GetType();
+                var idType = entityType.GetEntityIdType();
+
+                var genericGetterMethod = getterMethod.MakeGenericMethod(entityType, idType);
+
+                return genericGetterMethod.Invoke(this, new object[] { entity, propertyName }) as Task<object>;
+            }
+            catch (Exception e) 
+            {
+                throw;
             }
         }
 

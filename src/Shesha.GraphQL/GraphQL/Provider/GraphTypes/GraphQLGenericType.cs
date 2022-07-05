@@ -1,5 +1,9 @@
 ﻿using GraphQL;
 using GraphQL.Types;
+using Shesha.DynamicEntities;
+using Shesha.DynamicEntities.Cache;
+using Shesha.Extensions;
+using Shesha.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,14 +16,17 @@ namespace Shesha.GraphQL.Provider.GraphTypes
     /// </summary>
     public class GraphQLGenericType<TModel> : ObjectGraphType<TModel> where TModel : class
     {
-        public GraphQLGenericType()
+        private readonly IDynamicPropertyManager _dynamicPropertyManager;
+        private readonly IEntityConfigCache _entityConfigCache;
+        private readonly IDynamicDtoTypeBuilder _dynamicDtoTypeBuilder;
+
+        public GraphQLGenericType(IDynamicPropertyManager dynamicPropertyManager, IEntityConfigCache entityConfigCache, IDynamicDtoTypeBuilder dynamicDtoTypeBuilder)
         {
+            _dynamicPropertyManager = dynamicPropertyManager;
+            _entityConfigCache = entityConfigCache;
+            _dynamicDtoTypeBuilder = dynamicDtoTypeBuilder;
+
             var genericType = typeof(TModel);
-
-            if (typeof(TModel).Name.Contains("ICollection")) 
-            {
-
-            }
 
             Name = MakeName(typeof(TModel));
 
@@ -28,9 +35,56 @@ namespace Shesha.GraphQL.Provider.GraphTypes
             if (propsInfo == null || propsInfo.Length == 0)
                 throw new GraphQLSchemaException(genericType.Name, $"Unable to create generic GraphQL type from type {genericType.Name} because it has no properties");
 
-            genericType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .ToList()
-                .ForEach(pi => EmitField(pi));
+            var properties = genericType.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToList();
+            foreach (var property in properties) 
+            {
+                EmitField(property);
+                
+                // for nested entities add raw Id property
+                if (property.PropertyType.IsEntityType()) 
+                {
+                    var nestedEntityIdName = $"{property.Name}Id";
+
+                    // skip if property already declared
+                    if (!properties.Any(p => p.Name.Equals(nestedEntityIdName, StringComparison.InvariantCultureIgnoreCase))) 
+                    {
+                        var idType = property.PropertyType.GetEntityIdType();
+
+                        Field(GraphTypeMapper.GetGraphType(idType, isInput: false), nestedEntityIdName, $"Id of the {property.Name}",
+                            resolve: context => {
+                                var nestedEntity = property.GetValue(context.Source);
+                                return nestedEntity?.GetId();
+                            }
+                        );
+                    }
+                }
+            }
+
+            // add dynamic properties
+            if (typeof(TModel).IsEntityType()) 
+            {
+                AsyncHelper.RunSync(async () => {
+                    var properties = await _entityConfigCache.GetEntityPropertiesAsync(typeof(TModel));
+                    var dynamicProps = properties.Where(p => p.Source == Domain.Enums.MetadataSourceType.UserDefined).ToList();
+                    foreach (var dynamicProp in dynamicProps) 
+                    {
+                        var propType = await _dynamicDtoTypeBuilder.GetDtoPropertyTypeAsync(dynamicProp, new DynamicDtoTypeBuildingContext());
+                        FieldAsync(GraphTypeMapper.GetGraphType(propType, isInput: false), dynamicProp.Name, dynamicProp.Description,
+                            resolve: async context => {
+                                try
+                                {
+                                    var value = await _dynamicPropertyManager.GetPropertyAsync(context.Source, dynamicProp.Name);
+                                    return value;
+                                }
+                                catch (Exception e) 
+                                {
+                                    throw;
+                                }
+                            }
+                        );
+                    }
+                });
+            }
         }
 
         private static string MakeName(Type type)
@@ -176,7 +230,11 @@ namespace Shesha.GraphQL.Provider.GraphTypes
                         }
                         break;
                     case nameof(String):
-                    default: Field(GraphTypeMapper.GetGraphType(propertyInfo.PropertyType, isInput: false), propertyInfo.Name); break;
+                    default: 
+                        {
+                            Field(GraphTypeMapper.GetGraphType(propertyInfo.PropertyType, isInput: false), propertyInfo.Name); 
+                            break;
+                        } 
                 }
             }
         }
