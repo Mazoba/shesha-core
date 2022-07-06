@@ -119,13 +119,14 @@ namespace Shesha
         public IEntityConfigCache EntityConfigCache { get; set; }
 
         /// <summary>
-        /// Query entity data
+        /// Query entity data. 
+        /// NOTE: don't use on prod, will be merged with the `Get`endpoint soon
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
         /// <response code="200">NOTE: shape of the `result` depends on the `properties` argument. When `properties` argument is not specified - it returns top level properties of the entity, all referenced entities are presented as their Id values</response>
         [HttpGet]
-        public virtual async Task<GraphQLDataResult<TEntity>> QueryAsync(GetDynamicEntityInput<Guid> input)
+        public virtual async Task<GraphQLDataResult<TEntity>> QueryAsync(GetDynamicEntityInput<TPrimaryKey> input)
         {
             CheckGetAllPermission();
 
@@ -158,6 +159,7 @@ namespace Shesha
 
         /// <summary>
         /// Query entities list
+        /// NOTE: don't use on prod, will be merged with the GetAll endpoint soon
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
@@ -214,7 +216,7 @@ namespace Shesha
         }
 
 
-        private async Task<string> GenerateGqlGetQueryAsync(Guid id, string properties)
+        private async Task<string> GenerateGqlGetQueryAsync(TPrimaryKey id, string properties)
         {
             if (string.IsNullOrWhiteSpace(properties))
                 properties = await GetGqlTopLevelPropertiesAsync();
