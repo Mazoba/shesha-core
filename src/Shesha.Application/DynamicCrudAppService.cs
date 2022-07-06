@@ -183,7 +183,7 @@ namespace Shesha
                     : input.Properties;
 
                 s.Query = $@"query getAll($filter: String, $quickSearch: String, $sorting: String, $skipCount: Int, $maxResultCount: Int){{
-  personList(input: {{ filter: $filter, quickSearch: $quickSearch, sorting: $sorting, skipCount: $skipCount, maxResultCount: $maxResultCount }}){{
+  {schemaName}List(input: {{ filter: $filter, quickSearch: $quickSearch, sorting: $sorting, skipCount: $skipCount, maxResultCount: $maxResultCount }}){{
     totalCount
     items {{
         {properties}

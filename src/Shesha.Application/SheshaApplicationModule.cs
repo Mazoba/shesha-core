@@ -23,12 +23,14 @@ using Shesha.Startup;
 using System.Linq;
 using System.Reflection;
 using Abp.Authorization;
+using Shesha.GraphQL;
 
 namespace Shesha
 {
     [DependsOn(
         typeof(AbpKernelModule),
         typeof(SheshaCoreModule),
+        typeof(SheshaGraphQLModule),
         typeof(AbpAutoMapperModule))]
     public class SheshaApplicationModule : AbpModule
     {
