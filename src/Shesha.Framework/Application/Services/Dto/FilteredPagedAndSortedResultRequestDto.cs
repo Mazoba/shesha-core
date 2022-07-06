@@ -7,10 +7,14 @@ namespace Shesha.Application.Services.Dto
     /// </summary>
     public class FilteredPagedAndSortedResultRequestDto : PagedAndSortedResultRequestDto, IFilteredPagedAndSortedResultRequestDto
     {
-        /// inheritedDoc
+        /// <summary>
+        /// Filter string in JsonLogic format
+        /// </summary>
         public string Filter { get; set; }
 
-        /// inheritedDoc
+        /// <summary>
+        /// Quick search string. Is used to search entities by text
+        /// </summary>
         public string QuickSearch { get; set; }
     }
 }

@@ -27,9 +27,11 @@ namespace Shesha.DynamicEntities
         private readonly ICacheManager _cacheManager;
 
         /// <summary>
-        /// Cache of the ReferenceListItems
+        /// Cache of proxy classes
         /// </summary>
         protected ITypedCache<string, DynamicDtoProxyCacheItem> FullProxyCache => _cacheManager.GetCache<string, DynamicDtoProxyCacheItem>("DynamicDtoTypeBuilder_FullProxyCache");
+
+        protected ITypedCache<string, Type> DynamicTypeCache => _cacheManager.GetCache<string, Type>($"{nameof(DynamicDtoTypeBuilder)}.{nameof(DynamicTypeCache)}");
 
         /// <summary>
         /// Reference to the logger to write logs.
@@ -145,7 +147,7 @@ namespace Shesha.DynamicEntities
                     return arrayType;
                 }
                 case DataTypes.Object:
-                    return await BuildNestedTypeAsync(propertyDto, context); // JSON content
+                    return await GetNestedTypeAsync(propertyDto, context); // JSON content
                 default:
                     throw new NotSupportedException($"Data type not supported: {dataType}");
             }
@@ -166,6 +168,11 @@ namespace Shesha.DynamicEntities
             return context.UseDtoForEntityReferences
                 ? typeof(EntityWithDisplayNameDto<>).MakeGenericType(entityConfig.IdType)
                 : entityConfig?.IdType;
+        }
+
+        private async Task<Type> GetNestedTypeAsync(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context) 
+        {
+            return await DynamicTypeCache.GetAsync(propertyDto.Id.ToString(), async key => await BuildNestedTypeAsync(propertyDto, context));
         }
 
         private async Task<Type> BuildNestedTypeAsync(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context) 
@@ -384,14 +391,23 @@ namespace Shesha.DynamicEntities
 
         public void HandleEvent(EntityChangedEventData<EntityProperty> eventData)
         {
-            var entityConfig = eventData.Entity?.EntityConfig;
-
-            if (entityConfig == null)
+            if (eventData.Entity == null)
                 return;
 
-            var cacheKey = $"{entityConfig.Namespace}.{entityConfig.ClassName}";
+            var entityConfig = eventData.Entity?.EntityConfig;
+            if (entityConfig != null)
+            {
+                var cacheKey = $"{entityConfig.Namespace}.{entityConfig.ClassName}";
 
-            FullProxyCache.Remove(cacheKey);
+                FullProxyCache.Remove(cacheKey);
+            }
+
+            var prop = eventData.Entity;
+            while (prop != null) 
+            {
+                DynamicTypeCache.Remove(prop.Id.ToString());
+                prop = prop.ParentProperty;
+            }            
         }
     }
 }

@@ -46,6 +46,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Swagger;
 using Shesha.Specifications;
+using Shesha.GraphQL.Swagger;
 
 namespace Shesha.Web.Host.Startup
 {
@@ -258,7 +259,9 @@ namespace Shesha.Web.Host.Startup
                 options.IgnoreObsoleteActions();
                 options.AddXmlDocuments();
 
+                options.SchemaFilter<GraphQLSchemaFilter>();
                 options.SchemaFilter<DynamicDtoSchemaFilter>();
+                options.OperationFilter<SwaggerOperationFilter>();
 
                 options.CustomSchemaIds(type => SwaggerHelper.GetSchemaId(type));
 

@@ -11,6 +11,7 @@ using Shesha.Application.Services.Dto;
 using Shesha.Extensions;
 using Shesha.GraphQL.Provider.GraphTypes;
 using Shesha.JsonLogic;
+using Shesha.QuickSearch;
 using Shesha.Utilities;
 using System;
 using System.ComponentModel;
@@ -38,11 +39,13 @@ namespace Shesha.GraphQL.Provider.Queries
 
             var repository = serviceProvider.GetRequiredService<IRepository<TEntity, TId>>();
             var asyncExecuter = serviceProvider.GetRequiredService<IAsyncQueryableExecuter>();
+            var quickSearcher = serviceProvider.GetRequiredService<IQuickSearcher>();
 
             FieldAsync<GraphQLGenericType<TEntity>>(entityName,
                 arguments: new QueryArguments(new QueryArgument(MakeGetInputType()) { Name = nameof(IEntity.Id) }),
                 resolve: async context => {
                     var id = context.GetArgument<TId>(nameof(IEntity.Id));
+
                     return await repository.GetAsync(id);
                 }                    
             );
@@ -60,7 +63,8 @@ namespace Shesha.GraphQL.Provider.Queries
                     query = AddFilter(query, input.Filter);
 
                     // add quick search
-                    query = AddQuickSearch(query, input.QuickSearch);
+                    if (!string.IsNullOrWhiteSpace(input.QuickSearch))
+                        query = quickSearcher.ApplyQuickSearch(query, input.QuickSearch);
 
                     // calculate total count
                     var totalCount = query.Count();
@@ -99,17 +103,6 @@ namespace Shesha.GraphQL.Provider.Queries
             var expression = _jsonLogicConverter.ParseExpressionOf<TEntity>(jsonLogic);
 
             return query.Where(expression);
-        }
-
-        
-        private IQueryable<TEntity> AddQuickSearch(IQueryable<TEntity> query, string quickSearch)
-        {
-            if (string.IsNullOrWhiteSpace(quickSearch))
-                return query;
-
-            // todo: implement filter
-
-            return query;
         }
 
         /// <summary>

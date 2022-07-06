@@ -11,6 +11,7 @@ using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.DynamicEntities.Dtos;
+using Shesha.Extensions;
 using Shesha.Metadata;
 using Shesha.Services;
 using Shesha.Services.VersionedFields;
@@ -119,6 +120,27 @@ namespace Shesha.DynamicEntities
             }
         }
 
+        public async Task<object> GetPropertyAsync(object entity, string propertyName) 
+        {
+            try 
+            {
+                if (entity == null)
+                    return null;
+
+                var getterMethod = this.GetType().GetMethod(nameof(GetEntityPropertyAsync));
+                var entityType = entity.GetType();
+                var idType = entityType.GetEntityIdType();
+
+                var genericGetterMethod = getterMethod.MakeGenericMethod(entityType, idType);
+
+                return await (genericGetterMethod.Invoke(this, new object[] { entity, propertyName }) as Task<object>);
+            }
+            catch (Exception e) 
+            {
+                throw;
+            }
+        }
+
         public async Task<object> GetEntityPropertyAsync<TEntity, TId>(TEntity entity, string propertyName)
             where TEntity : class, IEntity<TId>
         {
@@ -180,7 +202,7 @@ namespace Shesha.DynamicEntities
                     simpleType = typeof(TimeSpan?);
                     break;
                 case DataTypes.Object:
-                    simpleType = typeof(string);
+                    simpleType = await DtoTypeBuilder.GetDtoPropertyTypeAsync(dynamicProperty, new DynamicDtoTypeBuildingContext());
                     break;
             }
 
