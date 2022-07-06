@@ -117,15 +117,15 @@ namespace Shesha
         public ISchemaContainer SchemaContainer { get; set; }
         public IGraphQLSerializer Serializer { get; set; }
         public IEntityConfigCache EntityConfigCache { get; set; }
-        
+
         /// <summary>
         /// Query entity data
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        //[ProducesResponseType(typeof(TDynamicDto), (int)HttpStatusCode.OK)]
+        /// <response code="200">NOTE: shape of the `result` depends on the `properties` argument. When `properties` argument is not specified - it returns top level properties of the entity, all referenced entities are presented as their Id values</response>
         [HttpGet]
-        public virtual async Task<GraphQLDataResult> QueryAsync(GetDynamicEntityInput<Guid> input)
+        public virtual async Task<GraphQLDataResult<TEntity>> QueryAsync(GetDynamicEntityInput<Guid> input)
         {
             CheckGetAllPermission();
 
@@ -153,11 +153,17 @@ namespace Shesha
             if (result.Errors != null)
                 throw new AbpValidationException("", result.Errors.Select(e => new ValidationResult(e.Message)).ToList());
 
-            return new GraphQLDataResult(result);
+            return new GraphQLDataResult<TEntity>(result);
         }
 
+        /// <summary>
+        /// Query entities list
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        /// <response code="200">NOTE: shape of the `items[]` depends on the `properties` argument. When `properties` argument is not specified - it returns top level properties of the entity, all referenced entities are presented as their Id values</response>
         [HttpGet]
-        public virtual async Task<object> QueryAllAsync(PropsFilteredPagedAndSortedResultRequestDto input)
+        public virtual async Task<GraphQLDataResult<PagedResultDto<TEntity>>> QueryAllAsync(PropsFilteredPagedAndSortedResultRequestDto input)
         {
             CheckGetAllPermission();
 
@@ -204,7 +210,7 @@ namespace Shesha
             if (result.Errors != null)
                 throw new AbpValidationException("", result.Errors.Select(e => new ValidationResult(e.Message)).ToList());
 
-            return new GraphQLDataResult(result);
+            return new GraphQLDataResult<PagedResultDto<TEntity>>(result);
         }
 
 
@@ -265,10 +271,5 @@ namespace Shesha
         }
 
         #endregion
-    }
-
-    public class GetDynamicEntityInput<TId> : EntityDto<TId>
-    {
-        public string Properties { get; set; }
     }
 }

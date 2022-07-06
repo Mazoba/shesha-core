@@ -161,8 +161,12 @@ namespace Shesha.GraphQL.Provider.GraphTypes
                                 Field(GraphTypeMapper.GetGraphType(underlyingType, isInput: false), propertyInfo.Name, resolve: context =>
                                 {
                                     var nullableEnum = propertyInfo.GetValue(context.Source);
-                                    if (nullableEnum != null) return (int)nullableEnum;
-                                    else return null;
+
+                                    if (nullableEnum == null)
+                                        return null;
+
+                                    var numericValue = Convert.ChangeType(nullableEnum, typeof(Int64));
+                                    return numericValue;
                                 });
                             }
                             else

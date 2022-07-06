@@ -1,6 +1,7 @@
 ﻿using Abp.AspNetCore.Configuration;
 using Abp.AspNetCore.Mvc.ExceptionHandling;
 using Abp.AspNetCore.Mvc.Results;
+using Abp.Dependency;
 using Abp.Web.Models;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
@@ -20,13 +21,15 @@ namespace Shesha.Swagger
     public class SwaggerOperationFilter : IOperationFilter
     {
         private readonly IAbpAspNetCoreConfiguration _configuration;
+        private readonly IIocManager _iocManager;
 
-        public SwaggerOperationFilter(IAbpAspNetCoreConfiguration configuration)
+        public SwaggerOperationFilter(IAbpAspNetCoreConfiguration configuration, IIocManager iocManager)
         {
             _configuration = configuration;
+            _iocManager = iocManager;
         }
 
-        public void Apply(OpenApiOperation operation, OperationFilterContext context) 
+        public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
             // Decorate wrapped responses
             DecorateWrappedResponses(operation, context);
@@ -60,7 +63,7 @@ namespace Shesha.Swagger
             {
                 var wrappedResponseType = typeof(AjaxResponse<>).MakeGenericType(unwrappedReturnType);
 
-                if (operation.Responses.ContainsKey(okResponse))
+                if (operation.Responses.TryGetValue(okResponse, out var oldOkResponse))
                     operation.Responses.Remove(okResponse);
 
                 var schema = context.SchemaGenerator.GenerateSchema(wrappedResponseType, context.SchemaRepository);
@@ -68,7 +71,9 @@ namespace Shesha.Swagger
                 //schema.Reference.Id = schema.Reference.Id.RemovePostfix(nameof(AjaxResponse));
                 operation.Responses.Add(okResponse, new OpenApiResponse()
                 {
-                    Description = $"Wrapped with {nameof(AjaxResponse)}<> by {nameof(AbpResultFilter)}",
+                    Description = string.IsNullOrWhiteSpace(oldOkResponse?.Description)
+                        ? $"Wrapped with {nameof(AjaxResponse)}<> by {nameof(AbpResultFilter)}"
+                        : oldOkResponse.Description,
                     Content = new Dictionary<string, OpenApiMediaType>
                     {
                         ["application/json"] = new OpenApiMediaType

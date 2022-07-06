@@ -7,24 +7,11 @@ using Abp.Reflection.Extensions;
 namespace Shesha.GraphQL
 {
     [DependsOn(
-        //typeof(AbpGraphQLApplicationContractsModule),
-        //typeof(AbpGraphQLProviderSharedModule),
-        //typeof(AbpDddApplicationModule),
         typeof(AbpAutoMapperModule),
         typeof(AbpAspNetCoreModule)
     )]
     public class SheshaGraphQLModule : AbpModule
     {
-        /*
-        public override void ConfigureServices(ServiceConfigurationContext context)
-        {
-            context.Services.AddAutoMapperObjectMapper<AbpGraphQLApplicationModule>();
-            Configure<AbpAutoMapperOptions>(options =>
-            {
-                options.AddMaps<AbpGraphQLApplicationModule>(validate: true);
-            });
-        }
-        */
         public override void PreInitialize() 
         {
             Configuration.Modules.AbpAspNetCore().CreateControllersForAppServices(

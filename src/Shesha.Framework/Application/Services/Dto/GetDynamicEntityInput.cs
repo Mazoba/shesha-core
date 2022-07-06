@@ -3,9 +3,10 @@
 namespace Shesha.Application.Services.Dto
 {
     /// <summary>
-    /// Filtered, pages and sorted request DTO with properties list
+    /// Input that is used to fetch entity data dynamically
     /// </summary>
-    public class PropsFilteredPagedAndSortedResultRequestDto : FilteredPagedAndSortedResultRequestDto
+    /// <typeparam name="TId"></typeparam>
+    public class GetDynamicEntityInput<TId> : EntityDto<TId>
     {
         /// <summary>
         /// List of properties to fetch in GraphQL-like syntax. Supports nested properties 

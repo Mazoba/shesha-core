@@ -1,6 +1,7 @@
 ﻿using Abp.Authorization;
 using Abp.Dependency;
 using Abp.Domain.Repositories;
+using Shesha.Application.Services.Dto;
 using Shesha.Domain;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Dtos;

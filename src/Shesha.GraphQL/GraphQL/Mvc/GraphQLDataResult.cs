@@ -12,7 +12,7 @@ namespace Shesha.GraphQL.Mvc
     /// </summary>
     public class GraphQLDataResult : JsonResult
     {
-        public GraphQLDataResult(ExecutionResult executionResult): base(executionResult)
+        public GraphQLDataResult(ExecutionResult executionResult) : base(executionResult)
         {
             var errorInfoProvider = new ErrorInfoProvider();
             SerializerSettings = new JsonSerializerSettings
@@ -26,6 +26,13 @@ namespace Shesha.GraphQL.Mvc
                     }
                 },
             };
+        }
+    }
+
+    public class GraphQLDataResult<TDecorator> : GraphQLDataResult
+    {
+        public GraphQLDataResult(ExecutionResult executionResult) : base(executionResult)
+        {
         }
     }
 }
