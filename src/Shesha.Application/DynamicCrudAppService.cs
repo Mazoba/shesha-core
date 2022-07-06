@@ -178,7 +178,7 @@ namespace Shesha
   personList(input: {{ filter: $filter, quickSearch: $quickSearch, sorting: $sorting, skipCount: $skipCount, maxResultCount: $maxResultCount }}){{
     totalCount
     items {{
-        {input.Properties}
+        {properties}
     }}
   }}
 }}";
@@ -220,30 +220,45 @@ namespace Shesha
 }}";
         }
 
+        private void AppendProperty(StringBuilder sb, EntityPropertyDto property)
+        {
+            // todo: use FieldNameConverter to get correct case of the field names
+            var propertyName = property.Name.ToCamelCase();
+
+            switch (property.DataType)
+            {
+                case DataTypes.Array:
+                    // todo: implement and uncomment
+                    return;
+
+                case DataTypes.EntityReference:
+                    sb.AppendLine($"{propertyName}: {propertyName}{nameof(IEntity.Id)}");
+                    break;
+
+                case DataTypes.Object:
+                    {
+                        sb.Append(propertyName);
+                        sb.AppendLine("{");
+                        foreach (var subProp in property.Properties)
+                        {
+                            AppendProperty(sb, subProp);
+                        }
+                        sb.AppendLine("}");
+                        break;
+                    }
+                default:
+                    sb.AppendLine(propertyName);
+                    break;
+            }
+        }
+
         private async Task<string> GetGqlTopLevelPropertiesAsync()
         {
             var sb = new StringBuilder();
             var properties = await EntityConfigCache.GetEntityPropertiesAsync(typeof(TEntity));
             foreach (var property in properties) 
             {
-                // todo: use FieldNameConverter to get correct case of the field names
-                var propertyName = property.Name.ToCamelCase();
-
-                switch (property.DataType) 
-                {
-                    case DataTypes.Object:
-                    case DataTypes.Array:
-                        // todo: implement and uncomment
-                        continue;
-
-                    case DataTypes.EntityReference:
-                        sb.AppendLine($"{propertyName}: {propertyName}{nameof(IEntity.Id)}");
-                        break;
-
-                    default:
-                        sb.AppendLine(propertyName);
-                        break;
-                }
+                AppendProperty(sb, property);
             }
 
             return sb.ToString();

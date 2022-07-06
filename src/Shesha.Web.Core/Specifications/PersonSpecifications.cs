@@ -22,7 +22,7 @@ namespace Shesha.Specifications
         }
     }
 
-    [GlobalSpecification]
+    //[GlobalSpecification]
     public class MyUnitPersonsSpecification : ShaSpecification<Person>
     {
         public override Expression<Func<Person, bool>> BuildExpression()

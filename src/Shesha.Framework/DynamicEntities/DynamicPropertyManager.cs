@@ -120,7 +120,7 @@ namespace Shesha.DynamicEntities
             }
         }
 
-        public Task<object> GetPropertyAsync(object entity, string propertyName) 
+        public async Task<object> GetPropertyAsync(object entity, string propertyName) 
         {
             try 
             {
@@ -133,7 +133,7 @@ namespace Shesha.DynamicEntities
 
                 var genericGetterMethod = getterMethod.MakeGenericMethod(entityType, idType);
 
-                return genericGetterMethod.Invoke(this, new object[] { entity, propertyName }) as Task<object>;
+                return await (genericGetterMethod.Invoke(this, new object[] { entity, propertyName }) as Task<object>);
             }
             catch (Exception e) 
             {
@@ -202,7 +202,7 @@ namespace Shesha.DynamicEntities
                     simpleType = typeof(TimeSpan?);
                     break;
                 case DataTypes.Object:
-                    simpleType = typeof(string);
+                    simpleType = await DtoTypeBuilder.GetDtoPropertyTypeAsync(dynamicProperty, new DynamicDtoTypeBuildingContext());
                     break;
             }
 

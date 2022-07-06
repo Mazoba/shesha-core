@@ -39,7 +39,6 @@ namespace Shesha.GraphQL.NewtonsoftJson
         {
             if (result.Executed)
             {
-                //writer.WritePropertyName("data");
                 if (result.Data is ExecutionNode executionNode)
                 {
                     WriteExecutionNode(writer, executionNode, serializer, true);
