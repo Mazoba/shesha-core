@@ -138,7 +138,16 @@ namespace Shesha
             var result = await DocumentExecuter.ExecuteAsync(async s =>
             {
                 s.Schema = schema;
-                s.Query = await GenerateGqlGetQueryAsync(input.Id, input.Properties);
+
+                var properties = string.IsNullOrWhiteSpace(input.Properties)
+                    ? await GetGqlTopLevelPropertiesAsync()
+                    : input.Properties;
+
+                s.Query = $@"query{{
+  {schemaName}(id: ""{input.Id}"") {{
+    {properties}
+  }}
+}}";
 
                 if (httpContext != null)
                 {
@@ -213,19 +222,6 @@ namespace Shesha
                 throw new AbpValidationException("", result.Errors.Select(e => new ValidationResult(e.Message)).ToList());
 
             return new GraphQLDataResult<PagedResultDto<TEntity>>(result);
-        }
-
-
-        private async Task<string> GenerateGqlGetQueryAsync(TPrimaryKey id, string properties)
-        {
-            if (string.IsNullOrWhiteSpace(properties))
-                properties = await GetGqlTopLevelPropertiesAsync();
-
-            return $@"query{{
-  person(id: ""{id}"") {{
-    {properties}
-  }}
-}}";
         }
 
         private void AppendProperty(StringBuilder sb, EntityPropertyDto property)
