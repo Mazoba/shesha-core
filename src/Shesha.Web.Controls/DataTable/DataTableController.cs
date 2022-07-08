@@ -555,7 +555,7 @@ namespace Shesha.Web.DataTable
                 if (filter.Filter == null)
                     continue;
 
-                var column = queryContext.Columns.FirstOrDefault(c => c.Name == filter.RealPropertyName);
+                var column = queryContext.Columns.FirstOrDefault(c => c.PropertyName == filter.RealPropertyName);
                 if (column?.GeneralDataType == null)
                     continue;
                 var filterCriteria = queryContext.FilterCriteria;
