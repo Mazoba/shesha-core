@@ -348,7 +348,7 @@ namespace Shesha.Authorization
 
         protected virtual async Task<bool> TryLockOutAsync(int? tenantId, long userId)
         {
-            using (var uow = UnitOfWorkManager.Begin(TransactionScopeOption.Suppress))
+            using (var uow = UnitOfWorkManager.Begin(TransactionScopeOption.RequiresNew))
             {
                 using (UnitOfWorkManager.Current.SetTenantId(tenantId))
                 {
