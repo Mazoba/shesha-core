@@ -16,6 +16,7 @@ using Shesha.Exceptions;
 using Shesha.NHibernate;
 using Shesha.NotificationMessages.Dto;
 using Shesha.Notifications.Dto;
+using Shesha.Notifications.Exceptions;
 using Shesha.Utilities;
 using Stubble.Core;
 using Stubble.Core.Builders;
@@ -306,10 +307,10 @@ namespace Shesha.Notifications
                 var message = await NotificationMessageRepository.GetAll().FirstOrDefaultAsync(m => m.Id == id);
 
                 if (message == null)
-                    throw new Exception($"Notification with id = '{id}' not found");
+                    throw new ShaNotificationNotFoundException(id);
 
                 if (message.Status == RefListNotificationStatus.Preparing)
-                    throw new Exception($"Notification with id = '{id}' is still preparing");
+                    throw new ShaNotificationIsStillPreparingException(id);
 
                 message.TryCount++;
                 message.SendDate = DateTime.Now;
@@ -337,7 +338,7 @@ namespace Shesha.Notifications
 
             // throw exception if we need to retry
             if (status == RefListNotificationStatus.WaitToRetry)
-                throw new Exception("Failed to send notification, waiting for retry");
+                throw new ShaNotificationFailedWaitRetryException(id);
         }
 
         private async Task SendNotificationInternalAsync(NotificationMessage message)
