@@ -41,7 +41,7 @@ jobs:
       
       # pack Shesha (Solution)
       - name: Dotnet Pack Shesha
-        run: dotnet pack -o ../dist -p:PackageVersion=${{ steps.tag_version.outputs.new_tag }} --include-symbols --include-source
+        run: dotnet pack -o ../dist -p:PackageVersion=${{ steps.tag_version.outputs.new_tag }} -p:Version=${{ steps.tag_version.outputs.new_tag }} --include-symbols --include-source
       
       # create github release
       - name: Create GitHub Release
