@@ -2,7 +2,7 @@ name: shesha-core-0.x.x
 
 on:
   push:
-    branches: [ main ]
+    branches: [ shesha_legacy ]
 
 env:
   DOTNET_VERSION: '5.x'
