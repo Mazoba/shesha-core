@@ -210,7 +210,7 @@ namespace Shesha.Scheduler
                                 Log.ErrorFormat("Job {0} interrupted", Name);
                             else
                             {
-                                Log.ErrorFormat("Error occured during {0} run: {1}", Name, e.Message);
+                                Log.Error($"Error occured during {Name} run: {e.Message}", e);
                                 OnFail();
                             }
                         }
