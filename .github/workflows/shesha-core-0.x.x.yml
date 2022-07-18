@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           clean: true
-		  ref: "shesha_legacy"
+          ref: shesha_legacy
       # setup .net core
       - name: Use .NET Core SDK ${{ env.DOTNET_VERSION }}
         uses: actions/setup-dotnet@v1
@@ -39,7 +39,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag_prefix: ""
-		  release_branches: "shesha_legacy"
+          release_branches: shesha_legacy
       
       # pack Shesha (Solution)
       - name: Dotnet Pack Shesha
