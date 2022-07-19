@@ -2,7 +2,6 @@
   <Import Project="..\..\common.props" />
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <AssetTargetFallback>$(AssetTargetFallback);portable-net45+win8+wp8+wpa81;</AssetTargetFallback>
     <AssemblyName>Shesha.Core</AssemblyName>
     <PackageId>Shesha.Core</PackageId>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
