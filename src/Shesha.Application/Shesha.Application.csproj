@@ -39,6 +39,6 @@
     <ProjectReference Include="..\Shesha.Elmah\Shesha.Elmah.csproj" />
     <ProjectReference Include="..\Shesha.Framework\Shesha.Framework.csproj" />
     <ProjectReference Include="..\Shesha.GraphQL\Shesha.GraphQL.csproj" />
-    <ProjectReference Include="..\Shesha.Web.Controls\Shesha.Web.Controls.csproj" />
+    <ProjectReference Include="..\Shesha.NHibernate\Shesha.NHibernate.csproj" />
   </ItemGroup>
 </Project>
