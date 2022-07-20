@@ -15,6 +15,7 @@ using Shesha.Domain;
 using Shesha.Domain.Enums;
 using Shesha.Email;
 using Shesha.Email.Dtos;
+using Shesha.Extensions;
 using Shesha.NHibernate;
 using Shesha.NotificationMessages.Dto;
 using Shesha.Services;
@@ -59,7 +60,7 @@ namespace Shesha.Notifications
                         throw new Exception($"Wrong type of template. Expected `{RefListNotificationType.Email}`, actual `{template.SendType}`");
 
                     var person = await GetRecipientAsync(userNotification);
-                    var email = person?.AvailableEmail;
+                    var email = person?.GetEmail();
                     if (string.IsNullOrWhiteSpace(email))
                         continue;
 

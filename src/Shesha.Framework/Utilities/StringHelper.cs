@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Abp.Localization;
+using HtmlAgilityPack;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -9,8 +11,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
-using Abp.Localization;
-using HtmlAgilityPack;
 
 namespace Shesha.Utilities
 {
@@ -25,6 +25,14 @@ namespace Shesha.Utilities
     /// </summary>
     public static class StringHelper
     {
+        /// <summary>
+        /// Returns first not empty string from the specified <paramref name="values"/>
+        /// </summary>
+        /// <param name="values">List of strings</param>
+        public static string FirstNotEmpty(params string[] values) 
+        {
+            return values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+        }
 
         /// <summary>
         /// Get localized text

@@ -10,6 +10,7 @@ using Hangfire;
 using Shesha.Authorization.Users;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
+using Shesha.Extensions;
 using Shesha.NHibernate;
 using Shesha.NotificationMessages.Dto;
 using Shesha.Push;
@@ -51,7 +52,7 @@ namespace Shesha.Notifications
                         throw new Exception($"Wrong type of template. Expected `{RefListNotificationType.SMS}`, actual `{template.SendType}`");
 
                     var person = await GetRecipientAsync(userNotification);
-                    var mobileNo = person?.MobileNumber;
+                    var mobileNo = person?.GetMobileNumber();
                     if (string.IsNullOrWhiteSpace(mobileNo))
                         continue;
 
