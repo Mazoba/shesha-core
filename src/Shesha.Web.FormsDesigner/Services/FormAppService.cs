@@ -1,15 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.AutoMapper.Dto;
-using Shesha.Web.DataTable;
-using Shesha.Web.FormsDesigner.Domain;
 using Shesha.Web.FormsDesigner.Dtos;
 using System;
-using System.Buffers.Text;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -19,7 +15,6 @@ namespace Shesha.Web.FormsDesigner.Services
     /// <summary>
     /// Configurable Forms application service
     /// </summary>
-    //[AbpAuthorize]
     [Route("api/services/Forms")]
     public class FormAppService : SheshaAppServiceBase, IFormAppService
     {
@@ -32,25 +27,6 @@ namespace Shesha.Web.FormsDesigner.Services
         public FormAppService(IFormStore formStore)
         {
             _formStore = formStore;
-        }
-
-        /// <summary>
-        /// Index table configuration. Note: It's just a temporary solution 
-        /// </summary>
-        public static DataTableConfig IndexTable()
-        {
-            var table = new DataTableConfig<Form, Guid>("Forms_Index");
-
-            table.AddProperty(e => e.Name);
-            table.AddProperty(e => e.Path);
-            table.AddProperty(e => e.Description);
-            table.AddProperty(e => e.ModelType);
-            table.AddProperty(e => e.Settings);
-
-            table.AddProperty(e => e.CreationTime, c => c.Caption("Created On").HiddenByDefault());
-            table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").HiddenByDefault());
-
-            return table;
         }
 
         /// inheritedDoc

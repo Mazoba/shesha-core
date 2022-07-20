@@ -17,7 +17,6 @@ namespace Shesha.Web.DataTable
         /// </summary>
         protected internal DataTableColumn()
         {
-            Fluent = new DataTableColumnFluentConfig(this);
             // default values
             IsVisible = true;
             IsSortable = true;
@@ -31,11 +30,6 @@ namespace Shesha.Web.DataTable
             IsEditable = true;
             IsDynamic = false;
         }
-
-        /// <summary>
-        /// Datatable configuration
-        /// </summary>
-        public DataTableConfig DataTableConfig { get; set; }
 
         /// <summary>
         /// Name of the property in the model
@@ -141,15 +135,6 @@ namespace Shesha.Web.DataTable
         #endregion
 
         /// <summary>
-        /// Data type of the column
-        /// </summary>
-        [Obsolete]
-        public string DataType =>
-            GeneralDataType != null
-                ? DataTableHelper.GeneralDataType2ColumnDataType(GeneralDataType.Value)
-                : DataTableHelper.DataType2ColumnDataType(StandardDataType, DataFormat);
-
-        /// <summary>
         /// General data type
         /// </summary>
         [Obsolete]
@@ -163,12 +148,6 @@ namespace Shesha.Web.DataTable
 
         public string StandardDataType { get; set; }
         public string DataFormat { get; set; }
-
-        /// <summary>
-        /// Fluent configuration
-        /// </summary>
-        [JsonIgnore]
-        public DataTableColumnFluentConfig Fluent { get; set; }
 
         /// <summary>
         /// Returns cell content

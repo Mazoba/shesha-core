@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
-using Abp.Application.Services;
+﻿using Abp.Application.Services;
 using Abp.Application.Services.Dto;
 using Abp.Authorization;
 using Abp.Domain.Repositories;
@@ -14,7 +9,11 @@ using Shesha.Authorization;
 using Shesha.Domain;
 using Shesha.Roles.Dto;
 using Shesha.ShaRoleAppointedPersons.Dto;
-using Shesha.Web.DataTable;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Shesha.ShaRoleAppointedPersons
 {
@@ -34,40 +33,6 @@ namespace Shesha.ShaRoleAppointedPersons
             _personRepository = personRepository;
             _areaRepository = areaRepository;
             _shaPermissionChecker = shaPermissionChecker;
-        }
-
-        /// <summary>
-        /// Appointed persons child table with regions
-        /// </summary>
-        public static ChildDataTableConfig<ShaRole, ShaRoleAppointedPersonInfo, Guid> ShaRoleAppointedPersonsWithRegionTable()
-        {
-            var table = ChildDataTableConfig<ShaRole, ShaRoleAppointedPersonInfo, Guid>.OneToMany("ShaRole_AppointedPersonsWithRegions", ap => ap.Role);
-
-            table.AddProperty(e => e.Person.FullName, c => c.Caption("Full Name").SortAscending());
-            table.AddProperty(e => e.Person.User.UserName, c => c.Caption("UserName"));
-            table.AddProperty(e => e.Teams, c => c.Caption("Team"));
-            table.AddProperty(e => e.Regions);
-
-            table.AddProperty(e => e.CreationTime, c => c.Caption("Created On").Visible(false));
-            table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").Visible(false));
-
-            return table;
-        }
-
-        /// <summary>
-        /// Appointed persons child table
-        /// </summary>
-        public static ChildDataTableConfig<ShaRole, ShaRoleAppointedPerson, Guid> ShaRoleAppointedPersonsTable()
-        {
-            var table = ChildDataTableConfig<ShaRole, ShaRoleAppointedPerson, Guid>.OneToMany("ShaRole_AppointedPersons", ap => ap.Role);
-
-            table.AddProperty(e => e.Person.FullName, c => c.Caption("Full Name").SortAscending());
-            table.AddProperty(e => e.Person.User.UserName, c => c.Caption("UserName"));
-
-            table.AddProperty(e => e.CreationTime, c => c.Caption("Created On").Visible(false));
-            table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").Visible(false));
-
-            return table;
         }
 
         /// <summary>

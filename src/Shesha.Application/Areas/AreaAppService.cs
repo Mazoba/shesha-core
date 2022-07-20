@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Abp.Application.Services;
+﻿using Abp.Application.Services;
 using Abp.Application.Services.Dto;
 using Abp.Domain.Repositories;
-using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.Mvc;
 using NHibernate.Linq;
 using Shesha.Areas.Dto;
 using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
-using Shesha.Web.DataTable;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Shesha.Areas
 {
@@ -25,46 +23,6 @@ namespace Shesha.Areas
         {
             _areaTreeItemRepository = areaTreeItemRepository;
             _areaHierarchyItemRepository = areaHierarchyItemRepository;
-        }
-
-        /// <summary>
-        /// Areas index table
-        /// </summary>
-        /// <returns></returns>
-        public static DataTableConfig IndexTable()
-        {
-            var table = new DataTableConfig<Area, Guid>("Areas_Index");
-
-            table.AddProperty(e => e.Name, c => c.SortAscending());
-            table.AddProperty(e => e.ShortName);
-            table.AddProperty(e => e.ParentArea.Name, c => c.Caption("Parent Area"));
-            table.AddProperty(e => e.AreaType);
-            table.AddProperty(e => e.Comments);
-
-            table.AddProperty(e => e.CreationTime, c => c.Caption("Created On").Visible(false));
-            table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").Visible(false));
-
-            return table;
-        }
-
-        /// <summary>
-        /// Subareas table
-        /// </summary>
-        /// <returns></returns>
-        public static ChildDataTableConfig<Area, Area, Guid> TeamMembersTable()
-        {
-            var table = ChildDataTableConfig<Area, Area, Guid>.OneToMany("Area_SubAreas", e => e.ParentArea);
-
-            table.AddProperty(e => e.Name, c => c.SortAscending());
-            table.AddProperty(e => e.ShortName);
-            table.AddProperty(e => e.ParentArea.Name, c => c.Caption("Parent Area"));
-            table.AddProperty(e => e.AreaType);
-            table.AddProperty(e => e.Comments);
-
-            table.AddProperty(e => e.CreationTime, c => c.Caption("Created On").Visible(false));
-            table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").Visible(false));
-
-            return table;
         }
 
         [HttpGet]

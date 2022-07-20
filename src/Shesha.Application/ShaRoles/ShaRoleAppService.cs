@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Abp.Application.Services;
+﻿using Abp.Application.Services;
 using Abp.Application.Services.Dto;
 using Abp.Authorization;
 using Abp.Domain.Repositories;
 using Shesha.Authorization;
 using Shesha.Domain;
-using Shesha.Permissions.Dtos;
 using Shesha.Roles.Dto;
 using Shesha.ShaRoles.Dto;
-using Shesha.Web.DataTable;
+using System;
+using System.Threading.Tasks;
 
 namespace Shesha.ShaRoles
 {
@@ -25,23 +22,6 @@ namespace Shesha.ShaRoles
             ) : base(repository)
         {
             _shaPermissionChecker = shaPermissionChecker;
-        }
-
-        /// <summary>
-        /// Index table configuration 
-        /// </summary>
-        public static DataTableConfig IndexTable()
-        {
-            var table = new DataTableConfig<ShaRole, Guid>("ShaRoles_Index");
-
-            table.AddProperty(e => e.Name, c => c.SortAscending());
-            //table.AddProperty(e => e.NameSpace, c => c.HiddenByDefault());
-            table.AddProperty(e => e.Description);
-
-            table.AddProperty(e => e.CreationTime, c => c.Caption("Created On").Visible(false));
-            table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").Visible(false));
-
-            return table;
         }
 
         public override async Task<ShaRoleDto> CreateAsync(CreateShaRoleDto input)
