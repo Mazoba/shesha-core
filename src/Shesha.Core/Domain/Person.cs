@@ -254,20 +254,10 @@ namespace Shesha.Domain
         public virtual bool OtpEnabled { get; set; }
 
         /// <summary>
-        /// 
-        /// </summary>
-        public virtual bool IsContractor { get; set; }
-
-        /// <summary>
         /// User record, may be null for non registered users
         /// </summary>
         [CanBeNull]
         public virtual User User { get; set; }
-
-        public virtual Area AreaLevel1 { get; set; }
-        public virtual Area AreaLevel2 { get; set; }
-        public virtual Area AreaLevel3 { get; set; }
-        public virtual Area AreaLevel4 { get; set; }
 
         public override string ToString()
         {

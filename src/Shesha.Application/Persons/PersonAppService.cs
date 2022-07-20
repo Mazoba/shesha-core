@@ -63,7 +63,6 @@ namespace Shesha.Persons
 
             table.AddProperty(e => e.CreationTime, c => c.Caption("Created On")/*.Visible(false)*/);
             table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").Visible(false));
-            table.AddProperty(e => e.IsContractor);
 
             table.OnRequestToFilterStatic = (criteria, input) =>
             {
@@ -86,13 +85,11 @@ namespace Shesha.Persons
             table.AddProperty(e => e.EmailAddress1);
             table.AddProperty(e => e.MobileNumber1);
             table.AddProperty(e => e.TypeOfAccount);
-            table.AddProperty(e => e.AreaLevel1, c => c.Caption("Area1"));
             table.AddProperty(e => e.User.LastLoginDate, c => c.Caption("Last log in"));
             table.AddProperty(e => e.IsLocked);
 
             table.AddProperty(e => e.CreationTime, c => c.Caption("Created On")/*.Visible(false)*/);
             table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").Visible(false));
-            table.AddProperty(e => e.IsContractor);
 
             table.OnRequestToFilterStatic = (criteria, input) =>
             {
