@@ -73,7 +73,7 @@ namespace Shesha.Persons
             // Creating User Account to enable login into the application
             User user = await _userManager.CreateUser(
                 input.UserName,
-                input.TypeOfAccount?.ItemValue == (long)RefListTypeOfAccount.SQL,
+                input.TypeOfAccount?.ItemValue == (long)RefListTypeOfAccount.Internal,
                 input.Password,
                 input.PasswordConfirmation,
                 input.FirstName,

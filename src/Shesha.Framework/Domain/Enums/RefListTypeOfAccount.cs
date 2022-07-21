@@ -3,13 +3,13 @@ using Shesha.Domain.Attributes;
 
 namespace Shesha.Domain.Enums
 {
-    [ReferenceList("Shesha.Core", "TypeOfAccount")]
+    [ReferenceList("Shesha.Framework", "TypeOfAccount")]
     public enum RefListTypeOfAccount : long
     {
         [Description("External (Active Directory)")]
-        AD = 0,
+        External = 0,
 
         [Description("Internal (SQL account)")]
-        SQL = 1
+        Internal = 1
     }
 }

@@ -20,9 +20,6 @@ namespace Shesha.Domain
     [DisplayManyToManyAuditTrail(typeof(ShaRoleAppointedPerson), "Role", DisplayName = "Role Appointment")]
     public class Person : FullPowerEntity
     {
-        [Display(Name = "Organisation")]
-        public virtual Organisation PrimaryOrganisation { get; set; }
-
         [StoredFile(IsVersionControlled = true)]
         public virtual StoredFile Photo { get; set; }
 
@@ -95,15 +92,6 @@ namespace Shesha.Domain
         [ReadonlyProperty]
         public virtual string FullName { get; protected set; }
 
-        [Display(Name = "Type of account")]
-        public virtual RefListTypeOfAccount? TypeOfAccount { get; set; }
-
-        [Display(Name = "Email Address Confirmed")]
-        public virtual bool EmailAddressConfirmed { get; set; }
-
-        [Display(Name = "Mobile Number Confirmed")]
-        public virtual bool MobileNumberConfirmed { get; set; }
-
         /// <summary>
         /// User record, may be null for non registered users
         /// </summary>
@@ -114,8 +102,6 @@ namespace Shesha.Domain
         {
             return FullName;
         }
-
-        public virtual bool IsMobileVerified { get; set; }
 
         [ManyToMany("Core_Persons_Languages", "LanguageId", "PersonId")]
         public virtual IList<ApplicationLanguage> PreferredLanguages { get; set; } = new List<ApplicationLanguage>();

@@ -4,6 +4,8 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Abp.Authorization.Users;
 using Abp.Extensions;
+using Shesha.Domain.Enums;
+using Shesha.EntityHistory;
 
 namespace Shesha.Authorization.Users
 {
@@ -16,6 +18,7 @@ namespace Shesha.Authorization.Users
         {
             Claims = new List<UserClaim>();
             Roles = new List<UserRole>();
+            TypeOfAccount = RefListTypeOfAccount.Internal;
         }
 
         public virtual DateTime? LastLoginDate { get; set; }
@@ -38,6 +41,34 @@ namespace Shesha.Authorization.Users
             NormalizedEmailAddress = EmailAddress?.ToUpperInvariant();
         }
 
+        [Display(Name = "Authentication Guid")]
+        [StringLength(36)]
+        public virtual string AuthenticationGuid { get; set; }
+
+        [Display(Name = "Authentication Guid Expiry Date")]
+        public virtual DateTime? AuthenticationGuidExpiresOn { get; set; }
+
+        /// <summary>
+        /// One Time Passwords by SMS
+        /// </summary>
+        [DisplayFormat(DataFormatString = "Yes|No")]
+        [Display(Name = "Use SMS Based One-Time-Passwords")]
+        [AuditedBoolean("SMS Based One-Time-Passwords enabled", "SMS Based One-Time-Passwords disabled")]
+        public virtual bool OtpEnabled { get; set; }
+
+        [Display(Name = "Require a change of password")]
+        public virtual bool RequireChangePassword { get; set; }
+
+        /// <summary>
+        /// Is this user active?
+        /// If as user is not active, he/she can not use the application.
+        /// </summary>
+        [AuditedAsEvent(typeof(IsLockedEventCreator))]
+        public override bool IsActive { get; set; }
+
+        [Display(Name = "Type of account")]
+        public virtual RefListTypeOfAccount? TypeOfAccount { get; set; }
+
         public static User CreateTenantAdminUser(int tenantId, string emailAddress)
         {
             var user = new User
@@ -47,12 +78,22 @@ namespace Shesha.Authorization.Users
                 Name = AdminUserName,
                 Surname = AdminUserName,
                 EmailAddress = emailAddress,
-                Roles = new List<UserRole>()
+                Roles = new List<UserRole>(),
+                TypeOfAccount = RefListTypeOfAccount.Internal,
             };
 
             user.SetNormalizedNames();
 
             return user;
+        }
+
+        private class IsLockedEventCreator : EntityHistoryEventCreatorBase<User, bool>
+        {
+            public override EntityHistoryEventInfo CreateEvent(EntityChangesInfo<User, bool> change)
+            {
+                var text = change.NewValue ? "User locked" : "User unlocked";
+                return CreateEvent(text, text);
+            }
         }
     }
 }

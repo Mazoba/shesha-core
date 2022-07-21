@@ -1,9 +1,8 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
-using Abp.AutoMapper;
+﻿using Abp.AutoMapper;
 using Shesha.Authorization.Users;
 using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
+using System.ComponentModel.DataAnnotations;
 
 namespace Shesha.Persons
 {
@@ -31,9 +30,6 @@ namespace Shesha.Persons
         [EmailAddress]
         [Required(AllowEmptyStrings = false)]
         public virtual string EmailAddress { get; set; }
-        public virtual bool isContractor { get; set; }
         public virtual ReferenceListItemValueDto TypeOfAccount { get; set; }
-
-        public virtual EntityWithDisplayNameDto<Guid?> PrimaryOrganisation { get; set; }
     }
 }
