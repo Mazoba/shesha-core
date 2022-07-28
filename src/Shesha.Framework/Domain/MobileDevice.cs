@@ -20,7 +20,7 @@ namespace Shesha.Domain
         /// <summary>
         /// Device name
         /// </summary>
-        [StringLength(300)]
+        [StringLength(100)]
         public virtual string ReadRouteName { get; set; }
 
         /// <summary>
