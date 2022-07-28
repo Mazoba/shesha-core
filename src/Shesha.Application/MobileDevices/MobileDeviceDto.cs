@@ -17,6 +17,11 @@ namespace Shesha.MobileDevices
         public string Name { get; set; }
 
         /// <summary>
+        /// 
+        /// </summary>
+        public string ReadRouteName { get; set; }
+
+        /// <summary>
         /// Device IMEI number
         /// </summary>
         public string IMEI { get; set; }
