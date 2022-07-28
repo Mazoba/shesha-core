@@ -18,6 +18,12 @@ namespace Shesha.Domain
         /// </summary>
         [StringLength(300)]
         public virtual string Name { get; set; }
+        
+        /// <summary>
+        /// Device name
+        /// </summary>
+        [StringLength(100)]
+        public virtual string ReadRouteName { get; set; }
 
         /// <summary>
         /// Device IMEI number
