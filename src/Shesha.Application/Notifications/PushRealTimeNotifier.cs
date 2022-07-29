@@ -10,6 +10,7 @@ using Hangfire;
 using Shesha.Authorization.Users;
 using Shesha.Domain;
 using Shesha.Domain.Enums;
+using Shesha.NHibernate;
 using Shesha.NotificationMessages.Dto;
 using Shesha.Push;
 using Shesha.Push.Dtos;
@@ -67,7 +68,7 @@ namespace Shesha.Notifications
                     });
 
                     // schedule sending
-                    BackgroundJob.Enqueue(() => SendNotification(messageId));
+                    UowManager.Current.DoAfterTransaction(() => BackgroundJob.Enqueue(() => SendNotification(messageId)));
                 }
             }
             catch (Exception e)

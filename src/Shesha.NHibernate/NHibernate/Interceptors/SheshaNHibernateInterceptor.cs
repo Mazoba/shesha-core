@@ -406,10 +406,13 @@ namespace Shesha.NHibernate.Interceptors
         /// inheritedDoc
         public override void AfterTransactionCompletion(ITransaction tx)
         {
-            while (AfterTransactionActions.Any())
+            if (tx.WasCommitted) 
             {
-                var action = AfterTransactionActions.Pop();
-                action.Invoke();
+                while (AfterTransactionActions.Any())
+                {
+                    var action = AfterTransactionActions.Pop();
+                    action.Invoke();
+                }
             }
 
             base.AfterTransactionCompletion(tx);

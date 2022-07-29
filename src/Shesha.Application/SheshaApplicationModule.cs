@@ -76,6 +76,10 @@ namespace Shesha
                     var pushNotifierType = !string.IsNullOrWhiteSpace(pushNotifier)
                         ? f.Resolve<ITypeFinder>().Find(t => typeof(IPushNotifier).IsAssignableFrom(t) && t.GetClassUid() == pushNotifier).FirstOrDefault()
                         : null;
+
+                    if (pushNotifierType == null)
+                        pushNotifierType = typeof(NullPushNotifier);
+
                     return pushNotifierType != null
                         ? f.Resolve(pushNotifierType) as IPushNotifier
                         : null;
