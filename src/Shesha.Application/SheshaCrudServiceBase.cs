@@ -149,7 +149,7 @@ namespace Shesha
         /// <param name="input"></param>
         /// <returns></returns>
         /// <response code="200">NOTE: shape of the `result` depends on the `properties` argument. When `properties` argument is not specified - it returns top level properties of the entity, all referenced entities are presented as their Id values</response>
-        //[HttpGet]
+        [HttpGet]
         public virtual async Task<GraphQLDataResult<TEntity>> QueryAsync(GetDynamicEntityInput<TPrimaryKey> input)
         {
             CheckGetAllPermission();
@@ -199,7 +199,7 @@ namespace Shesha
         /// <param name="input"></param>
         /// <returns></returns>
         /// <response code="200">NOTE: shape of the `items[]` depends on the `properties` argument. When `properties` argument is not specified - it returns top level properties of the entity, all referenced entities are presented as their Id values</response>
-        //[HttpGet]
+        [HttpGet]
         public virtual async Task<GraphQLDataResult<PagedResultDto<TEntity>>> QueryAllAsync(PropsFilteredPagedAndSortedResultRequestDto input)
         {
             CheckGetAllPermission();
