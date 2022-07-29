@@ -50,7 +50,7 @@ namespace Shesha
         {
             IocManager.Resolve<AppTimes>().StartupTime = Clock.Now;
 
-            SeedHelper.SeedHostDb(IocManager);
+            //SeedHelper.SeedHostDb(IocManager);
         }
     }
 }
