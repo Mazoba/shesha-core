@@ -23,8 +23,10 @@
     <EmbeddedResource Include="Localization\SourceFiles\*.xml" Exclude="bin\**;obj\**;**\*.xproj;packages\**;@(EmbeddedResource)" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Domain\BankAccount.cs" />
     <Compile Remove="Domain\Continent.cs" />
     <Compile Remove="Domain\Country.cs" />
+    <Compile Remove="Domain\OrganisationBankAccount.cs" />
     <Compile Remove="Domain\SheshaEntityChange.cs" />
     <Compile Remove="Domain\SheshaEntityChangeSet.cs" />
     <Compile Remove="Domain\SheshaEntityChangeSet_.cs" />
