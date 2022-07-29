@@ -1,6 +1,4 @@
-﻿using System;
-using System.Text;
-using Abp.AspNetCore;
+﻿using Abp.AspNetCore;
 using Abp.AspNetCore.Configuration;
 using Abp.AspNetCore.SignalR;
 using Abp.AutoMapper;
@@ -20,9 +18,9 @@ using Shesha.Elmah;
 using Shesha.Languages;
 using Shesha.NHibernate;
 using Shesha.Scheduler;
-using Shesha.Web;
 using Shesha.Startup;
-using Shesha.Domain;
+using System;
+using System.Text;
 
 namespace Shesha
 {
@@ -33,7 +31,6 @@ namespace Shesha
         typeof(AbpAspNetCoreModule),
         typeof(AbpAspNetCoreSignalRModule),
         typeof(AbpAutoMapperModule),
-        typeof(SheshaWebControlsModule),
         typeof(SheshaElmahModule),
         typeof(SheshaSchedulerModule),
         typeof(SheshaApplicationModule)

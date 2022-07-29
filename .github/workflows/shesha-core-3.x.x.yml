@@ -34,11 +34,11 @@ jobs:
       # tag branch
       - name: Tag Branch
         id: tag_version
-        uses: mathieudutour/github-tag-action@v5.6
+        uses: iilyichev/github-tag-action@v6.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag_prefix: ""
-      
+          tag_filter: "^3."
       # pack Shesha (Solution)
       - name: Dotnet Pack Shesha
         run: dotnet pack -o ../dist -p:PackageVersion=${{ steps.tag_version.outputs.new_tag }} -p:Version=${{ steps.tag_version.outputs.new_tag }} --include-symbols --include-source

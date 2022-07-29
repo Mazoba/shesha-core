@@ -22,6 +22,7 @@ namespace Shesha.Specifications
         }
     }
 
+    /*
     //[GlobalSpecification]
     public class MyUnitPersonsSpecification : ShaSpecification<Person>
     {
@@ -38,4 +39,5 @@ namespace Shesha.Specifications
             return p => currentPerson == null || p.AreaLevel1 == currentPerson.AreaLevel1;
         }
     }
+    */
 }
