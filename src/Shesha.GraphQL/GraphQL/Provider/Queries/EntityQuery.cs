@@ -26,16 +26,13 @@ namespace Shesha.GraphQL.Provider.Queries
     {
         private readonly IJsonLogic2LinqConverter _jsonLogicConverter;
 
-        protected EntityQuery(IJsonLogic2LinqConverter jsonLogicConverter)
-        {
-            _jsonLogicConverter = jsonLogicConverter;
-        }
-
         public EntityQuery(IServiceProvider serviceProvider)
         {
             var entityName = typeof(TEntity).Name;
 
             Name = entityName + "Query";
+
+            _jsonLogicConverter = serviceProvider.GetRequiredService<IJsonLogic2LinqConverter>();
 
             var repository = serviceProvider.GetRequiredService<IRepository<TEntity, TId>>();
             var asyncExecuter = serviceProvider.GetRequiredService<IAsyncQueryableExecuter>();
@@ -102,7 +99,9 @@ namespace Shesha.GraphQL.Provider.Queries
 
             var expression = _jsonLogicConverter.ParseExpressionOf<TEntity>(jsonLogic);
 
-            return query.Where(expression);
+            return expression != null
+                ? query.Where(expression)
+                : query;
         }
 
         /// <summary>

@@ -1,24 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Abp.Application.Services;
+﻿using Abp.Application.Services;
 using Abp.Authorization;
-using Abp.Dependency;
-using Abp.ObjectMapping;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using NHibernate;
 using NHibernate.Transform;
 using Shesha.Authorization;
 using Shesha.Configuration;
-using Shesha.Extensions;
 using Shesha.NHibernate.Utilites;
 using Shesha.Services;
-using Shesha.Web.DataTable;
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Shesha.Maintenance
 {
@@ -37,76 +32,6 @@ namespace Shesha.Maintenance
             .GetCurrentSession()
             .CreateSQLQuery("select DB_NAME()")
             .UniqueResult<string>());
-
-        /// <summary>
-        /// Custom Index table configuration 
-        /// </summary>
-        public static DataTableConfig BackupFilesIndex()
-        {
-            var table = new DataTableConfig<BackupFileDto, int>("BackupFiles_Index");
-
-            table.AddProperty(e => e.FileName);
-            return table;
-        }
-
-        /// <summary>
-        /// Returns data for the DateTable control
-        /// </summary>
-        [HttpPost]
-        public async Task<DataTableData> GetData(DataTableGetDataInput input, CancellationToken cancellationToken)
-        {
-            var mapper = StaticContext.IocManager.Resolve<IObjectMapper>();
-            var tableConfig = BackupFilesIndex();
-
-            var items = (await GetBackupsList()).Select(x => new { FileName = x }).ToList();
-
-            var totalRowsBeforeFilter = items.Count();
-
-            // Dynamic filter
-            if (!string.IsNullOrEmpty(input.QuickSearch))
-            {
-                var properties = tableConfig.AuthorizedColumns.Where(x => x.IsVisible).Select(x => x.FilterPropertyName)
-                    .ToArray();
-                if (properties.Length > 0)
-                {
-                    items = items.LikeDynamic(properties, input.QuickSearch).ToList();
-                }
-            }
-
-            var totalRows = items.Count();
-
-            var totalPages = (int)Math.Ceiling((double)items.Count() / input.PageSize);
-
-            var takeCount = input.PageSize > -1 ? input.PageSize : int.MaxValue;
-            var skipCount = Math.Max(0, (input.CurrentPage - 1) * takeCount);
-
-            var sort = input.Sorting.FirstOrDefault();
-            if (sort != null)
-            {
-                items = items.OrderByDynamic(sort.Id, sort.Desc ? "desc" : "asc").ToList();
-            }
-
-            items = items.Skip(skipCount).Take(takeCount).ToList();
-
-            var dataRows = new List<Dictionary<string, object>>();
-
-            foreach (var item in items)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                dataRows.Add(new Dictionary<string, object>() { { "FileName", item.FileName } });
-            }
-
-            var result = new DataTableData
-            {
-                TotalRowsBeforeFilter = totalRowsBeforeFilter,
-                TotalRows = totalRows,
-                TotalPages = totalPages,
-                //Echo = dataTableParam.sEcho,
-                Rows = dataRows
-            };
-
-            return result;
-        }
 
         [HttpGet]
         public async Task<List<string>> GetBackupsList()
@@ -297,5 +222,4 @@ namespace Shesha.Maintenance
         public bool FileIsADirectory { get; set; }
         public bool ParentDirectoryExists { get; set; }
     }
-
 }

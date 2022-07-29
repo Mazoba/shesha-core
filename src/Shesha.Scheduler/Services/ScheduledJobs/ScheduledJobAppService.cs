@@ -1,8 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Abp.Application.Services.Dto;
+﻿using Abp.Application.Services.Dto;
 using Abp.Dependency;
 using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
@@ -16,7 +12,10 @@ using Shesha.Scheduler.Attributes;
 using Shesha.Scheduler.Bootstrappers;
 using Shesha.Scheduler.Domain;
 using Shesha.Scheduler.Services.ScheduledJobs.Dto;
-using Shesha.Web.DataTable;
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Shesha.Scheduler.Services.ScheduledJobs
 {
@@ -142,23 +141,6 @@ namespace Shesha.Scheduler.Services.ScheduledJobs
             var bootstrapper = IocManager.Resolve<ScheduledJobBootstrapper>();
             await bootstrapper.Process();
             return "Bootstrapped successfully";
-        }
-
-        /// <summary>
-        /// Index table configuration
-        /// </summary>
-        /// <returns></returns>
-        public static DataTableConfig IndexTable()
-        {
-            var table = new DataTableConfig<ScheduledJob, Guid>("ScheduledJob_Index");
-
-            table.AddProperty(e => e.JobNamespace, m => m.WidthPixels(105));
-            table.AddProperty(e => e.JobName, m => m.WidthPixels(235));
-            table.AddProperty(e => e.JobDescription, m => m.WidthPixels(350));
-            table.AddProperty(e => e.StartupMode, m => m.WidthPixels(80));
-            table.AddProperty(e => e.JobStatus, m => m.WidthPixels(70));
-
-            return table;
         }
 
         /// inheritedDoc

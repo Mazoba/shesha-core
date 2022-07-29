@@ -11,6 +11,18 @@ namespace Shesha.Authorization.Roles
 
             roleManagementConfig.StaticRoles.Add(
                 new StaticRoleDefinition(
+                    StaticRoleNames.Host.Dev,
+                    MultiTenancySides.Host
+                )
+            );
+            roleManagementConfig.StaticRoles.Add(
+                new StaticRoleDefinition(
+                    StaticRoleNames.Host.Config,
+                    MultiTenancySides.Host
+                )
+            );
+            roleManagementConfig.StaticRoles.Add(
+                new StaticRoleDefinition(
                     StaticRoleNames.Host.Admin,
                     MultiTenancySides.Host
                 )
@@ -18,6 +30,18 @@ namespace Shesha.Authorization.Roles
 
             // Static tenant roles
 
+            roleManagementConfig.StaticRoles.Add(
+                new StaticRoleDefinition(
+                    StaticRoleNames.Tenants.Dev,
+                    MultiTenancySides.Tenant
+                )
+            );
+            roleManagementConfig.StaticRoles.Add(
+                new StaticRoleDefinition(
+                    StaticRoleNames.Tenants.Config,
+                    MultiTenancySides.Tenant
+                )
+            );
             roleManagementConfig.StaticRoles.Add(
                 new StaticRoleDefinition(
                     StaticRoleNames.Tenants.Admin,

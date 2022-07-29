@@ -1,8 +1,6 @@
 ﻿using Abp.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.Elmah;
-using Shesha.Web.DataTable;
-using Shesha.Web.FormsDesigner.Domain;
 using Shesha.Web.FormsDesigner.Dtos;
 using System;
 using System.IO;
@@ -13,7 +11,6 @@ namespace Shesha.Web.FormsDesigner.Services
     /// <summary>
     /// Configurable components application service
     /// </summary>
-    //[AbpAuthorize]
     [Route("api/services/ConfigurableComponents")]
     public class ConfigurableComponentAppService : SheshaAppServiceBase, IConfigurableComponentAppService
     {
@@ -26,25 +23,6 @@ namespace Shesha.Web.FormsDesigner.Services
         public ConfigurableComponentAppService(IConfigurableComponentStore componentStore)
         {
             _componentStore = componentStore;
-        }
-
-        /// <summary>
-        /// Index table configuration. Note: It's just a temporary solution 
-        /// </summary>
-        public static DataTableConfig IndexTable()
-        {
-            var table = new DataTableConfig<ConfigurableComponent, Guid>("ConfigurableComponent_Index");
-
-            table.AddProperty(e => e.Name);
-            table.AddProperty(e => e.Path);
-            table.AddProperty(e => e.Description);
-            table.AddProperty(e => e.ModelType);
-            table.AddProperty(e => e.Settings);
-
-            table.AddProperty(e => e.CreationTime, c => c.Caption("Created On").HiddenByDefault());
-            table.AddProperty(e => e.LastModificationTime, c => c.Caption("Updated On").HiddenByDefault());
-
-            return table;
         }
 
         /// inheritedDoc

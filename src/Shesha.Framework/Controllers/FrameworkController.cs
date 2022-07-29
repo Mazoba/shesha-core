@@ -21,6 +21,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Shesha.Utilities;
+using Abp.Domain.Entities;
 
 namespace Shesha.Controllers
 {
@@ -60,7 +61,7 @@ namespace Shesha.Controllers
                 var sessionFactory = StaticContext.IocManager.Resolve<ISessionFactory>();
                 var migrationGenerator = StaticContext.IocManager.Resolve<IMigrationGenerator>();
 
-                var types = typeFinder.FindAll().Where(t => t.IsEntityType()).ToList();
+                var types = typeFinder.FindAll().Where(t => t.IsEntityType() && t != typeof(AggregateRoot)).ToList();
 
                 var errors = new Dictionary<Type, Exception>();
 

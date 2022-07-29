@@ -1,20 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using Abp.Application.Services;
+﻿using Abp.Application.Services;
 using Abp.Configuration;
 using Abp.Domain.Entities.Auditing;
 using Abp.Domain.Repositories;
-using Abp.Domain.Uow;
 using Abp.EntityHistory;
 using Abp.Events.Bus.Entities;
 using Abp.ObjectMapping;
 using Abp.Reflection;
-using Microsoft.AspNetCore.Mvc;
 using NHibernate;
 using NHibernate.Criterion;
 using NHibernate.Intercept;
@@ -26,7 +17,11 @@ using Shesha.NHibernate.Session;
 using Shesha.Reflection;
 using Shesha.Services;
 using Shesha.Utilities;
-using Shesha.Web.DataTable;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Reflection;
 
 namespace Shesha.EntityHistory
 {
@@ -74,126 +69,6 @@ namespace Shesha.EntityHistory
             Mapper = mapper;
             TypeFinder = typeFinder;
             SessionFactory = sessionFactory;
-        }
-
-        /// <summary>
-        /// Custom Index table configuration 
-        /// </summary>
-        public static DataTableConfig IndexTableFull()
-        {
-            var table = new DataTableConfig<EntityHistoryItemDto, int>("EntityHistoryFull_Index");
-
-            table.AddProperty(e => e.EventText, p => p.WidthPixels(185));
-            table.AddProperty(e => e.ExtendedDescription);
-            table.AddProperty(e => e.UserFullName, p => p.WidthPixels(130));
-            table.AddProperty(e => e.CreationTime, p => p.WidthPixels(160));
-            table.AddProperty(e => e.EntityTypeFullName, c => c.Visible(false).AllowShowHide(false));
-            table.AddProperty(e => e.EntityId, c => c.Visible(false).AllowShowHide(false));
-
-            return table;
-        }
-
-        /// <summary>
-        /// Returns data for the DateTable control
-        /// </summary>
-        [HttpPost]
-        public async Task<DataTableData> GetData(DataTableGetDataInput input, CancellationToken cancellationToken)
-        {
-            // disable SoftDeleteFilter to allow get deleted entities
-            CurrentUnitOfWork.DisableFilter(AbpDataFilters.SoftDelete);
-
-            var tableConfig = IndexTableFull();
-            var entityId = input.Filter.FirstOrDefault(f => f.RealPropertyName == "EntityId")?.Filter.ToString();
-            var entityTypeFullName =
-                input.Filter.FirstOrDefault(f => f.RealPropertyName == "EntityTypeFullName")?.Filter.ToString();
-
-            var itemType = TypeFinder.Find(t => t.FullName == entityTypeFullName)?.FirstOrDefault();
-
-            var history = new List<EntityHistoryItemDto>();
-
-            var maxDate = DateTime.MaxValue;
-
-            // Add entity history
-            history.AddRange(GetEntityAudit(itemType, entityId, out maxDate));
-
-            // Add many-to-many related entities
-            history.AddRange(GetManyToManyEntitiesAudit(itemType, entityId));
-
-            // Add many-to-one related entities
-            history.AddRange(GetManyToOneEntitiesAudit(itemType, entityId));
-            
-            // Add child audited properties
-            history.AddRange(GetChildEntitiesAudit(itemType, entityId));
-
-            // Add generic child entities
-            history.AddRange(GetGenericEntitiesAudit(itemType, entityId));
-
-            if (maxDate != DateTime.MaxValue)
-            {
-                history = history.Where(x => x.CreationTime <= maxDate).ToList();
-            }
-
-            var totalRowsBeforeFilter = history.Count();
-
-            // Dynamic filter
-            if (!string.IsNullOrEmpty(input.QuickSearch))
-            {
-                var properties = tableConfig.AuthorizedColumns.Where(x => x.IsVisible).Select(x => x.FilterPropertyName)
-                    .ToArray();
-                if (properties.Length > 0)
-                {
-                    history = history.LikeDynamic(properties, input.QuickSearch).ToList();
-                }
-            }
-
-            var totalRows = history.Count();
-
-            var totalPages = (int)Math.Ceiling((double)history.Count() / input.PageSize);
-
-            var takeCount = input.PageSize > -1 ? input.PageSize : int.MaxValue;
-            var skipCount = Math.Max(0, (input.CurrentPage - 1) * takeCount);
-
-            history = history.OrderBy(x => x.CreationTime).ToList();
-
-            // Dynamic order by property name
-            var sort = input.Sorting.FirstOrDefault();
-            if (sort != null)
-            {
-                history = history.OrderByDynamic(sort.Id, sort.Desc ? "desc" : "asc").ToList();
-            }
-
-            if (skipCount > history.Count) skipCount = 0;
-
-            history = history.Skip(skipCount).Take(takeCount).ToList();
-
-            var dataRows = new List<Dictionary<string, object>>();
-            var authorizedColumns =
-                tableConfig.Columns //.Where(c => c.AuthorizationRules == null || c.AuthorizationRules.IsAuthorized())
-                    .ToList();
-
-            foreach (var item in history)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var row = new Dictionary<string, object>();
-                foreach (var col in authorizedColumns)
-                {
-                    var value = item.GetType().GetProperty(col.PropertyName)?.GetValue(item);
-                    row.Add(col.PropertyName, value);
-                }
-
-                dataRows.Add(row);
-            }
-
-            var result = new DataTableData
-            {
-                TotalRowsBeforeFilter = totalRowsBeforeFilter,
-                TotalRows = totalRows,
-                TotalPages = totalPages,
-                Rows = dataRows
-            };
-
-            return result;
         }
 
         private List<EntityHistoryItemDto> GetChildEntitiesAudit(Type itemType, string entityId)

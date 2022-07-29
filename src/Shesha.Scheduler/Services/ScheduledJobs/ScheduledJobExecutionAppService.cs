@@ -1,19 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using Abp.Application.Services;
+﻿using Abp.Application.Services;
 using Abp.Dependency;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
-using FluentMigrator.Builders.Alter.Table;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Shesha.Scheduler.Domain;
 using Shesha.Scheduler.Services.ScheduledJobs.Dto;
 using Shesha.Scheduler.SignalR;
 using Shesha.Services;
-using Shesha.Web.DataTable;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace Shesha.Scheduler.Services.ScheduledJobs
 {
@@ -24,40 +22,6 @@ namespace Shesha.Scheduler.Services.ScheduledJobs
         public ScheduledJobExecutionAppService(IRepository<ScheduledJobExecution, Guid> repository, IMimeMappingService mimeMappingService) : base(repository)
         {
             _mimeMappingService = mimeMappingService;
-        }
-
-        public static ChildDataTableConfig<ScheduledJob, ScheduledJobExecution, Guid> JobExecutionsTable()
-        {
-            var table = ChildDataTableConfig<ScheduledJob, ScheduledJobExecution, Guid>.OneToMany("ScheduledJob_Executions", ex => ex.Job);
-
-            table.UseDtos = true;
-            table.DetailsUrl = url => "/api/services/Scheduler/ScheduledJobExecution/Get";
-            table.CreateUrl = url => "/api/services/Scheduler/ScheduledJobExecution/Create";
-            table.UpdateUrl = url => "/api/services/Scheduler/ScheduledJobExecution/Update";
-            table.DeleteUrl = url => "/api/services/Scheduler/ScheduledJobExecution/Delete";
-
-            table.AddProperty(e => e.StartedOn, m => m.SortDescending());
-            table.AddProperty(e => e.FinishedOn);
-            table.AddProperty(e => e.Status);
-            table.AddProperty(e => e.StartedBy);
-            table.AddProperty(e => e.ErrorMessage);
-
-            return table;
-        }
-
-        public static DataTableConfig<ScheduledJobExecution, Guid> JobsExecutionLog()
-        {
-            var table = ChildDataTableConfig<ScheduledJob, ScheduledJobExecution, Guid>.OneToMany("ScheduledJobs_ExecutionLog", ex => ex.Job);
-
-            table.AddProperty(e => e.StartedOn, m => m.SortDescending());
-            table.AddProperty(e => e.Job.JobNamespace, c => c.Caption("Job Namespace"));
-            table.AddProperty(e => e.Job.JobName, c => c.Caption("Job Name"));
-            table.AddProperty(e => e.FinishedOn);
-            table.AddProperty(e => e.Status);
-            table.AddProperty(e => e.StartedBy);
-            table.AddProperty(e => e.ErrorMessage);
-
-            return table;
         }
 
         /// <summary>

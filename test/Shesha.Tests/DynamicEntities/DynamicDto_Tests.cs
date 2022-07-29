@@ -155,6 +155,7 @@ namespace Shesha.Tests.DynamicEntities
             nestedProperties.ShouldContain(p => p.Name == supervisorLastNamePropName);
         }
 
+        /*
         [Fact]
         public async Task BuildDynamicDto_WidthDtoReferences_Test()
         {
@@ -203,5 +204,6 @@ namespace Shesha.Tests.DynamicEntities
             var area1IsDto = area1Prop.PropertyType == typeof(EntityWithDisplayNameDto<Guid>);
             area1IsDto.ShouldBeTrue($"{area1PropName} is not mapped as '{nameof(EntityWithDisplayNameDto<Guid>)}'");
         }
+        */
     }
 }

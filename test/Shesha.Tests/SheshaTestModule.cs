@@ -33,8 +33,7 @@ namespace Shesha.Tests
 
         typeof(SheshaApplicationModule),
         typeof(SheshaNHibernateModule),
-        typeof(SheshaFrameworkModule),
-        typeof(SheshaWebControlsModule)
+        typeof(SheshaFrameworkModule)
         )]
     public class SheshaTestModule : AbpModule
     {
