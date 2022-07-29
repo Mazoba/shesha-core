@@ -159,19 +159,21 @@ namespace Shesha
             var schema = await SchemaContainer.GetOrDefaultAsync(schemaName);
             var httpContext = AppContextHelper.Current;
 
-            var result = await DocumentExecuter.ExecuteAsync(async s =>
-            {
-                s.Schema = schema;
-
-                var properties = string.IsNullOrWhiteSpace(input.Properties)
+            var properties = string.IsNullOrWhiteSpace(input.Properties)
                     ? await GetGqlTopLevelPropertiesAsync()
                     : input.Properties;
 
-                s.Query = $@"query{{
+            var query = $@"query{{
   {schemaName}(id: ""{input.Id}"") {{
     {properties}
   }}
 }}";
+
+            var result = await DocumentExecuter.ExecuteAsync(async s =>
+            {
+                s.Schema = schema;
+
+                s.Query = query;
 
                 if (httpContext != null)
                 {
@@ -207,15 +209,10 @@ namespace Shesha
             var schema = await SchemaContainer.GetOrDefaultAsync(schemaName);
             var httpContext = AppContextHelper.Current;
 
-            var result = await DocumentExecuter.ExecuteAsync(async s =>
-            {
-                s.Schema = schema;
-
-                var properties = string.IsNullOrWhiteSpace(input.Properties)
-                    ? await GetGqlTopLevelPropertiesAsync()
-                    : CleanupProperties(input.Properties);
-
-                s.Query = $@"query getAll($filter: String, $quickSearch: String, $sorting: String, $skipCount: Int, $maxResultCount: Int){{
+            var properties = string.IsNullOrWhiteSpace(input.Properties)
+                ? await GetGqlTopLevelPropertiesAsync()
+                : CleanupProperties(input.Properties);
+            var query = $@"query getAll($filter: String, $quickSearch: String, $sorting: String, $skipCount: Int, $maxResultCount: Int){{
   {schemaName}List(input: {{ filter: $filter, quickSearch: $quickSearch, sorting: $sorting, skipCount: $skipCount, maxResultCount: $maxResultCount }}){{
     totalCount
     items {{
@@ -223,6 +220,12 @@ namespace Shesha
     }}
   }}
 }}";
+
+            var result = await DocumentExecuter.ExecuteAsync(async s =>
+            {
+                s.Schema = schema;
+
+                s.Query = query;
                 s.Variables = new Inputs(new Dictionary<string, object> {
                     { "filter", input.Filter },
                     { "quickSearch", input.QuickSearch },

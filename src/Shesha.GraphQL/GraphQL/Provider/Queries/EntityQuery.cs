@@ -28,7 +28,7 @@ namespace Shesha.GraphQL.Provider.Queries
 
         public EntityQuery(IServiceProvider serviceProvider)
         {
-            var entityName = typeof(TEntity).Name;
+            var entityName = StringHelper.ToCamelCase(typeof(TEntity).Name);
 
             Name = entityName + "Query";
 
