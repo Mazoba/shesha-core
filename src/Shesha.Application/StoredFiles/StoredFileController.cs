@@ -159,6 +159,40 @@ namespace Shesha.StoredFiles
             return uploadedFile;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        /// <exception cref="AbpValidationException"></exception>
+        [HttpPost, Route("UploadStatic")]
+        [Consumes("multipart/form-data")]
+        public async Task<StoredFileDto> UploadStaticAsync([FromForm] StaticFileInput input)
+        {
+            if (input.File == null)
+                ModelState.AddModelError(nameof(input.File), $"{nameof(input.File)} must not be null");
+
+            if (!ModelState.IsValid)
+                throw new AbpValidationException("An error occured");//, ModelState.Keys.Select(k => new ValidationResult(ModelState.Values[k], new List<string>() { k })));
+
+            var uploadedFile = new StoredFileDto();
+            var fileName = input.File.FileName.CleanupFileName();
+
+            await using (var fileStream = input.File.OpenReadStream())
+            {
+                var storedFile = await _fileService.SaveFile(fileStream, fileName, file =>
+                {
+                    file.Category = input.FilesCategory;
+                });
+
+                await _unitOfWorkManager.Current.SaveChangesAsync();
+                MapStoredFile(storedFile, uploadedFile);
+            }
+
+            return uploadedFile;
+        }
+
+
         private List<ValidationResult> GetValidationResults(ModelStateDictionary modelState)
         {
             var idx = 0;
