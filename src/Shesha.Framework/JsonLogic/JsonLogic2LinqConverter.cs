@@ -66,6 +66,9 @@ namespace Shesha.JsonLogic
 
             if (rule is JObject ruleObj)
             {
+                if (!ruleObj.HasValues)
+                    return Expression.Empty();
+
                 if (!TryGetOperator(rule, out var @operator))
                     throw new Exception("Failed to parse expression");
 
@@ -409,6 +412,9 @@ namespace Shesha.JsonLogic
 
         public Expression<Func<T, bool>> ParseExpressionOf<T>(JObject rule)
         {
+            if (rule.IsNullOrEmpty())
+                return null;
+
             var itemExpression = Expression.Parameter(typeof(T), "ent");
             var conditions = ParseTree<T>(rule, itemExpression);
             if (conditions.CanReduce)
@@ -422,6 +428,9 @@ namespace Shesha.JsonLogic
 
         public Func<T, bool> ParsePredicateOf<T>(JObject rule)
         {
+            if (rule.IsNullOrEmpty())
+                return null;
+
             var query = ParseExpressionOf<T>(rule);
             return query.Compile();
         }

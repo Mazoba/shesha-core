@@ -8,6 +8,7 @@ using Castle.MicroKernel.Registration;
 using Shesha.Authorization;
 using Shesha.Authorization.Roles;
 using Shesha.Authorization.Users;
+using Shesha.Domain;
 using Shesha.Localization;
 using Shesha.MultiTenancy;
 using Shesha.Timing;
@@ -48,6 +49,8 @@ namespace Shesha
         public override void PostInitialize()
         {
             IocManager.Resolve<AppTimes>().StartupTime = Clock.Now;
+
+            SeedHelper.SeedHostDb(IocManager);
         }
     }
 }

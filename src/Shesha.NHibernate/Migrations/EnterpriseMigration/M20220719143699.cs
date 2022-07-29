@@ -15,7 +15,7 @@ namespace Shesha.Migrations.EnterpriseMigration
         {
             Execute.Sql(@"update Core_Organisations set Frwk_Discriminator = 'entpr.Supplier' where Frwk_Discriminator = 'Core.Supplier'");
             Execute.Sql(@"update entpr_Orders set Frwk_Discriminator = 'entpr.Order' where Frwk_Discriminator = 'Core.Order'");
-            Execute.Sql(@"update entpr_ImportResults set Frwk_Discriminator = 'entpr.ImportResult' where Frwk_Discriminator = 'Core.ImportResult'");
+            //Execute.Sql(@"update entpr_ImportResults set Frwk_Discriminator = 'entpr.ImportResult' where Frwk_Discriminator = 'Core.ImportResult'");
 
             Execute.Sql(@"update 
 	Core_Organisations

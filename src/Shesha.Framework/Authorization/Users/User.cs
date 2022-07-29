@@ -69,14 +69,14 @@ namespace Shesha.Authorization.Users
         [Display(Name = "Type of account")]
         public virtual RefListTypeOfAccount? TypeOfAccount { get; set; }
 
-        public static User CreateTenantAdminUser(int tenantId, string emailAddress)
+        public static User CreateUser(int? tenantId, string username, string emailAddress)
         {
             var user = new User
             {
                 TenantId = tenantId,
-                UserName = AdminUserName,
-                Name = AdminUserName,
-                Surname = AdminUserName,
+                UserName = username,
+                Name = username,
+                Surname = username,
                 EmailAddress = emailAddress,
                 Roles = new List<UserRole>(),
                 TypeOfAccount = RefListTypeOfAccount.Internal,
@@ -85,6 +85,15 @@ namespace Shesha.Authorization.Users
             user.SetNormalizedNames();
 
             return user;
+        }
+
+        public new const string AdminUserName = "admin";
+        public const string DevUserName = "dev";
+        public const string ConfigUserName = "config";
+
+        public static User CreateTenantAdminUser(int tenantId, string emailAddress)
+        {
+            return CreateUser(tenantId, AdminUserName, emailAddress);
         }
 
         private class IsLockedEventCreator : EntityHistoryEventCreatorBase<User, bool>

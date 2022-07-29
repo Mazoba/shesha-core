@@ -406,7 +406,7 @@ namespace Shesha.NHibernate.Interceptors
         /// inheritedDoc
         public override void AfterTransactionCompletion(ITransaction tx)
         {
-            if (tx.WasCommitted) 
+            if (tx != null && tx.WasCommitted) 
             {
                 while (AfterTransactionActions.Any())
                 {

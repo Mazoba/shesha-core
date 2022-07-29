@@ -250,11 +250,11 @@ namespace Shesha.CodeGeneration
                             ? $@".{nameof(IColumnTypeSyntax<IFluentSyntax>.AsString)}({maxLength})"
                             : $@".{nameof(SheshaFluentMigratorExtensions.AsStringMax)}()");
                     }
-                    else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?) || property.PropertyType.IsEnumType())
+                    else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
                     {
                         sb.Append($@".{nameof(IColumnTypeSyntax<IFluentSyntax>.AsInt32)}()");
                     }
-                    else if (property.PropertyType == typeof(Int64) || property.PropertyType == typeof(Int64?))
+                    else if (property.PropertyType == typeof(Int64) || property.PropertyType == typeof(Int64?) || property.PropertyType.IsEnumType())
                     {
                         sb.Append($@".{nameof(IColumnTypeSyntax<IFluentSyntax>.AsInt64)}()");
                     }

@@ -3,6 +3,7 @@ using Abp.Domain.Repositories;
 using Abp.Linq;
 using FluentAssertions;
 using Newtonsoft.Json.Linq;
+using Shesha.Authorization.Users;
 using Shesha.Domain;
 using Shesha.Extensions;
 using Shesha.JsonLogic;
@@ -276,7 +277,7 @@ namespace Shesha.Tests.JsonLogic
     {
       ""=="": [
         {
-          ""var"": ""IsLocked""
+          ""var"": ""OtpEnabled""
         },
         true
       ]
@@ -286,15 +287,15 @@ namespace Shesha.Tests.JsonLogic
         [Fact]
         public void BooleanField_Equals_Convert()
         {
-            var expression = ConvertToExpression<Person>(_booleanField_Equals_expression);
+            var expression = ConvertToExpression<User>(_booleanField_Equals_expression);
 
-            Assert.Equal(@"ent => (ent.IsLocked == True)", expression.ToString());
+            Assert.Equal($@"ent => (ent.{nameof(User.OtpEnabled)} == True)", expression.ToString());
         }
 
         [Fact]
         public async Task BooleanField_Equals_Fetch()
         {
-            var data = await TryFetchData<Person, Guid>(_booleanField_Equals_expression);
+            var data = await TryFetchData<User, Int64>(_booleanField_Equals_expression);
             Assert.NotNull(data);
         }
 
@@ -303,7 +304,7 @@ namespace Shesha.Tests.JsonLogic
     {
       ""!="": [
         {
-          ""var"": ""IsLocked""
+          ""var"": ""OtpEnabled""
         },
         true
       ]
@@ -313,15 +314,15 @@ namespace Shesha.Tests.JsonLogic
         [Fact]
         public void BooleanField_NotEquals_Convert()
         {
-            var expression = ConvertToExpression<Person>(_booleanField_NotEquals_expression);
+            var expression = ConvertToExpression<User>(_booleanField_NotEquals_expression);
 
-            Assert.Equal(@"ent => (ent.IsLocked != True)", expression.ToString());
+            Assert.Equal($@"ent => (ent.{nameof(User.OtpEnabled)} != True)", expression.ToString());
         }
 
         [Fact]
         public async Task BooleanField_NotEquals_Fetch()
         {
-            var data = await TryFetchData<Person, Guid>(_booleanField_NotEquals_expression);
+            var data = await TryFetchData<User, Int64>(_booleanField_NotEquals_expression);
             Assert.NotNull(data);
         }
 
@@ -398,7 +399,7 @@ namespace Shesha.Tests.JsonLogic
     {
       ""=="": [
         {
-          ""var"": ""AreaLevel1""
+          ""var"": ""ShaRole""
         },
         ""852c4011-4e94-463a-9e0d-b0054ab88f7d""
       ]
@@ -409,15 +410,15 @@ namespace Shesha.Tests.JsonLogic
         [Fact]
         public void EntityReference_Equals_Convert()
         {
-            var expression = ConvertToExpression<Person>(_entityReference_Equals_expression);
+            var expression = ConvertToExpression<ShaRolePermission>(_entityReference_Equals_expression);
 
-            Assert.Equal(@"ent => (ent.AreaLevel1.Id == ""852c4011-4e94-463a-9e0d-b0054ab88f7d"".ToGuid())", expression.ToString());
+            Assert.Equal($@"ent => (ent.{nameof(ShaRolePermission.ShaRole)}.Id == ""852c4011-4e94-463a-9e0d-b0054ab88f7d"".ToGuid())", expression.ToString());            
         }
 
         [Fact]
         public async Task EntityReference_Equals_Fetch()
         {
-            var data = await TryFetchData<Person, Guid>(_entityReference_Equals_expression);
+            var data = await TryFetchData<ShaRolePermission, Guid>(_entityReference_Equals_expression);
             Assert.NotNull(data);
         }
 
@@ -430,7 +431,7 @@ namespace Shesha.Tests.JsonLogic
     {
       ""=="": [
         {
-          ""var"": ""AreaLevel1""
+          ""var"": ""ShaRole""
         },
         ""852c4011-4e94-463a-9e0d-b0054ab88f7d""
       ]
@@ -440,7 +441,7 @@ namespace Shesha.Tests.JsonLogic
         {
           "">"": [
             {
-              ""var"": ""User.LastLoginDate""
+              ""var"": ""ShaRole.LastModificationTime""
             },
             ""2021-04-25T08:13:55.000Z""
           ]
@@ -448,7 +449,7 @@ namespace Shesha.Tests.JsonLogic
         {
           ""=="": [
             {
-              ""var"": ""IsLocked""
+              ""var"": ""IsGranted""
             },
             false
           ]
@@ -461,15 +462,15 @@ namespace Shesha.Tests.JsonLogic
         [Fact]
         public void ComplexExpression_Convert()
         {
-            var expression = ConvertToExpression<Person>(_complex_expression);
+            var expression = ConvertToExpression<ShaRolePermission>(_complex_expression);
 
-            Assert.Equal(@"ent => ((ent.AreaLevel1.Id == ""852c4011-4e94-463a-9e0d-b0054ab88f7d"".ToGuid()) OrElse ((ent.User.LastLoginDate > Convert(25/04/2021 8:13:55 AM, Nullable`1)) AndAlso (ent.IsLocked == False)))", expression.ToString());
+            Assert.Equal(@"ent => ((ent.ShaRole.Id == ""852c4011-4e94-463a-9e0d-b0054ab88f7d"".ToGuid()) OrElse ((ent.ShaRole.LastModificationTime > Convert(25/04/2021 8:13:55 AM, Nullable`1)) AndAlso (ent.IsGranted == False)))", expression.ToString());
         }
 
         [Fact]
         public async Task ComplexExpression_Fetch()
         {
-            var data = await TryFetchData<Person, Guid>(_entityReference_Equals_expression);
+            var data = await TryFetchData<ShaRolePermission, Guid>(_entityReference_Equals_expression);
             Assert.NotNull(data);
         }
 
@@ -478,39 +479,39 @@ namespace Shesha.Tests.JsonLogic
         #region sorting
 
         [Fact]
-        public async Task ComplexExpression_Fetch_SortBy_FirstName_Asc()
+        public async Task ComplexExpression_Fetch_SortBy_Asc()
         {
-            var data = await TryFetchData<Person, Guid>(_entityReference_Equals_expression, queryable => 
-                queryable.OrderBy(nameof(Person.FirstName))
+            var data = await TryFetchData<ShaRolePermission, Guid>(_entityReference_Equals_expression, queryable => 
+                queryable.OrderBy(nameof(ShaRolePermission.Permission))
             );
 
             Assert.NotNull(data);
 
-            data.Should().BeInAscendingOrder(e => e.FirstName);
+            data.Should().BeInAscendingOrder(e => e.Permission);
         }
 
         [Fact]
-        public async Task ComplexExpression_Fetch_SortBy_FirstName_Desc()
+        public async Task ComplexExpression_Fetch_SortBy_Desc()
         {
-            var data = await TryFetchData<Person, Guid>(_entityReference_Equals_expression, queryable =>
-                queryable.OrderByDescending(nameof(Person.FirstName))
+            var data = await TryFetchData<ShaRolePermission, Guid>(_entityReference_Equals_expression, queryable =>
+                queryable.OrderByDescending(nameof(ShaRolePermission.Permission))
             );
 
             Assert.NotNull(data);
 
-            data.Should().BeInDescendingOrder(e => e.FirstName);
+            data.Should().BeInDescendingOrder(e => e.Permission);
         }
 
         [Fact]
-        public async Task ComplexExpression_Fetch_SortBy_User_Username_Asc()
+        public async Task ComplexExpression_Fetch_SortBy_NestedEntity_Property_Asc()
         {
-            await TryFetchData<Person, Guid>(_entityReference_Equals_expression, 
-                queryable => queryable.OrderBy($"{nameof(Person.User)}.{nameof(Person.User.UserName)}"),
+            await TryFetchData<ShaRolePermission, Guid>(_entityReference_Equals_expression, 
+                queryable => queryable.OrderBy($"{nameof(ShaRolePermission.ShaRole)}.{nameof(ShaRolePermission.ShaRole.Name)}"),
                 data => {
                     Assert.NotNull(data);
                     
-                    var userNames = data.Select(e => e.User?.UserName).ToList();
-                    userNames.Should().BeInAscendingOrder(e => e);
+                    var roleNames = data.Select(e => e.ShaRole?.Name).ToList();
+                    roleNames.Should().BeInAscendingOrder(e => e);
                 }
             );
         }
@@ -518,8 +519,8 @@ namespace Shesha.Tests.JsonLogic
         [Fact]
         public async Task ComplexExpression_Fetch_SortBy_Title_Asc()
         {
-            await TryFetchData<Person, Guid>(_booleanField_NotEquals_expression,
-                queryable => queryable.OrderBy($"{nameof(Person.Title)}"),
+            await TryFetchData<User, Int64>(_booleanField_NotEquals_expression,
+                queryable => queryable.OrderBy($"{nameof(User.TypeOfAccount)}"),
                 data => {
                     Assert.NotNull(data);
 
@@ -527,13 +528,13 @@ namespace Shesha.Tests.JsonLogic
                     
                     var titlesWithDisplayText = data.Select(e =>
                         {
-                            var displayText = e.Title.HasValue
-                                ? refListHelper.GetItemDisplayText("Shesha.Core", "PersonTitles", (Int64)e.Title.Value)
+                            var displayText = e.TypeOfAccount.HasValue
+                                ? refListHelper.GetItemDisplayText("Shesha.Framework", "TypeOfAccount", (Int64)e.TypeOfAccount.Value)
                                 : null;
 
 
                             return new { 
-                                ItemValue = (Int64?)e.Title,
+                                ItemValue = (Int64?)e.TypeOfAccount,
                                 ItemText = displayText
                             };
                         })

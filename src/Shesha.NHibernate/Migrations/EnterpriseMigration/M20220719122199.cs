@@ -10,7 +10,6 @@ namespace Shesha.Migrations.EnterpriseMigration
             Rename.Table("Core_BankAccounts").To("entpr_BankAccounts");
             Rename.Table("Core_DistributionLists").To("entpr_DistributionLists");
             Rename.Table("Core_DistributionListItems").To("entpr_DistributionListItems");
-            Rename.Table("Core_ImportResults").To("entpr_ImportResults");
             Rename.Table("Core_LogonMessages").To("entpr_LogonMessages");
             Rename.Table("Core_LogonMessageAuditItems").To("entpr_LogonMessageAuditItems");
             Rename.Table("Core_Orders").To("entpr_Orders");
@@ -20,6 +19,8 @@ namespace Shesha.Migrations.EnterpriseMigration
             Rename.Table("Core_OrganisationPostLevels").To("entpr_OrganisationPostLevels");
             Rename.Table("Core_Periods").To("entpr_Periods");
             Rename.Table("Core_Services").To("entpr_Services");
+
+            Rename.Table("Core_ImportResults").To("Frwk_ImportResults");
         }
     }
 }
