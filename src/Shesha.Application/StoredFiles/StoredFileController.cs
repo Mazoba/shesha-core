@@ -130,7 +130,7 @@ namespace Shesha.StoredFiles
                         property.SetValue(owner, storedFile, null);
                     }
                 }
-                
+
                 await _unitOfWorkManager.Current.SaveChangesAsync();
                 MapStoredFile(storedFile, uploadedFile);
             }
@@ -178,14 +178,50 @@ namespace Shesha.StoredFiles
             var uploadedFile = new StoredFileDto();
             var fileName = input.File.FileName.CleanupFileName();
 
-            await using (var fileStream = input.File.OpenReadStream())
-            {
-                var storedFile = await _fileService.SaveFile(fileStream, fileName, file =>
-                {
-                    file.Category = input.FilesCategory;
-                });
+            StoredFile storedFile;
 
-                await _unitOfWorkManager.Current.SaveChangesAsync();
+            // allow to use predefined Id and re-activate existing storedfile
+            using (_unitOfWorkManager.Current.DisableFilter(AbpDataFilters.SoftDelete))
+            {
+                storedFile = input.Id != null && input.Id.HasValue && input.Id.Value != Guid.Empty
+                    ? await _fileRepository.GetAll().FirstOrDefaultAsync(f => f.Id == input.Id.Value)
+                    : null;
+            }
+
+            if (storedFile == null)
+            {
+                await using (var fileStream = input.File.OpenReadStream())
+                {
+                    storedFile = await _fileService.SaveFile(fileStream, fileName, file =>
+                    {
+                        if (input.Id.HasValue && input.Id.Value != Guid.Empty)
+                            file.Id = input.Id.Value;
+                        file.Category = input.FilesCategory;
+                    });
+
+                    await _unitOfWorkManager.Current.SaveChangesAsync();
+                    MapStoredFile(storedFile, uploadedFile);
+                }
+            }
+            else
+            {
+                storedFile.IsDeleted = false;
+                storedFile.IsVersionControlled = true;
+                var version = await _fileService.GetNewOrDefaultVersionAsync(storedFile);
+                version.FileName = fileName;
+                version.FileType = Path.GetExtension(fileName);
+                await _fileVersionRepository.InsertOrUpdateAsync(version);
+
+                await using (var fileStream = input.File.OpenReadStream())
+                {
+                    await _fileService.UpdateVersionContentAsync(version, fileStream);
+                }
+
+                // copy to the main todo: remove duplicated properties (filename, filetype), add a link to the last version and update it using triggers
+                storedFile.FileName = version.FileName;
+                storedFile.FileType = version.FileType;
+                await _fileRepository.UpdateAsync(storedFile);
+
                 MapStoredFile(storedFile, uploadedFile);
             }
 
@@ -201,12 +237,12 @@ namespace Shesha.StoredFiles
             var keys = modelState.Keys.Select(k => new { Idx = idx++, Key = k }).ToList();
 
             var errors = values.Where(v => v.Value.Errors.Any()).Select(v => new
-                {
-                    Key = keys[v.Idx].Key,
-                    State = v.Value.Errors.Select(e => e.ErrorMessage)
+            {
+                Key = keys[v.Idx].Key,
+                State = v.Value.Errors.Select(e => e.ErrorMessage)
 
-                })
-                .Select(s => new ValidationResult(StringHelper.Delimited(s.State, "; "), new List<string>{ s.Key }))
+            })
+                .Select(s => new ValidationResult(StringHelper.Delimited(s.State, "; "), new List<string> { s.Key }))
                 .ToList();
 
             return errors;
@@ -272,7 +308,7 @@ namespace Shesha.StoredFiles
         /// Delete file
         /// </summary>
         [HttpDelete, Route("Delete")]
-        public async Task<bool> Delete([FromQuery]DeleteStoredFileInput input)
+        public async Task<bool> Delete([FromQuery] DeleteStoredFileInput input)
         {
             var ownerSpecified =
                 !string.IsNullOrWhiteSpace(input.OwnerType) && !string.IsNullOrWhiteSpace(input.OwnerId);
@@ -337,7 +373,7 @@ namespace Shesha.StoredFiles
         /// Download zip archive of all files linked to a specified entity
         /// </summary>
         [HttpGet, Route("DownloadZip")]
-        public async Task<FileStreamResult> DownloadZipAsync([FromQuery]DownloadZipInput input)
+        public async Task<FileStreamResult> DownloadZipAsync([FromQuery] DownloadZipInput input)
         {
             var files = input.AllCategories
                 ? await _fileService.GetAttachmentsAsync(input.OwnerId, input.OwnerType)
@@ -356,7 +392,7 @@ namespace Shesha.StoredFiles
         /// Get list of files attached to a specified entity
         /// </summary>
         [HttpGet, Route("FilesList")]
-        public async Task<List<StoredFileDto>> FilesList([FromQuery]FilesListInput input)
+        public async Task<List<StoredFileDto>> FilesList([FromQuery] FilesListInput input)
         {
             if (string.IsNullOrEmpty(input.OwnerType))
                 throw new Exception($"`{nameof(input.OwnerType)}` must not be null");
@@ -466,7 +502,7 @@ namespace Shesha.StoredFiles
             {
                 ModelState.AddModelError(input.OwnerId, $"Owner not found (type = '{input.OwnerType}', id = '{input.OwnerId}')");
             }
-            
+
             var uploadAsProperty = owner != null && !string.IsNullOrWhiteSpace(input.PropertyName);
             var property = uploadAsProperty
                 ? ReflectionHelper.GetProperty(owner, input.PropertyName)
@@ -551,7 +587,7 @@ namespace Shesha.StoredFiles
         {
             var storedFile = await _fileRepository.GetAsync(id);
 
-            return storedFile!= null && !storedFile.IsDeleted
+            return storedFile != null && !storedFile.IsDeleted
                 ? GetFileDto(storedFile)
                 : null;
         }
@@ -563,8 +599,8 @@ namespace Shesha.StoredFiles
         [HttpGet, Route("EntityProperty")]
         public async Task<StoredFileDto> GetEntityPropertyAsync([FromQuery] StoredFileAsPropertyDto input)
         {
-            if (string.IsNullOrWhiteSpace(input.OwnerType) || 
-                string.IsNullOrWhiteSpace(input.OwnerId) || 
+            if (string.IsNullOrWhiteSpace(input.OwnerType) ||
+                string.IsNullOrWhiteSpace(input.OwnerId) ||
                 string.IsNullOrWhiteSpace(input.PropertyName))
                 return null;
 
