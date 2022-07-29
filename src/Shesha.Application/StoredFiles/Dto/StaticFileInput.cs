@@ -15,6 +15,12 @@ namespace Shesha.StoredFiles.Dto
     public class StaticFileInput
     {
         /// <summary>
+        /// Id of the stored file
+        /// </summary>
+        [BindProperty(Name = "id")]
+        public Guid? Id { get; set; }
+
+        /// <summary>
         /// Category of the file. Is used to split attachments into groups
         /// </summary>
         [BindProperty(Name = "filesCategory")]
