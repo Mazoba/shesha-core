@@ -16,6 +16,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Migrations\M20220706160000.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FluentMigrator" Version="3.2.1" />
     <PackageReference Include="FluentMigrator.Runner" Version="3.2.1" />
     <PackageReference Include="JsonLogic.Net" Version="1.1.9" />
