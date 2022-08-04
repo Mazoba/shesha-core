@@ -22,6 +22,7 @@ namespace Shesha.Domain
 
         public ConfigurationItemBase(string itemType)
         {
+            /*
             var guidGenerator = StaticContext.IocManager.Resolve<IGuidGenerator>();
 
             Id = guidGenerator.Create();
@@ -29,6 +30,7 @@ namespace Shesha.Domain
                 Id = this.Id,
                 ItemType = itemType
             };
+            */
         }
 
         public abstract Task<IConfigurationItem> GetDependencies();        

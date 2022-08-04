@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Shesha.Application.Services.Dto;
 using Shesha.DynamicEntities.Cache;
 using Shesha.DynamicEntities.Dtos;
+using Shesha.Exceptions;
 using Shesha.Extensions;
 using Shesha.GraphQL.Middleware;
 using Shesha.GraphQL.Mvc;
@@ -31,34 +32,6 @@ namespace Shesha
         protected SheshaCrudServiceBase(IRepository<TEntity, TPrimaryKey> repository) : base(repository)
         {
         }
-
-        /*
-        public virtual async Task<IActionResult> Query([FromBody] GraphQLRequest request) 
-        {
-            var startTime = DateTime.UtcNow;
-
-            var result = await _documentExecuter.ExecuteAsync(s =>
-            {
-                s.Schema = _schema;
-                s.Query = request.Query;
-                s.Variables = request.Variables;
-                s.OperationName = request.OperationName;
-                s.RequestServices = HttpContext.RequestServices;
-                s.UserContext = new GraphQLUserContext
-                {
-                    User = HttpContext.User,
-                };
-                s.CancellationToken = HttpContext.RequestAborted;
-            });
-
-            if (_graphQLOptions.Value.EnableMetrics)
-            {
-                result.EnrichWithApolloTracing(startTime);
-            }
-
-            return new ExecutionResultActionResult(result);
-        }
-        */
     }
 
 
@@ -187,7 +160,10 @@ namespace Shesha
             });
 
             if (result.Errors != null)
-                throw new AbpValidationException("", result.Errors.Select(e => new ValidationResult(e.Message)).ToList());
+            {
+                var validationResults = result.Errors.Select(e => new ValidationResult(e.FullMessage())).ToList();
+                throw new AbpValidationException(string.Join("\r\n", validationResults.Select(r => r.ErrorMessage)), validationResults);
+            }
 
             return new GraphQLDataResult<TEntity>(result);
         }
@@ -245,8 +221,10 @@ namespace Shesha
                 }
             });
 
-            if (result.Errors != null)
-                throw new AbpValidationException("", result.Errors.Select(e => new ValidationResult(e.Message)).ToList());
+            if (result.Errors != null) {
+                var validationResults = result.Errors.Select(e => new ValidationResult(e.FullMessage())).ToList();
+                throw new AbpValidationException(string.Join("\r\n", validationResults.Select(r => r.ErrorMessage)), validationResults);
+            }
 
             return new GraphQLDataResult<PagedResultDto<TEntity>>(result);
         }

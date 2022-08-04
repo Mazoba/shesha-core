@@ -236,6 +236,13 @@ namespace Shesha.GraphQL.Provider.GraphTypes
                                             if (nullableDateTime.HasValue) return nullableDateTime.Value;
                                             else return null;
                                         }); break;
+                                    case nameof(TimeSpan):
+                                        Field(GraphTypeMapper.GetGraphType(underlyingType, isInput: false), propertyInfo.Name, resolve: context =>
+                                        {
+                                            var nullableTimeSpan = propertyInfo.GetValue(context.Source) as TimeSpan?;
+                                            if (nullableTimeSpan.HasValue) return nullableTimeSpan.Value;
+                                            else return null;
+                                        }); break;
                                 }
                             }
                         }

@@ -171,6 +171,26 @@ namespace Shesha.Utilities
                 return string.Empty;
         }
 
+        public static DateTime StartOfTheMinute(this DateTime dt)
+        {
+            return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0, 0);
+        }
+
+        public static TimeSpan StartOfTheMinute(this TimeSpan ts)
+        {
+            return TimeSpan.FromMinutes((Int64)ts.TotalMinutes);
+        }
+
+        public static DateTime EndOfTheMinute(this DateTime dt)
+        {
+            return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 59, 59);
+        }
+
+        public static TimeSpan EndOfTheMinute(this TimeSpan ts)
+        {
+            return ts.StartOfTheMinute().Add(TimeSpan.FromMinutes(1)).Add(-TimeSpan.FromMilliseconds(1));
+        }
+
         public static DateTime StartOfTheMonth(this DateTime d)
         {
             return new DateTime(d.Year, d.Month, 1);

@@ -50,6 +50,7 @@
     <ProjectReference Include="..\..\src\Shesha.AzureAD\Shesha.AzureAD.csproj" />
     <ProjectReference Include="..\..\src\Shesha.NHibernate\Shesha.NHibernate.csproj" />
     <ProjectReference Include="..\..\src\Shesha.Scheduler\Shesha.Scheduler.csproj" />
+    <ProjectReference Include="..\..\src\Shesha.Web.FormsDesigner\Shesha.Web.FormsDesigner.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Abp.Castle.Log4Net" Version="6.6.2" />

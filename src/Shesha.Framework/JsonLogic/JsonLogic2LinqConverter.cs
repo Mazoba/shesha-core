@@ -6,6 +6,7 @@ using Shesha.Reflection;
 using Shesha.Utilities;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -54,6 +55,20 @@ namespace Shesha.JsonLogic
             return acc;
         }
 
+        private Expression CombineExpressions<T>(Expression[] expressions, Binder binder, ParameterExpression param)
+        {
+            Expression acc = null;
+
+            Expression bind(Expression acc, Expression right) => acc == null ? right : binder(acc, right);
+
+            foreach (var expression in expressions)
+            {
+                acc = bind(acc, expression);
+            }
+
+            return acc;
+        }
+
         private Expression ParseTree<T>(
             JToken rule,
             ParameterExpression param)
@@ -83,104 +98,294 @@ namespace Shesha.JsonLogic
                     case JsOperators.Equal:
                     case JsOperators.StrictEqual:
                         {
-                            // todo: add support of more than two agruments
-                            if (@operator.Arguments.Count() != 2)
-                                throw new Exception($"{@operator.Name} operator require two arguments");
-
-                            var arg1 = ParseTree<T>(@operator.Arguments[0], param);
-                            var arg2 = ParseTree<T>(@operator.Arguments[1], param);
-
-                            if (arg1.Type == typeof(Guid) && arg2.Type == typeof(string)) 
-                            {
-                                var toGuidMethod = typeof(StringHelper).GetMethod(nameof(StringHelper.ToGuid), new Type[] { typeof(string) });
-
-                                arg2 = Expression.Call(
-                                    null,
-                                    toGuidMethod,
-                                    arg2);
-                            }
-
-                            return Expression.Equal(arg1, arg2);
+                            return ParseEqualExpression<T>(param, @operator);
                         }
 
                     case JsOperators.NotEqual:
                     case JsOperators.StrictNotEqual:
                         {
-                            // todo: add support of more than two agruments
-                            if (@operator.Arguments.Count() != 2)
-                                throw new Exception($"{@operator.Name} operator require two arguments");
-
-                            var arg1 = ParseTree<T>(@operator.Arguments[0], param);
-                            var arg2 = ParseTree<T>(@operator.Arguments[1], param);
-
-                            return Expression.NotEqual(arg1, arg2);
+                            var equalExpression= ParseEqualExpression<T>(param, @operator);
+                            return Expression.Not(equalExpression);
                         }
 
                     case JsOperators.Greater:
                         {
-                            // todo: add support of more than two agruments
-                            if (@operator.Arguments.Count() != 2)
-                                throw new Exception($"{@operator.Name} operator require two arguments");
+                            return Compare<T>(param, @operator.Arguments, pair => pair, 
+                                pair => 
+                                {
+                                    Expression expr = null;
 
-                            var arg1 = ParseTree<T>(@operator.Arguments[0], param);
-                            var arg2 = ParseTree<T>(@operator.Arguments[1], param);
+                                    #region datetime
+                                    // try to compare var and datetime const (normal order)
+                                    if (TryCompareMemberAndDateTime(pair.Left, pair.Right,
+                                        dt => dt.EndOfTheMinute(), // compare with end of the minute to exclude current value
+                                        Expression.GreaterThan,
+                                        out expr
+                                    ))
+                                        return expr;
 
-                            if (ExpressionExtensions.IsNullableExpression(arg1) && !ExpressionExtensions.IsNullableExpression(arg2))
-                                arg2 = Expression.Convert(arg2, arg1.Type);
-                            else if (!ExpressionExtensions.IsNullableExpression(arg1) && ExpressionExtensions.IsNullableExpression(arg2))
-                                arg1 = Expression.Convert(arg1, arg2.Type);
+                                    // try to compare datetime const and var (reverse order)
+                                    if (TryCompareMemberAndDateTime(pair.Right, pair.Left,
+                                        dt => dt.StartOfTheMinute(),
+                                        Expression.LessThan,
+                                        out expr
+                                    ))
+                                        return expr;
+                                    #endregion
 
-                            // 1. split arguments to pair
-                            // 2. convert to nullable if required
+                                    #region date
 
-                            /*
-                            if (ExpressionExtensions.IsNullableExpression(arg1)) {
-                                // https://stackoverflow.com/questions/2088231/expression-greaterthan-fails-if-one-operand-is-nullable-type-other-is-non-nulla
+                                    // try to compare var and datetime const (normal order)
+                                    if (TryCompareMemberAndDate(pair.Left, pair.Right,
+                                        dt => dt.EndOfTheDay(), // compare with end of the day to exclude current value
+                                        Expression.GreaterThan,
+                                        out expr
+                                    ))
+                                        return expr;
 
-                                var arg1NotNullable = Expression.Convert(arg1, ReflectionHelper.GetUnderlyingTypeIfNullable(arg1.Type));
+                                    // try to compare datetime const and var (reverse order)
+                                    if (TryCompareMemberAndDate(pair.Right, pair.Left,
+                                        dt => dt.StartOfTheDay(),
+                                        Expression.LessThan,
+                                        out expr
+                                    ))
+                                        return expr;
 
-                                var memberIsNotNull = Expression.NotEqual(arg1, Expression.Constant(null));
-                                return Expression.AndAlso(memberIsNotNull, Expression.GreaterThan(arg1NotNullable, arg2));
-                            }
-                            */
-                                
-                            return Expression.GreaterThan(arg1, arg2);
+                                    #endregion
+
+                                    #region time
+
+                                    // try to compare var and time const (normal order)
+                                    if (TryCompareMemberAndTime(pair.Left, pair.Right,
+                                        t => t.EndOfTheMinute(), // compare with end of the minute
+                                        Expression.GreaterThan,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    // try to compare time const and var (reverse order)
+                                    if (TryCompareMemberAndTime(pair.Right, pair.Left,
+                                        t => t.StartOfTheMinute(),
+                                        Expression.LessThan,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    #endregion
+
+                                    var convertedPair = PrepareExpressionPair(pair);
+                                    return Expression.GreaterThan(convertedPair.Left, convertedPair.Right);
+                                });
                         }
 
                     case JsOperators.GreaterOrEqual:
                         {
-                            // todo: add support of more than two agruments
-                            if (@operator.Arguments.Count() != 2)
-                                throw new Exception($"{@operator.Name} operator require two arguments");
+                            return Compare<T>(param, @operator.Arguments, pair => pair, 
+                                pair => 
+                                {
+                                    Expression expr = null;
 
-                            var arg1 = ParseTree<T>(@operator.Arguments[0], param);
-                            var arg2 = ParseTree<T>(@operator.Arguments[1], param);
+                                    #region datetime
+                                    // try to compare var and datetime const (normal order)
+                                    if (TryCompareMemberAndDateTime(pair.Left, pair.Right,
+                                        dt => dt.StartOfTheMinute(), // compare with start of the minute to include current value
+                                        Expression.GreaterThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
 
-                            return Expression.GreaterThanOrEqual(arg1, arg2);
+                                    // try to compare datetime const and var (reverse order)
+                                    if (TryCompareMemberAndDateTime(pair.Right, pair.Left,
+                                        dt => dt.EndOfTheMinute(),
+                                        Expression.LessThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+                                    #endregion
+
+                                    #region date
+
+                                    // try to compare var and datetime const (normal order)
+                                    if (TryCompareMemberAndDate(pair.Left, pair.Right,
+                                        dt => dt.StartOfTheDay(), // compare with start of the day to include current value
+                                        Expression.GreaterThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    // try to compare datetime const and var (reverse order)
+                                    if (TryCompareMemberAndDate(pair.Right, pair.Left,
+                                        dt => dt.EndOfTheDay(),
+                                        Expression.LessThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    #endregion
+
+                                    #region time
+
+                                    // try to compare var and time const (normal order)
+                                    if (TryCompareMemberAndTime(pair.Left, pair.Right,
+                                        t => t.StartOfTheMinute(), // compare with start of the minute
+                                        Expression.GreaterThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    // try to compare time const and var (reverse order)
+                                    if (TryCompareMemberAndTime(pair.Right, pair.Left,
+                                        t => t.EndOfTheMinute(),
+                                        Expression.LessThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    #endregion
+
+                                    var convertedPair = PrepareExpressionPair(pair);
+                                    return Expression.GreaterThanOrEqual(convertedPair.Left, convertedPair.Right);
+                                });
                         }
 
                     case JsOperators.Less:
                         {
-                            // todo: add support of more than two agruments
-                            if (@operator.Arguments.Count() != 2)
-                                throw new Exception($"{@operator.Name} operator require two arguments");
+                            return Compare<T>(param, @operator.Arguments, pair => pair,
+                                pair =>
+                                {
+                                    Expression expr = null;
 
-                            var arg1 = ParseTree<T>(@operator.Arguments[0], param);
-                            var arg2 = ParseTree<T>(@operator.Arguments[1], param);
+                                    #region datetime
+                                    // try to compare var and datetime const (normal order)
+                                    if (TryCompareMemberAndDateTime(pair.Left, pair.Right,
+                                        dt => dt.StartOfTheMinute(), // compare with start of the minute to exclude current value
+                                        Expression.LessThan,
+                                        out expr
+                                    ))
+                                        return expr;
 
-                            return Expression.LessThan(arg1, arg2);
+                                    // try to compare datetime const and var (reverse order)
+                                    if (TryCompareMemberAndDateTime(pair.Right, pair.Left,
+                                        dt => dt.EndOfTheMinute(),
+                                        Expression.GreaterThan,
+                                        out expr
+                                    ))
+                                        return expr;
+                                    #endregion
+
+                                    #region date
+
+                                    // try to compare var and datetime const (normal order)
+                                    if (TryCompareMemberAndDate(pair.Left, pair.Right,
+                                        dt => dt.StartOfTheDay(), // compare with start of the day to exclude current value
+                                        Expression.LessThan,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    // try to compare datetime const and var (reverse order)
+                                    if (TryCompareMemberAndDate(pair.Right, pair.Left,
+                                        dt => dt.EndOfTheDay(),
+                                        Expression.GreaterThan,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    #endregion
+
+                                    #region time
+
+                                    // try to compare var and time const (normal order)
+                                    if (TryCompareMemberAndTime(pair.Left, pair.Right,
+                                        t => t.StartOfTheMinute(), // compare with start of the minute to exclude current value
+                                        Expression.LessThan,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    // try to compare time const and var (reverse order)
+                                    if (TryCompareMemberAndTime(pair.Right, pair.Left,
+                                        t => t.EndOfTheMinute(),
+                                        Expression.GreaterThan,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    #endregion
+
+                                    var convertedPair = PrepareExpressionPair(pair);
+                                    return Expression.LessThan(convertedPair.Left, convertedPair.Right);
+                                });
                         }
 
                     case JsOperators.LessOrEqual:
                         {
-                            // todo: add support of more than two agruments
-                            if (@operator.Arguments.Count() != 2)
-                                throw new Exception($"{@operator.Name} operator require two arguments");
+                            return Compare<T>(param, @operator.Arguments, pair => pair,
+                                pair =>
+                                {
+                                    Expression expr = null;
 
-                            var arg1 = ParseTree<T>(@operator.Arguments[0], param);
-                            var arg2 = ParseTree<T>(@operator.Arguments[1], param);
+                                    #region datetime
+                                    // try to compare var and datetime const (normal order)
+                                    if (TryCompareMemberAndDateTime(pair.Left, pair.Right,
+                                        dt => dt.EndOfTheMinute(), // compare with end of the minute to include current value
+                                        Expression.LessThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
 
-                            return Expression.LessThanOrEqual(arg1, arg2);
+                                    // try to compare datetime const and var (reverse order)
+                                    if (TryCompareMemberAndDateTime(pair.Right, pair.Left,
+                                        dt => dt.StartOfTheMinute(),
+                                        Expression.GreaterThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+                                    #endregion
+                                    
+                                    #region date
+                                    
+                                    // try to compare var and datetime const (normal order)
+                                    if (TryCompareMemberAndDate(pair.Left, pair.Right,
+                                        dt => dt.EndOfTheDay(), // compare with end of the day to include current value
+                                        Expression.LessThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    // try to compare datetime const and var (reverse order)
+                                    if (TryCompareMemberAndDate(pair.Right, pair.Left,
+                                        dt => dt.StartOfTheDay(),
+                                        Expression.GreaterThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    #endregion
+
+                                    #region time
+
+                                    // try to compare var and time const (normal order)
+                                    if (TryCompareMemberAndTime(pair.Left, pair.Right,
+                                        t => t.EndOfTheMinute(), // compare with end of the minute to include current value
+                                        Expression.LessThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    // try to compare time const and var (reverse order)
+                                    if (TryCompareMemberAndTime(pair.Right, pair.Left,
+                                        t => t.StartOfTheMinute(),
+                                        Expression.GreaterThanOrEqual,
+                                        out expr
+                                    ))
+                                        return expr;
+
+                                    #endregion
+
+                                    var convertedPair = PrepareExpressionPair(pair);
+                                    return Expression.LessThanOrEqual(convertedPair.Left, convertedPair.Right);
+                                });
                         }
 
                     case JsOperators.Negotiation:
@@ -283,28 +488,217 @@ namespace Shesha.JsonLogic
             return null;
         }
 
-        private IEnumerable<Expression> ConvertArguments<T>(JToken[] args, ParameterExpression param) 
+        private bool TryCompareMemberAndDateTime(Expression left, Expression right, Func<DateTime, DateTime> dateConverter, Binder binder, out Expression expression)
         {
-            var convertedArgs = args.Select(arg => ParseTree<T>(arg, param));
-            return convertedArgs;
+            expression = null;
+            if (IsDateTimeMember(left) &&
+                right is ConstantExpression constExpr && constExpr.Type == typeof(DateTime))
+            {
+                var dateExpr = Expression.Constant(dateConverter.Invoke((DateTime)constExpr.Value));
+                expression = SafeNullable(left, dateExpr, binder);
+                return true;
+            }
+
+            return false;
         }
 
-        private IEnumerable<Expression> FixExpressionsNullability(IEnumerable<Expression> expressions) 
+        private bool TryCompareMemberAndDate(Expression left, Expression right, Func<DateTime, DateTime> dateConverter, Binder binder, out Expression expression)
         {
-            if (expressions.Any(e => ExpressionExtensions.IsNullableExpression(e)) && expressions.Any(e => !ExpressionExtensions.IsNullableExpression(e)))
+            expression = null;
+            if (IsDateMember(left) &&
+                right is ConstantExpression constExpr && constExpr.Type == typeof(DateTime))
             {
-                var convertedExpressions = expressions.Select(e =>
-                {
-                    if (!ExpressionExtensions.IsNullableExpression(e))
-                    {
-                        return Expression.Convert(e, typeof(Nullable<>).MakeGenericType(e.Type));
-                    }
-                    else
-                        return e;
-                });
-                return convertedExpressions;
+                var dateExpr = Expression.Constant(dateConverter.Invoke((DateTime)constExpr.Value));
+                expression = SafeNullable(left, dateExpr, binder);
+                return true;
             }
-            return expressions;
+
+            return false;
+        }
+
+        private bool TryCompareMemberAndTime(Expression left, Expression right, Func<TimeSpan, TimeSpan> timeConverter, Binder binder, out Expression expression)
+        {
+            expression = null;
+            if (IsTimeMember(left) && right.NodeType == ExpressionType.Constant)
+            {
+                right = ConvertTimeSpanConst(right, timeConverter);
+                expression = SafeNullable(left, right, binder);
+                return true;
+            }
+            
+            return false;
+        }
+
+        private Expression ParseEqualExpression<T>(ParameterExpression param, OperationProps @operator)
+        {
+            return Compare<T>(param, @operator.Arguments, pair => pair, 
+                pair =>
+            {
+                if (IsDateTimeMember(pair.Left) && pair.Right.NodeType == ExpressionType.Constant)
+                {
+                    // for datetime we strip seconds and compare as a date range: HH:mm:00 <= member <= HH:mm:59
+                    var from = ConvertDateTimeConst(pair.Right, d => d.StartOfTheMinute());
+                    var to = ConvertDateTimeConst(pair.Right, d => d.EndOfTheMinute());
+
+                    return CombineExpressions<T>(new Expression[]
+                        {
+                                            SafeNullable(from, pair.Left, Expression.LessThanOrEqual),
+                                            SafeNullable(pair.Left, to, Expression.LessThanOrEqual),
+                        },
+                        Expression.AndAlso,
+                        param);
+                }
+                if (IsDateMember(pair.Left) && pair.Right.NodeType == ExpressionType.Constant)
+                {
+                    // date member should be compared as range: StartOfTheDay <= member <= EndOfTheDay
+                    var from = ConvertDateTimeConst(pair.Right, d => d.StartOfTheDay());
+                    var to = ConvertDateTimeConst(pair.Right, d => d.EndOfTheDay());
+
+                    return CombineExpressions<T>(new Expression[]
+                        {
+                                            SafeNullable(from, pair.Left, Expression.LessThanOrEqual),
+                                            SafeNullable(pair.Left, to, Expression.LessThanOrEqual),
+                        },
+                        Expression.AndAlso,
+                        param);
+                }
+                if (IsTimeMember(pair.Left) && pair.Right.NodeType == ExpressionType.Constant)
+                {
+                    // time member should be compared as range (from member:00 to member:59 seconds)
+                    var from = ConvertTimeSpanConst(pair.Right, t => t.StartOfTheMinute());
+                    var to = ConvertTimeSpanConst(pair.Right, d => d.EndOfTheMinute());
+
+                    return CombineExpressions<T>(new Expression[]
+                        {
+                                            SafeNullable(from, pair.Left, Expression.LessThanOrEqual),
+                                            SafeNullable(pair.Left, to, Expression.LessThanOrEqual),
+                        },
+                        Expression.AndAlso,
+                        param);
+                }
+                var convertedPair = PrepareExpressionPair(pair);
+                return Expression.Equal(convertedPair.Left, convertedPair.Right);
+            });
+        }
+
+        private Expression SafeNullable(Expression left, Expression right, Binder binder) 
+        {
+            ConvertNullable(ref left, ref right);
+            ConvertNullable(ref right, ref left);
+
+            return binder(left, right);
+        }
+
+        private bool IsDateMember(Expression expression)
+        {
+            if (!(expression is MemberExpression memberExpr) || expression.Type.GetUnderlyingTypeIfNullable() != typeof(DateTime))
+                return false;
+
+            var dataTypeAttribute = memberExpr.Member.GetAttribute<DataTypeAttribute>();
+            return dataTypeAttribute?.DataType == DataType.Date;
+        }
+
+        private Expression ConvertDateTimeConst(Expression expression, Func<DateTime, DateTime> convertor)
+        {
+            if (expression is ConstantExpression constExpr && constExpr.Type == typeof(DateTime))
+            {
+                return Expression.Constant(convertor.Invoke((DateTime)constExpr.Value));
+            }
+            return expression;
+        }
+
+        private Expression ConvertTimeSpanConst(Expression expression, Func<TimeSpan, TimeSpan> convertor)
+        {
+            if (!(expression is ConstantExpression constExpr))
+                return expression;
+
+            TimeSpan? value = constExpr.Type == typeof(TimeSpan)
+                ? (TimeSpan)constExpr.Value
+                : constExpr.Type == typeof(Int64)
+                    ? TimeSpan.FromSeconds((Int64)constExpr.Value)
+                    : null;
+            
+            return value.HasValue
+                ? Expression.Constant(convertor.Invoke(value.Value))
+                : expression;
+        }
+
+        private bool IsDateTimeMember(Expression expression)
+        {
+            if (!(expression is MemberExpression memberExpr) || expression.Type.GetUnderlyingTypeIfNullable() != typeof(DateTime))
+                return false;
+
+            var dataTypeAttribute = memberExpr.Member.GetAttribute<DataTypeAttribute>();
+            return dataTypeAttribute == null || dataTypeAttribute?.DataType == DataType.DateTime;
+        }
+
+        private bool IsTimeMember(Expression expression)
+        {
+            return expression is MemberExpression && expression.Type.GetUnderlyingTypeIfNullable() == typeof(TimeSpan);
+        }
+        
+        private void ConvertGuids(ref Expression a, ref Expression b)
+        {
+            if (a.Type == typeof(Guid) && b.Type == typeof(string))
+            {
+                var toGuidMethod = typeof(StringHelper).GetMethod(nameof(StringHelper.ToGuid), new Type[] { typeof(string) });
+
+                b = Expression.Call(
+                    null,
+                    toGuidMethod,
+                    b);
+            }
+        }
+
+        private void ConvertTicksTimeSpan(ref Expression a, ref Expression b)
+        {
+            if (a.Type == typeof(TimeSpan) && b.Type == typeof(Int64))
+            {
+                var fromSecondsMethod = typeof(TimeSpan).GetMethod(nameof(TimeSpan.FromSeconds), new Type[] { typeof(double) });
+                
+                b = Expression.Call(
+                    null,
+                    fromSecondsMethod,
+                    Expression.Convert(b, typeof(double)));
+            }
+        }
+
+        private void ConvertNullable(ref Expression a, ref Expression b) 
+        {
+            if (ExpressionExtensions.IsNullableExpression(a) && !ExpressionExtensions.IsNullableExpression(b))
+                b = Expression.Convert(b, a.Type);
+        }
+
+        private Expression Compare<T>(ParameterExpression param, JToken[] tokens, Func<ExpressionPair, ExpressionPair> preparePair, Func<ExpressionPair, Expression> comparator) 
+        {
+            var expressions = tokens.Select(t => ParseTree<T>(t, param)).ToArray();
+
+            var pairs = SplitArgumentsIntoPair(expressions).Select(pair => preparePair(pair));
+
+            var pairExpressions = pairs.Select(pair => comparator.Invoke(pair)).ToArray();
+
+            return CombineExpressions<T>(pairExpressions, Expression.AndAlso, param);
+        }
+
+        private ExpressionPair PrepareExpressionPair(ExpressionPair pair) 
+        {
+            var left = pair.Left;
+            var right = pair.Right;
+
+            // if one of arguments is a Guid and another one is a string - convert string to Guid
+            ConvertGuids(ref left, ref right);
+            ConvertGuids(ref right, ref left);
+
+            // check nullability in pairs and convert not nullable argument to nullable if required
+            ConvertNullable(ref left, ref right);
+            ConvertNullable(ref right, ref left);
+
+            return new ExpressionPair(left, right);
+        }
+
+        private Expression Compare<T>(ParameterExpression param, JToken[] tokens, Func<ExpressionPair, Expression> comparator) 
+        {
+            return Compare<T>(param, tokens, pair => PrepareExpressionPair(pair), comparator);
         }
 
         private IEnumerable<ExpressionPair> SplitArgumentsIntoPair(Expression[] arguments) 
@@ -320,13 +714,6 @@ namespace Shesha.JsonLogic
 
             return pairs;
         }
-
-        /*
-         if (ExpressionExtensions.IsNullableExpression(arg1) && !ExpressionExtensions.IsNullableExpression(arg2))
-                                arg2 = Expression.Convert(arg2, arg1.Type);
-                            else if (!ExpressionExtensions.IsNullableExpression(arg1) && ExpressionExtensions.IsNullableExpression(arg2))
-                                arg1 = Expression.Convert(arg1, arg2.Type);
-         */
 
         private string GetStringValue(JToken arg)
         {

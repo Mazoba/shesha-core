@@ -1,5 +1,3 @@
-using System;
-using System.Reflection;
 using Abp;
 using Abp.AutoMapper;
 using Abp.Castle.Logging.Log4Net;
@@ -23,13 +21,17 @@ using Shesha.NHibernate;
 using Shesha.Services;
 using Shesha.Tests.DependencyInjection;
 using Shesha.Tests.DynamicEntities;
-using Shesha.Web;
+using Shesha.Web.FormsDesigner;
+using System;
+using System.Reflection;
 
 namespace Shesha.Tests
 {
     [DependsOn(
         typeof(AbpKernelModule),
         typeof(AbpTestBaseModule),
+
+        typeof(SheshaFormsDesignerModule),
 
         typeof(SheshaApplicationModule),
         typeof(SheshaNHibernateModule),
