@@ -273,6 +273,36 @@ namespace Shesha.Tests.JsonLogic
 
         #region int operators
 
+        #region Equals
+        private readonly string _int64Field_Equals_expression = @"{
+  ""and"": [
+    {
+      ""=="": [
+        {
+          ""var"": ""CreatorUserId""
+        },
+        100
+      ]
+    }
+  ]
+}";
+
+        [Fact]
+        public void Int64Field_Equals_Convert()
+        {
+            var expression = ConvertToExpression<Person>(_int64Field_Equals_expression);
+            Assert.Equal($@"ent => (ent.{nameof(Person.CreatorUserId)} == Convert(100, Nullable`1))", expression.ToString());
+        }
+
+        [Fact]
+        public async Task Int64Field_Equals_Fetch()
+        {
+            var data = await TryFetchData<Person, Guid>(_int64Field_Equals_expression);
+            Assert.NotNull(data);
+        }
+
+        #endregion
+
         #region Less Than
         private readonly string _int64Field_LessThan_expression = @"{
   ""and"": [
@@ -1020,6 +1050,40 @@ namespace Shesha.Tests.JsonLogic
                 }
             );
         }
+
+        #endregion
+
+        #region reference list
+
+        #region Equals
+        private readonly string _reflistField_Contains_expression = @"{
+  ""and"": [
+    {
+      ""in"": [
+        {
+          ""var"": ""Title""
+        },
+        [1,2,3]
+      ]
+    }
+  ]
+}";
+
+        [Fact]
+        public void reflistField_Equals_Convert()
+        {
+            var expression = ConvertToExpression<Person>(_reflistField_Contains_expression);
+            Assert.Equal(@"ent => (((Convert(ent.Title, Nullable`1) == Convert(1, Nullable`1)) OrElse (Convert(ent.Title, Nullable`1) == Convert(2, Nullable`1))) OrElse (Convert(ent.Title, Nullable`1) == Convert(3, Nullable`1)))", expression.ToString());
+        }
+
+        [Fact]
+        public async Task reflistField_Equals_Fetch()
+        {
+            var data = await TryFetchData<Person, Guid>(_reflistField_Contains_expression);
+            Assert.NotNull(data);
+        }
+
+        #endregion
 
         #endregion
 

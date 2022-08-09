@@ -21,11 +21,6 @@ namespace Shesha.JsonLogic
     /// </summary>
     public class JsonLogic2LinqConverter : IJsonLogic2LinqConverter, ITransientDependency
     {
-        public void Convert(JToken rule, JsonLogic2LinqConverterContext context)
-        {
-            throw new NotImplementedException();
-        }
-
         private const string StringStr = "string";
 
         private readonly string BooleanStr = nameof(Boolean).ToLower();
@@ -76,7 +71,7 @@ namespace Shesha.JsonLogic
             if (rule is JValue value)
                 return Expression.Constant(value.Value);
 
-            if (rule is JArray array)
+            if (rule is JArray array) 
                 throw new NotImplementedException();
 
             if (rule is JObject ruleObj)
@@ -434,19 +429,34 @@ namespace Shesha.JsonLogic
 
                     case JsOperators.In:
                         {
-                            var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new Type[] { typeof(string) });
-
                             if (@operator.Arguments.Count() != 2)
                                 throw new Exception($"{JsOperators.In} operator require two arguments");
 
-                            var arg1 = ParseTree<T>(@operator.Arguments[0], param);
-                            var arg2 = ParseTree<T>(@operator.Arguments[1], param);
 
-                            // note: `in` arguments are reversed
-                            return Expression.Call(
-                                    arg2,
-                                    containsMethod,
-                                    arg1);
+                            if (@operator.Arguments[1] is JArray arrayArg)
+                            {
+                                var parsedArray = arrayArg.Select(i => ParseTree<T>(i, param)).ToArray();
+                                var arg = ParseTree<T>(@operator.Arguments[0], param);
+                                if (arg is MemberExpression memberExpr && memberExpr.Member.IsReferenceListProperty()) 
+                                {
+                                    arg = Expression.Convert(arg, typeof(Int64?));
+                                }
+
+                                var arrExpressions = parsedArray.Select(item => Expression.Equal(arg, Expression.Convert(item, typeof(Int64?)))).ToArray();
+                                return CombineExpressions<T>(arrExpressions, Expression.OrElse, param);
+                            }
+                            else {
+                                var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new Type[] { typeof(string) });
+
+                                var arg1 = ParseTree<T>(@operator.Arguments[0], param);
+                                var arg2 = ParseTree<T>(@operator.Arguments[1], param);
+
+                                // note: `in` arguments are reversed
+                                return Expression.Call(
+                                        arg2,
+                                        containsMethod,
+                                        arg1);
+                            }
                         }
 
                     case JsOperators.EndsWith:
