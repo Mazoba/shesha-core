@@ -216,7 +216,7 @@ namespace Shesha.DataTables
                         Name = c.Name,
                         Label = c.Caption,
                         Description = c.Description,
-                        DataType = c.StandardDataType,
+                        DataType = c.DataType,
                     } as IPropertyMetadata;
                 }
             );
@@ -280,15 +280,8 @@ namespace Shesha.DataTables
                 PropertyName = propName,
                 Caption = caption,
                 Description = prop?.GetDescription(),
-                StandardDataType = dataTypeInfo.DataType,
+                DataType = dataTypeInfo.DataType,
                 DataFormat = dataTypeInfo.DataFormat,
-
-                #region backward compatibility, to be removed
-                GeneralDataType = prop != null
-                    ? EntityConfigurationLoaderByReflection.GetGeneralDataType(prop)
-                    : (GeneralDataType?)null,
-                CustomDataType = prop?.GetAttribute<DataTypeAttribute>()?.CustomDataType,
-                #endregion
             };
             var entityConfig = prop?.DeclaringType.GetEntityConfiguration();
             var propConfig = prop != null ? entityConfig?.Properties[prop.Name] : null;
@@ -310,7 +303,7 @@ namespace Shesha.DataTables
                 if (propertyConfig != null) 
                 {
                     column.IsDynamic = true;
-                    column.StandardDataType = propertyConfig.DataType;
+                    column.DataType = propertyConfig.DataType;
                     column.DataFormat = propertyConfig.DataFormat;
                     column.Description = propertyConfig.Description;
                     column.IsFilterable = false;
@@ -318,16 +311,10 @@ namespace Shesha.DataTables
                 }
             }
 
-            // Set FilterCaption and FilterPropertyName
-            column.FilterCaption ??= column.Caption;
-            column.FilterPropertyName ??= column.PropertyName;
-
             if (column.PropertyName == null)
             {
-                column.PropertyName = column.FilterPropertyName;
                 column.Name = (column.PropertyName ?? "").Replace('.', '_');
             }
-            column.Caption ??= column.FilterCaption;
 
             // Check is the property mapped to the DB. If it's not mapped - make the column non sortable and non filterable
             if (column.IsSortable && rowType.IsEntityType() && propName != null && propName != "Id")
@@ -385,15 +372,8 @@ namespace Shesha.DataTables
                 PropertyName = propName,
                 Caption = caption,
                 Description = prop?.GetDescription(),
-                StandardDataType = dataTypeInfo.DataType,
+                DataType = dataTypeInfo.DataType,
                 DataFormat = dataTypeInfo.DataFormat,
-
-                #region backward compatibility, to be removed
-                GeneralDataType = prop != null
-                    ? EntityConfigurationLoaderByReflection.GetGeneralDataType(prop)
-                    : (GeneralDataType?)null,
-                CustomDataType = prop?.GetAttribute<DataTypeAttribute>()?.CustomDataType,
-                #endregion
             };
             var entityConfig = prop?.DeclaringType.GetEntityConfiguration();
             var propConfig = prop != null ? entityConfig?.Properties[prop.Name] : null;
@@ -415,7 +395,7 @@ namespace Shesha.DataTables
                 if (propertyConfig != null)
                 {
                     column.IsDynamic = true;
-                    column.StandardDataType = propertyConfig.DataType;
+                    column.DataType = propertyConfig.DataType;
                     column.DataFormat = propertyConfig.DataFormat;
                     column.Description = propertyConfig.Description;
                     column.IsFilterable = false;
@@ -423,16 +403,10 @@ namespace Shesha.DataTables
                 }
             }
 
-            // Set FilterCaption and FilterPropertyName
-            column.FilterCaption ??= column.Caption;
-            column.FilterPropertyName ??= column.PropertyName;
-
             if (column.PropertyName == null)
             {
-                column.PropertyName = column.FilterPropertyName;
                 column.Name = (column.PropertyName ?? "").Replace('.', '_');
             }
-            column.Caption ??= column.FilterCaption;
 
             // Check is the property mapped to the DB. If it's not mapped - make the column non sortable and non filterable
             if (column.IsSortable && rowType.IsEntityType() && propName != null && propName != "Id")

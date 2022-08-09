@@ -8,6 +8,11 @@ namespace Shesha.ConfigurationItems
     public interface IConfigurationItem
     {
         /// <summary>
+        /// Configuration item type
+        /// </summary>
+        string ItemType { get; }
+
+        /// <summary>
         /// Get dependencies of current configuration item
         /// </summary>
         /// <returns></returns>

@@ -3,7 +3,7 @@
 namespace Shesha.Domain.ConfigurationItems
 {
     /// <summary>
-    /// Status of the <see cref="ConfigurationItemVersion"/>
+    /// Status of the <see cref="ConfigurationItem"/>
     /// </summary>
     [ReferenceList("Shesha.Framework", "ConfigurationItemVersionStatus")]
     public enum ConfigurationItemVersionStatus
