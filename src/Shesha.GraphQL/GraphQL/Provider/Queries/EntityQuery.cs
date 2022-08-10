@@ -8,10 +8,12 @@ using GraphQL.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using Shesha.Application.Services.Dto;
+using Shesha.Domain;
 using Shesha.Extensions;
 using Shesha.GraphQL.Provider.GraphTypes;
 using Shesha.JsonLogic;
 using Shesha.QuickSearch;
+using Shesha.Reflection;
 using Shesha.Utilities;
 using System;
 using System.ComponentModel;
@@ -126,6 +128,17 @@ namespace Shesha.GraphQL.Provider.Queries
                 var direction = sortColumn.RightPart(' ', ProcessDirection.LeftToRight)?.Trim().Equals("desc", StringComparison.InvariantCultureIgnoreCase) == true
                     ? ListSortDirection.Descending
                     : ListSortDirection.Ascending;
+
+                // special handling for entities - sort them by display name if available
+                var property = ReflectionHelper.GetProperty(typeof(TEntity), column, useCamelCase: true);
+                if (property != null && property.PropertyType.IsEntityType()) 
+                {
+                    var displayNameProperty = property.PropertyType.GetEntityConfiguration()?.DisplayNamePropertyInfo;
+                    if (displayNameProperty != null) 
+                    {
+                        column = $"{column}.{displayNameProperty.Name}";
+                    }
+                }                    
 
                 if (sorted)
                 {

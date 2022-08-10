@@ -1,6 +1,7 @@
 ﻿using Abp.Domain.Uow;
 using GraphQL;
 using GraphQL.Types;
+using Shesha.Domain;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Cache;
 using Shesha.Extensions;
@@ -66,6 +67,24 @@ namespace Shesha.GraphQL.Provider.GraphTypes
             // add dynamic properties
             if (typeof(TModel).IsEntityType()) 
             {
+                var displayNameProperty = typeof(TModel).GetEntityConfiguration()?.DisplayNamePropertyInfo;
+
+                // add displayName
+                FieldAsync(GraphTypeMapper.GetGraphType(typeof(string), isInput: false), "_displayName", "Entity display name",
+                    resolve: async context => {
+                        try
+                        {
+                            return displayNameProperty != null
+                                ? displayNameProperty.GetValue(context.Source)
+                                : "";
+                        }
+                        catch (Exception e)
+                        {
+                            throw;
+                        }
+                    }
+                );
+
                 AsyncHelper.RunSync(async () => {
                     using (var uow = _unitOfWorkManager.Begin())
                     {

@@ -273,6 +273,46 @@ namespace Shesha.Tests.JsonLogic
 
         #region int operators
 
+        [Fact]
+        public void Int32Field_EqualsInt64_Convert()
+        {
+            var expression = ConvertToExpression<EntityWithDateProps>(@"{
+  ""and"": [
+    {
+      ""=="": [
+        {
+          ""var"": ""IntProp""
+        },
+        100
+      ]
+    }
+  ]
+}");
+            Assert.Equal($@"ent => (ent.IntProp == 100)", expression.ToString());
+        }
+
+        [Fact]
+        public void NullableInt32Field_EqualsInt64_Convert()
+        {
+            var expression = ConvertToExpression<EntityWithDateProps>(@"{
+  ""and"": [
+    {
+      ""=="": [
+        {
+          ""var"": ""NullableIntProp""
+        },
+        100
+      ]
+    }
+  ]
+}");
+            Assert.Equal($@"ent => (ent.NullableIntProp == Convert(100, Nullable`1))", expression.ToString());
+        }
+
+        #endregion
+
+        #region int64 operators
+
         #region Equals
         private readonly string _int64Field_Equals_expression = @"{
   ""and"": [
@@ -1102,6 +1142,8 @@ namespace Shesha.Tests.JsonLogic
             public virtual DateTime DateProp { get; set; }
             
             public virtual TimeSpan TimeProp { get; set; }
+            public virtual int IntProp { get; set; }
+            public virtual int? NullableIntProp { get; set; }
         }
     }
 }

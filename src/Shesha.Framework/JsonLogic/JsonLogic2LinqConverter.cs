@@ -660,6 +660,25 @@ namespace Shesha.JsonLogic
             }
         }
 
+        private void ConvertNumericConsts(ref Expression a, ref Expression b)
+        {
+            if (!(a is MemberExpression memberExpr && b is ConstantExpression constExpr))
+                return;
+
+            if (memberExpr.Type.GetUnderlyingTypeIfNullable() == typeof(int) && constExpr.Type == typeof(Int64)) 
+            {
+                var constValue = (Int64)constExpr.Value;
+                if (constValue <= int.MaxValue)
+                    b = Expression.Constant(Convert.ToInt32(constValue));
+                else
+                    throw new OverflowException($"Constant value must be not grester than {int.MaxValue} (max int size) to compare with {memberExpr.Member.Name}, currtent value is {constValue}");
+            }
+            if (memberExpr.Type.GetUnderlyingTypeIfNullable() == typeof(Int64) && constExpr.Type == typeof(int))
+            {
+                b = Expression.Constant((Int64)constExpr.Value);
+            }
+        }
+
         private void ConvertTicksTimeSpan(ref Expression a, ref Expression b)
         {
             if (a.Type == typeof(TimeSpan) && b.Type == typeof(Int64))
@@ -698,6 +717,9 @@ namespace Shesha.JsonLogic
             // if one of arguments is a Guid and another one is a string - convert string to Guid
             ConvertGuids(ref left, ref right);
             ConvertGuids(ref right, ref left);
+
+            ConvertNumericConsts(ref left, ref right);
+            ConvertNumericConsts(ref right, ref left);
 
             // check nullability in pairs and convert not nullable argument to nullable if required
             ConvertNullable(ref left, ref right);

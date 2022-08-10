@@ -134,7 +134,7 @@ namespace Shesha
 
             var properties = string.IsNullOrWhiteSpace(input.Properties)
                     ? await GetGqlTopLevelPropertiesAsync()
-                    : input.Properties;
+                    : CleanupProperties(input.Properties);
 
             var query = $@"query{{
   {schemaName}(id: ""{input.Id}"") {{

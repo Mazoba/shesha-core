@@ -461,18 +461,6 @@ namespace Shesha.Reflection
         }
 
         /// <summary>
-        /// Moved from Shesha 2 with modifications, will be refactored later
-        /// </summary>
-        /// <param name="predicate"></param>
-        /// <returns></returns>
-        [Obsolete("To be removed")]
-        public static IEnumerable<Type> FilterTypesInAssemblies(Predicate<Type> predicate)
-        {
-            var typeFinder = StaticContext.IocManager.Resolve<ITypeFinder>();
-            return typeFinder.FindAll().Where(t => predicate.Invoke(t)).ToList();
-        }
-
-        /// <summary>
         /// Return display name of the specified property
         /// </summary>
         public static string GetDisplayName(PropertyInfo property)
@@ -665,12 +653,13 @@ namespace Shesha.Reflection
         }
 
         /// <summary>
-        /// 
+        /// Search property with specified name in the current type. Supports dot notation
         /// </summary>
-        /// <param name="type"></param>
-        /// <param name="propertyName"></param>
+        /// <param name="type">Root type</param>
+        /// <param name="propertyName">Name of property, supports dot notation</param>
+        /// <param name="useCamelCase">Set to true to compare property names in camel case</param>
         /// <returns></returns>
-        public static PropertyInfo GetProperty(this Type type, string propertyName)
+        public static PropertyInfo GetProperty(this Type type, string propertyName, bool useCamelCase = false)
         {
             var propTokens = propertyName.Split('.');
             var currentType = type;
@@ -681,7 +670,15 @@ namespace Shesha.Reflection
                 var containerType = currentType.StripCastleProxyType();
                 try
                 {
-                    propInfo = containerType.GetProperty(propTokens[i]);
+                    if (useCamelCase)
+                    {
+                        var props = containerType.GetProperties().Where(p => p.Name.ToCamelCase() == propTokens[i].ToCamelCase()).ToList();
+                        if (props.Count() > 1)
+                            throw new AmbiguousMatchException();
+                        
+                        propInfo = props.FirstOrDefault();
+                    } else
+                        propInfo = containerType.GetProperty(propTokens[i]);
                 }
                 catch (AmbiguousMatchException)
                 {
