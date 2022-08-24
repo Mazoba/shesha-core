@@ -1,6 +1,8 @@
 ﻿using Abp.Dependency;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Shesha.Application.Services;
+using Shesha.Configuration.Runtime;
 using Shesha.Domain.Attributes;
 using Shesha.DynamicEntities.Dtos;
 using Shesha.Extensions;
@@ -28,6 +30,18 @@ namespace Shesha.DynamicEntities
 
         public void PopulateFeature(IEnumerable<ApplicationPart> parts, ControllerFeature feature)
         {
+            var entityConfigurationStore = _iocManager.Resolve<IEntityConfigurationStore>();
+
+            var entityControllers = feature.Controllers.Where(c => c.AsType().ImplementsGenericInterface(typeof(IEntityAppService<,>))).ToList();
+            foreach (var controller in entityControllers) 
+            {
+                var genericInterface = controller.AsType().GetGenericInterfaces(typeof(IEntityAppService<,>)).FirstOrDefault();
+
+                var entityType = genericInterface.GenericTypeArguments.FirstOrDefault();
+
+                entityConfigurationStore.SetDefaultAppService(entityType, controller);
+            }
+
             var shaConfig = _iocManager.Resolve<IShaApplicationModuleConfiguration>();
             foreach (var registration in shaConfig.DynamicApplicationServiceRegistrations) 
             { 
@@ -41,9 +55,11 @@ namespace Shesha.DynamicEntities
                     if (entityAttribute != null && !entityAttribute.GenerateApplicationService)
                         continue;
 
-                    var appServiceType = GetAppServiceType(entityType);
+                    var appServiceType = DynamicAppServiceHelper.MakeApplicationServiceType(entityType);
                     if (appServiceType != null) 
                     {
+                        entityConfigurationStore.SetDefaultAppService(entityType, appServiceType);
+
                         var controllerName = MvcHelper.GetControllerName(appServiceType);
                         if (!existingControllerNames.Contains(controllerName)) 
                         {
@@ -55,19 +71,6 @@ namespace Shesha.DynamicEntities
                     }
                 }
             }
-        }
-
-        private Type GetAppServiceType(Type entityType)
-        {
-            var idType = entityType.GetProperty("Id")?.PropertyType;
-            if (idType == null)
-                return null;
-
-            var dtoType = typeof(DynamicDto<,>).MakeGenericType(entityType, idType);
-
-            var appServiceType = typeof(DynamicCrudAppService<,,>).MakeGenericType(entityType, dtoType, idType);
-
-            return appServiceType;
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Abp.Domain.Uow;
 using GraphQL;
 using GraphQL.Types;
+using Shesha.Configuration.Runtime;
 using Shesha.Domain;
 using Shesha.DynamicEntities;
 using Shesha.DynamicEntities.Cache;
@@ -70,7 +71,7 @@ namespace Shesha.GraphQL.Provider.GraphTypes
                 var displayNameProperty = typeof(TModel).GetEntityConfiguration()?.DisplayNamePropertyInfo;
 
                 // add displayName
-                FieldAsync(GraphTypeMapper.GetGraphType(typeof(string), isInput: false), "_displayName", "Entity display name",
+                FieldAsync(GraphTypeMapper.GetGraphType(typeof(string), isInput: false), EntityConstants.DisplayNameField, "Entity display name",
                     resolve: async context => {
                         try
                         {

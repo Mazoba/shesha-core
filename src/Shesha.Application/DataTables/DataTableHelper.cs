@@ -102,10 +102,12 @@ namespace Shesha.DataTables
                     if (property == null)
                         return null;
 
+                    /*
                     if (property.PropertyInfo.Name == currentEntityConfig.CreatedUserPropertyInfo?.Name ||
                         property.PropertyInfo.Name == currentEntityConfig.LastUpdatedUserPropertyInfo?.Name ||
                         property.PropertyInfo.Name == currentEntityConfig.InactivateUserPropertyInfo?.Name)
                         return null;
+                    */
 
                     if (!property.IsMapped)
                         return null;
@@ -383,7 +385,7 @@ namespace Shesha.DataTables
                 column.ReferenceListNamespace = propConfig.ReferenceListNamespace;
                 if (propConfig.EntityReferenceType != null)
                 {
-                    column.EntityReferenceTypeShortAlias = propConfig.EntityReferenceType.GetEntityConfiguration()?.SafeTypeShortAlias;
+                    column.EntityReferenceTypeShortAlias = propConfig.EntityReferenceType.GetEntityConfiguration()?.SafeTypeShortAlias ?? propConfig.EntityReferenceType.FullName;
                     column.AllowInherited = propConfig.PropertyInfo.HasAttribute<AllowInheritedAttribute>();
                 }
             }

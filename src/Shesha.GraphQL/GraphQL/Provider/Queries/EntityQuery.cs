@@ -8,8 +8,11 @@ using GraphQL.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using Shesha.Application.Services.Dto;
+using Shesha.Configuration.Runtime;
+using Shesha.Configuration.Runtime.Exceptions;
 using Shesha.Domain;
 using Shesha.Extensions;
+using Shesha.GraphQL.Dtos;
 using Shesha.GraphQL.Provider.GraphTypes;
 using Shesha.JsonLogic;
 using Shesha.QuickSearch;
@@ -27,6 +30,7 @@ namespace Shesha.GraphQL.Provider.Queries
     public class EntityQuery<TEntity, TId> : ObjectGraphType, ITransientDependency where TEntity : class, IEntity<TId>
     {
         private readonly IJsonLogic2LinqConverter _jsonLogicConverter;
+        private readonly IEntityConfigurationStore _entityConfigStore;
 
         public EntityQuery(IServiceProvider serviceProvider)
         {
@@ -35,6 +39,7 @@ namespace Shesha.GraphQL.Provider.Queries
             Name = entityName + "Query";
 
             _jsonLogicConverter = serviceProvider.GetRequiredService<IJsonLogic2LinqConverter>();
+            _entityConfigStore = serviceProvider.GetRequiredService<IEntityConfigurationStore>();
 
             var repository = serviceProvider.GetRequiredService<IRepository<TEntity, TId>>();
             var asyncExecuter = serviceProvider.GetRequiredService<IAsyncQueryableExecuter>();
@@ -51,10 +56,10 @@ namespace Shesha.GraphQL.Provider.Queries
 
             FieldAsync<PagedResultDtoType<TEntity>>($"{entityName}List",
                 arguments: new QueryArguments(
-                    new QueryArgument<GraphQLInputGenericType<FilteredPagedAndSortedResultRequestDto>>
-                    { Name = "input", DefaultValue = new FilteredPagedAndSortedResultRequestDto() } ),
+                    new QueryArgument<GraphQLInputGenericType<ListRequestDto>> { Name = "input", DefaultValue = new ListRequestDto() }
+                ),
                 resolve: async context => {
-                    var input = context.GetArgument<FilteredPagedAndSortedResultRequestDto>("input");
+                    var input = context.GetArgument<ListRequestDto>("input");
 
                     var query = repository.GetAll();
 
@@ -63,7 +68,7 @@ namespace Shesha.GraphQL.Provider.Queries
 
                     // add quick search
                     if (!string.IsNullOrWhiteSpace(input.QuickSearch))
-                        query = quickSearcher.ApplyQuickSearch(query, input.QuickSearch);
+                        query = quickSearcher.ApplyQuickSearch(query, input.QuickSearch, input.QuickSearchProperties);
 
                     // calculate total count
                     var totalCount = query.Count();
@@ -124,6 +129,15 @@ namespace Shesha.GraphQL.Provider.Queries
                 var column = sortColumn.LeftPart(' ', ProcessDirection.LeftToRight);
                 if (string.IsNullOrWhiteSpace(column))
                     continue;
+
+                if (column == EntityConstants.DisplayNameField)
+                {
+                    var entityConfig = _entityConfigStore.Get(typeof(TEntity));
+                    if (entityConfig.DisplayNamePropertyInfo == null)
+                        throw new EntityDisplayNameNotFoundException(typeof(TEntity));
+
+                    column = entityConfig.DisplayNamePropertyInfo.Name;
+                }
 
                 var direction = sortColumn.RightPart(' ', ProcessDirection.LeftToRight)?.Trim().Equals("desc", StringComparison.InvariantCultureIgnoreCase) == true
                     ? ListSortDirection.Descending

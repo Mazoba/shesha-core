@@ -67,7 +67,7 @@ namespace Shesha.Configuration.Runtime
                     : null;
 
             if (type == null)
-                throw new EntityTypeNotFound(nameOrAlias);
+                throw new EntityTypeNotFoundException (nameOrAlias);
 
             return Get(type);
         }
@@ -89,6 +89,12 @@ namespace Shesha.Configuration.Runtime
                 }
             }
             return config;
+        }
+
+        public void SetDefaultAppService(Type entityType, Type applicationServiceType)
+        {
+            var config = Get(entityType);
+            config.ApplicationServiceType = applicationServiceType;
         }
     }
 }

@@ -59,38 +59,12 @@ namespace Shesha.Configuration.Runtime
         {
             var entityAtt = config.EntityType.GetUniqueAttribute<EntityAttribute>();
 
-            // Defaulting the values.
-            config.ControllerName = config.EntityType.Name;
-            config.DetailsActionName = "Details";
-            config.CreateActionName = "Create";
-            config.EditActionName = "Edit";
-            config.InactivateActionName = "Inactivate";
-            config.DeleteActionName = "Delete";
-
             if (entityAtt != null)
             {
                 config.FriendlyName = string.IsNullOrEmpty(entityAtt.FriendlyName)
                                           ? config.EntityType.Name // Fall back to type name when friendly name is not specified
                                           : entityAtt.FriendlyName;
-
-                /* todo: review CRUD functionality and uncomment/remove
-                config.ControllerName = !string.IsNullOrWhiteSpace(entityAtt.ControllerName) ? entityAtt.ControllerName : config.ControllerName;
-                config.DetailsActionName = !string.IsNullOrWhiteSpace(entityAtt.DetailsActionName) ? entityAtt.DetailsActionName : config.DetailsActionName;
-                config.CreateActionName = !string.IsNullOrWhiteSpace(entityAtt.CreateActionName) ? entityAtt.CreateActionName : config.CreateActionName;
-                config.EditActionName = !string.IsNullOrWhiteSpace(entityAtt.EditActionName) ? entityAtt.EditActionName : config.EditActionName;
-                config.InactivateActionName = !string.IsNullOrWhiteSpace(entityAtt.InactivateActionName) ? entityAtt.InactivateActionName : config.InactivateActionName;
-                config.DeleteActionName = !string.IsNullOrWhiteSpace(entityAtt.DeleteActionName) ? entityAtt.DeleteActionName : config.DeleteActionName;
-                config.DrillToView = entityAtt.DrillToView;
-                */
             }
-
-            /*
-            config.CreatedUserPropertyInfo = ReflectionHelper.FindPropertyWithUniqueAttribute(config.EntityType, typeof(CreatedUserAttribute), typeof(string));
-            config.CreatedTimestampPropertyInfo = ReflectionHelper.FindPropertyWithUniqueAttribute(config.EntityType, typeof(CreatedTimestampAttribute), typeof(DateTime?));
-            config.LastUpdatedUserPropertyInfo = ReflectionHelper.FindPropertyWithUniqueAttribute(config.EntityType, typeof(LastUpdatedUserAttribute), typeof(string));
-            config.LastUpdatedTimestampPropertyInfo = ReflectionHelper.FindPropertyWithUniqueAttribute(config.EntityType, typeof(LastUpdatedTimestampAttribute), typeof(DateTime?));
-            config.DefaultSortOrderPropertyInfo = ReflectionHelper.FindPropertyWithUniqueAttribute(config.EntityType, typeof(SearchOrderAttribute), typeof(DateTime?));
-            */
 
             config.TypeShortAlias = GetTypeShortAlias(config.EntityType);
 

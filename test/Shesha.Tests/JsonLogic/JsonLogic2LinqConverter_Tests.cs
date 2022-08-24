@@ -1125,6 +1125,37 @@ namespace Shesha.Tests.JsonLogic
 
         #endregion
 
+        #region Entity reference `in`
+
+        private readonly string _entityReference_In_Convert_expression = @"{
+  ""and"": [
+    {
+      ""in"": [
+        {
+          ""var"": ""Id""
+        },
+        [""24007BA5-697B-417C-91BA-ED92F3F31F3A"", ""D197A7B3-5505-430C-9D98-CD64F1A638FA""]
+      ]
+    }
+  ]
+}";
+
+        [Fact]
+        public void entityReference_In_Convert()
+        {
+            var expression = ConvertToExpression<Person>(_entityReference_In_Convert_expression);
+            Assert.Equal(@"ent => ((ent.Id == ""24007BA5-697B-417C-91BA-ED92F3F31F3A"".ToGuid()) OrElse (ent.Id == ""D197A7B3-5505-430C-9D98-CD64F1A638FA"".ToGuid()))", expression.ToString());
+        }
+
+        [Fact]
+        public async Task entityReference_In_Fetch()
+        {
+            var data = await TryFetchData<Person, Guid>(_entityReference_In_Convert_expression);
+            Assert.NotNull(data);
+        }
+
+        #endregion
+
         #endregion
 
         public class EntityWithDateProps: Entity<Guid> 

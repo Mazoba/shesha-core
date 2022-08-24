@@ -702,5 +702,15 @@ namespace Shesha.Reflection
 
             return null;
         }
+
+        public static bool ImplementsGenericInterface(this Type type, Type interfaceType) 
+        {
+            return type.GetGenericInterfaces(interfaceType).Any();
+        }
+
+        public static IEnumerable<Type> GetGenericInterfaces(this Type type, Type interfaceType)
+        {
+            return type.GetInterfaces().Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == interfaceType);
+        }
     }
 }
