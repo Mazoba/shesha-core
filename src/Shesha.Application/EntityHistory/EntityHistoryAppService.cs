@@ -314,7 +314,7 @@ namespace Shesha.EntityHistory
 
                 if (ownField == null)
                 {
-                    var ownFields = manyToManyType.GetProperties().Where(x => itemType.IsAssignableFrom(x.PropertyType)).ToList();
+                    var ownFields = manyToManyType.GetProperties().Where(x => x.PropertyType.IsAssignableFrom(itemType)).ToList();
                     if (ownFields.Count() > 1)
                         throw new Exception($"Found more then 1 field with parent type {itemType.FullName}");
                     ownField = ownFields.FirstOrDefault();
@@ -446,7 +446,7 @@ namespace Shesha.EntityHistory
 
                 if (ownField == null)
                 {
-                    var ownFields = manyToOneType.GetProperties().Where(x => itemType.IsAssignableFrom(x.PropertyType)).ToList();
+                    var ownFields = manyToOneType.GetProperties().Where(x => x.PropertyType.IsAssignableFrom(itemType)).ToList();
                     if (ownFields.Count() > 1)
                         throw new Exception($"Found more then 1 field with parent type {itemType.FullName}");
                     ownField = ownFields.FirstOrDefault();
