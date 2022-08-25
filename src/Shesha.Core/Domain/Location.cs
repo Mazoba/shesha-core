@@ -9,5 +9,6 @@ namespace Shesha.Domain
     [Entity(TypeShortAlias = "Shesha.Core.Location")]
     public class Location : Area
     {
+
     }
 }
