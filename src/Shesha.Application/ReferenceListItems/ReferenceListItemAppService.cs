@@ -1,5 +1,4 @@
-﻿using Abp.Application.Services;
-using Abp.Domain.Repositories;
+﻿using Abp.Domain.Repositories;
 using Shesha.Domain;
 using Shesha.Services;
 using Shesha.Services.ReferenceLists.Dto;
@@ -7,7 +6,7 @@ using System;
 
 namespace Shesha.ReferenceLists
 {
-    public class ReferenceListItemAppService : AsyncCrudAppService<ReferenceListItem, ReferenceListItemDto, Guid>
+    public class ReferenceListItemAppService : SheshaCrudServiceBase<ReferenceListItem, ReferenceListItemDto, Guid>
     {
         private readonly ReferenceListHelper _refListHelper;
 

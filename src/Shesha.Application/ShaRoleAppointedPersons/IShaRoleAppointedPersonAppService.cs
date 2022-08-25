@@ -1,11 +1,11 @@
-﻿using System;
-using Abp.Application.Services;
-using Shesha.Roles.Dto;
+﻿using Abp.Application.Services;
+using Shesha.Application.Services.Dto;
 using Shesha.ShaRoleAppointedPersons.Dto;
+using System;
 
 namespace Shesha.ShaRoleAppointedPersons
 {
-    public interface IShaRoleAppointedPersonAppService : IAsyncCrudAppService<ShaRoleAppointedPersonDto, Guid, PagedRoleResultRequestDto, CreateShaRoleAppointedPersonDto, ShaRoleAppointedPersonDto>
+    public interface IShaRoleAppointedPersonAppService : IAsyncCrudAppService<ShaRoleAppointedPersonDto, Guid, FilteredPagedAndSortedResultRequestDto, CreateShaRoleAppointedPersonDto, ShaRoleAppointedPersonDto>
     {
     }
 }

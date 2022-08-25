@@ -1,13 +1,12 @@
-﻿using Abp.Application.Services;
-using Abp.Application.Services.Dto;
+﻿using Abp.Application.Services.Dto;
 using Abp.Authorization;
 using Abp.Domain.Repositories;
 using Abp.Runtime.Validation;
 using Microsoft.AspNetCore.Mvc;
 using NHibernate.Linq;
+using Shesha.Application.Services.Dto;
 using Shesha.Authorization;
 using Shesha.Domain;
-using Shesha.Roles.Dto;
 using Shesha.ShaRoleAppointedPersons.Dto;
 using System;
 using System.Collections.Generic;
@@ -18,7 +17,7 @@ using System.Threading.Tasks;
 namespace Shesha.ShaRoleAppointedPersons
 {
     [AbpAuthorize(PermissionNames.Pages_Roles)]
-    public class ShaRoleAppointedPersonAppService : AsyncCrudAppService<ShaRoleAppointedPerson, ShaRoleAppointedPersonDto, Guid, PagedRoleResultRequestDto, CreateShaRoleAppointedPersonDto, ShaRoleAppointedPersonDto>, IShaRoleAppointedPersonAppService
+    public class ShaRoleAppointedPersonAppService : SheshaCrudServiceBase<ShaRoleAppointedPerson, ShaRoleAppointedPersonDto, Guid, FilteredPagedAndSortedResultRequestDto, CreateShaRoleAppointedPersonDto, ShaRoleAppointedPersonDto>, IShaRoleAppointedPersonAppService
     {
         private readonly IRepository<ShaRole, Guid> _roleRepository;
         private readonly IRepository<ShaRoleAppointmentEntity, Guid> _appEntityRepository;

@@ -1,5 +1,4 @@
-﻿using Abp.Application.Services;
-using Abp.Dependency;
+﻿using Abp.Dependency;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Shesha.Scheduler.Services.ScheduledJobs
 {
-    public class ScheduledJobExecutionAppService : AsyncCrudAppService<ScheduledJobExecution, ScheduledJobExecutionDto, Guid>, ITransientDependency
+    public class ScheduledJobExecutionAppService : SheshaCrudServiceBase<ScheduledJobExecution, ScheduledJobExecutionDto, Guid>, ITransientDependency
     {
         private readonly IMimeMappingService _mimeMappingService;
 

@@ -2,6 +2,7 @@
 using Abp.Application.Services.Dto;
 using Abp.Authorization;
 using Abp.Domain.Repositories;
+using Shesha.Application.Services.Dto;
 using Shesha.Authorization;
 using Shesha.Domain;
 using Shesha.Roles.Dto;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 namespace Shesha.ShaRoles
 {
     [AbpAuthorize(PermissionNames.Pages_Roles)]
-    public class ShaRoleAppService : AsyncCrudAppService<ShaRole, ShaRoleDto, Guid, PagedRoleResultRequestDto, CreateShaRoleDto, ShaRoleDto>, IShaRoleAppService
+    public class ShaRoleAppService : SheshaCrudServiceBase<ShaRole, ShaRoleDto, Guid, FilteredPagedAndSortedResultRequestDto, CreateShaRoleDto, ShaRoleDto>, IShaRoleAppService
     {
         private readonly IShaPermissionChecker _shaPermissionChecker;
 
