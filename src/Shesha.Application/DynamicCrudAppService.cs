@@ -32,18 +32,36 @@ namespace Shesha
             return await MapToCustomDynamicDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(entity);
         }
 
-
         public override async Task<TDynamicDto> UpdateAsync(TDynamicDto input)
         {
             CheckUpdatePermission();
 
             var entity = await Repository.GetAsync(input.Id);
 
-            await MapDynamicDtoToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
+            var jObject = (input as IHasJObjectField).JObject;
 
-            var validationResults = new List<ValidationResult>();
-            if (!Validator.TryValidateObject(entity, new ValidationContext(entity), validationResults))
-                throw new AbpValidationException("Please correct the errors and try again", validationResults);
+            if (jObject != null)
+            {
+                var validationResults = new List<ValidationResult>();
+                var result = MapJObjectToStaticPropertiesEntityAsync<TEntity, TPrimaryKey>(jObject, entity, validationResults);
+                if (!result)
+                    throw new AbpValidationException("Please correct the errors and try again", validationResults);
+
+                if (!Validator.TryValidateObject(entity, new ValidationContext(entity), validationResults))
+                    throw new AbpValidationException("Please correct the errors and try again", validationResults);
+
+                result = await MapJObjectToDynamicPropertiesEntityAsync<TEntity, TPrimaryKey>(jObject, entity, validationResults);
+                if (!result)
+                    throw new AbpValidationException("Please correct the errors and try again", validationResults);
+            }
+            else
+            {
+                await MapDynamicDtoToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
+
+                var validationResults = new List<ValidationResult>();
+                if (!Validator.TryValidateObject(entity, new ValidationContext(entity), validationResults))
+                    throw new AbpValidationException("Please correct the errors and try again", validationResults);
+            }
 
             await Repository.UpdateAsync(entity);
 
@@ -56,17 +74,43 @@ namespace Shesha
 
             var entity = Activator.CreateInstance<TEntity>();
 
-            await MapStaticPropertiesToEntityDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
+            var jObject = (input as IHasJObjectField).JObject;
 
-            var validationResults = new List<ValidationResult>();
-            if (!Validator.TryValidateObject(entity, new ValidationContext(entity), validationResults))
-                throw new AbpValidationException("Please correct the errors and try again", validationResults);
+            if (jObject != null)
+            {
+                var validationResults = new List<ValidationResult>();
+                var result = MapJObjectToStaticPropertiesEntityAsync<TEntity, TPrimaryKey>(jObject, entity, validationResults);
+
+                if (!result)
+                    throw new AbpValidationException("Please correct the errors and try again", validationResults);
+
+                if (!Validator.TryValidateObject(entity, new ValidationContext(entity), validationResults))
+                    throw new AbpValidationException("Please correct the errors and try again", validationResults);
+            }
+            else
+            {
+                await MapStaticPropertiesToEntityDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
+
+                var validationResults = new List<ValidationResult>();
+                if (!Validator.TryValidateObject(entity, new ValidationContext(entity), validationResults))
+                    throw new AbpValidationException("Please correct the errors and try again", validationResults);
+            }
 
             await Repository.InsertAsync(entity);
 
             await UnitOfWorkManager.Current.SaveChangesAsync();
 
-            await MapDynamicPropertiesToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
+            if (jObject != null)
+            {
+                var validationResults = new List<ValidationResult>();
+                var result = await MapJObjectToDynamicPropertiesEntityAsync<TEntity, TPrimaryKey>(jObject, entity, validationResults);
+                if (!result)
+                    throw new AbpValidationException("Please correct the errors and try again", validationResults);
+            }
+            else
+            {
+                await MapDynamicPropertiesToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(input, entity);
+            }
 
             await UnitOfWorkManager.Current.SaveChangesAsync();
 

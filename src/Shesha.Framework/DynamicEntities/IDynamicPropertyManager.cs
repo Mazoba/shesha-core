@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Abp.Domain.Entities;
+using Newtonsoft.Json.Linq;
 using Shesha.DynamicEntities.Dtos;
 
 namespace Shesha.DynamicEntities
@@ -43,6 +44,17 @@ namespace Shesha.DynamicEntities
         Task MapDtoToEntityAsync<TDynamicDto, TEntity, TId>(TDynamicDto dynamicDto, TEntity entity)
             where TEntity : class, IEntity<TId>
             where TDynamicDto : class, IDynamicDto<TEntity, TId>;
+
+        /// <summary>
+        /// Map values of dynamic properties from JObject to Entity
+        /// </summary>
+        /// <typeparam name="TId">Type of primary key</typeparam>
+        /// <typeparam name="TEntity">Type of Entity</typeparam>
+        /// <param name="jObject">Data</param>
+        /// <param name="entity">Entity</param>
+        /// <returns></returns>
+        Task MapJObjectToEntityAsync<TEntity, TId>(JObject jObject, TEntity entity)
+            where TEntity : class, IEntity<TId>;
 
         /// <summary>
         /// Map values of dynamic properties from Entity to Dto

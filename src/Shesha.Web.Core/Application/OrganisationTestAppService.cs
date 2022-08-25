@@ -8,18 +8,13 @@ using Shesha.Specifications;
 using System;
 using System.Threading.Tasks;
 
-namespace Shesha.Application.Persons
+namespace Shesha.Application
 {
     [AbpAuthorize]
-    public class PersonTestAppService : DynamicCrudAppService<Person, DynamicDto<Person, Guid>, Guid>, ITransientDependency
+    public class OrganisationTestAppService : DynamicCrudAppService<Organisation, DynamicDto<Organisation, Guid>, Guid>, ITransientDependency
     {
-        public PersonTestAppService(IRepository<Person, Guid> repository) : base(repository)
+        public OrganisationTestAppService(IRepository<Organisation, Guid> repository) : base(repository)
         {
-        }
-
-        public override async Task<DynamicDto<Person, Guid>> UpdateAsync([DynamicBinder(UseDtoForEntityReferences = true, UseDynamicDtoProxy = true)] DynamicDto<Person, Guid> input) 
-        { 
-            return await base.UpdateAsync(input);
         }
 
         [DisableSpecifications]

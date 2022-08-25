@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
+using Newtonsoft.Json.Linq;
 using NHibernate.Linq;
 using Shesha.Authorization.Users;
 using Shesha.DynamicEntities;
@@ -18,6 +19,8 @@ using Shesha.DynamicEntities.Mapper;
 using Shesha.MultiTenancy;
 using Shesha.Services;
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Threading.Tasks;
 
@@ -62,6 +65,8 @@ namespace Shesha
         /// Dynamic DTO mapping helper
         /// </summary>
         public IDynamicDtoMappingHelper DynamicDtoMappingHelper { get; set; }
+
+        public IEntityModelBinder EntityModelBinder { get; set; }
 
         private IUrlHelper _url;
 
@@ -337,6 +342,45 @@ namespace Shesha
         {
             await MapStaticPropertiesToEntityDtoAsync<TDynamicDto, TEntity, TPrimaryKey>(dto, entity);
             await MapDynamicPropertiesToEntityAsync<TDynamicDto, TEntity, TPrimaryKey>(dto, entity);
+        }
+
+        /// <summary>
+        /// Map static properties of JObject to a specified entity
+        /// </summary>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <typeparam name="TPrimaryKey">Type of primary key</typeparam>
+        /// <param name="jObject">Data</param>
+        /// <param name="entity">Destination entity</param>
+        /// <param name="validationResult">Validation result</param>
+        /// <returns></returns>
+        protected bool MapJObjectToStaticPropertiesEntityAsync<TEntity, TPrimaryKey>(
+            JObject jObject,
+            TEntity entity,
+            List<ValidationResult> validationResult)
+            where TEntity : class, IEntity<TPrimaryKey>
+        {
+            return EntityModelBinder.BindProperties(jObject, entity, validationResult);
+        }
+
+        /// <summary>
+        /// Map dynamic properties of JObject to a specified entity
+        /// </summary>
+        /// <typeparam name="TEntity">Type of entity</typeparam>
+        /// <typeparam name="TPrimaryKey">Type of primary key</typeparam>
+        /// <param name="jObject">Data</param>
+        /// <param name="entity">Destination entity</param>
+        /// <param name="validationResult">Validation result</param>
+        /// <returns></returns>
+        protected async Task<bool> MapJObjectToDynamicPropertiesEntityAsync<TEntity, TPrimaryKey>(
+            JObject jObject,
+            TEntity entity,
+            List<ValidationResult> validationResult)
+            where TEntity : class, IEntity<TPrimaryKey>
+        {
+            await DynamicPropertyManager.MapJObjectToEntityAsync<TEntity, TPrimaryKey>(jObject, entity);
+            
+            // ToDo: Add validations
+            return true;
         }
 
         #endregion

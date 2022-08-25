@@ -44,6 +44,12 @@ namespace Shesha.DynamicEntities.Swagger
                 schema.Properties.Add(property.Name.ToCamelCase(), propertySchema);
             }
 
+            if (schema.Properties.ContainsKey(nameof(IHasJObjectField.JObject).ToCamelCase()))
+            {
+                // Hide JObject field for DynamicDto
+                schema.Properties.Remove(nameof(IHasJObjectField.JObject).ToCamelCase());
+            }
+
             // add `_formFields` with comment
             var formFieldsProp = typeof(IHasFormFieldsList).GetProperty(nameof(IHasFormFieldsList._formFields));
             if (!propNames.Contains(formFieldsProp.Name.ToLower())) 

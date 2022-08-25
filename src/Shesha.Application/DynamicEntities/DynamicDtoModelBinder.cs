@@ -103,6 +103,12 @@ namespace Shesha.DynamicEntities
 
             _logger.AttemptingToBindModel(bindingContext);
 
+            var defaultMetadata = bindingContext.ModelMetadata as DefaultModelMetadata;
+            var bindingSettings = defaultMetadata != null
+                ? defaultMetadata.Attributes.ParameterAttributes?.OfType<IDynamicMappingSettings>().FirstOrDefault()
+                : null;
+            bindingSettings = bindingSettings ?? new DynamicMappingSettings();
+
             // Special logic for body, treat the model name as string.Empty for the top level
             // object, but allow an override via BinderModelName. The purpose of this is to try
             // and be similar to the behavior for POCOs bound via traditional model binding.
@@ -128,13 +134,6 @@ namespace Shesha.DynamicEntities
             if (modelType is IDynamicDtoProxy)
                 throw new NotSupportedException($"{this.GetType().FullName} doesn't support binding of the dynamic poxies. Type `{modelType.FullName}` is implementing `{nameof(IDynamicDtoProxy)}` interface");
 
-
-            var defaultMetadata = bindingContext.ModelMetadata as DefaultModelMetadata;
-            var bindingSettings = defaultMetadata != null
-                ? defaultMetadata.Attributes.ParameterAttributes?.OfType<IDynamicMappingSettings>().FirstOrDefault()
-                : null;
-            bindingSettings = bindingSettings ?? new DynamicMappingSettings();
-
             var fullDtoBuildContext = new DynamicDtoTypeBuildingContext
             {
                 ModelType = bindingContext.ModelType,
@@ -142,10 +141,15 @@ namespace Shesha.DynamicEntities
                 AddFormFieldsProperty = true,
                 UseDtoForEntityReferences = bindingSettings.UseDtoForEntityReferences,
             };
-            modelType = await _dtoBuilder.BuildDtoFullProxyTypeAsync(bindingContext.ModelType, fullDtoBuildContext);
 
-            metadata = bindingContext.ModelMetadata.GetMetadataForType(modelType);
-            
+            if (bindingSettings.UseDynamicDtoProxy)
+            {
+                // Generate proxy only is needed
+                modelType = await _dtoBuilder.BuildDtoFullProxyTypeAsync(bindingContext.ModelType, fullDtoBuildContext);
+
+                metadata = bindingContext.ModelMetadata.GetMetadataForType(modelType);
+            }
+
             #endregion
 
             var formatterContext = new InputFormatterContext(
@@ -229,6 +233,14 @@ namespace Shesha.DynamicEntities
                         bindingContext.Result = ModelBindingResult.Success(effectiveModel);
                     } else
                         bindingContext.Result = ModelBindingResult.Success(result.Model);
+
+                    if (bindingContext.Result.Model is IHasJObjectField modelDynamicDto)
+                    {
+                        // Add JObject only if not a DtoProxy
+                        modelDynamicDto.JObject = !bindingSettings.UseDynamicDtoProxy
+                            ? Newtonsoft.Json.Linq.JObject.Parse(body)
+                            : null;
+                    }
                 }
                 else
                 {

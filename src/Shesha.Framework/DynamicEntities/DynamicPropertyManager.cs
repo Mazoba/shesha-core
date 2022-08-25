@@ -3,9 +3,11 @@ using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Reflection;
 using System.Threading.Tasks;
+using Abp.Collections.Extensions;
 using Abp.Dependency;
 using Abp.Domain.Entities;
 using Abp.Domain.Repositories;
+using Newtonsoft.Json.Linq;
 using NHibernate.Linq;
 using Shesha.Configuration.Runtime;
 using Shesha.Domain;
@@ -120,6 +122,24 @@ namespace Shesha.DynamicEntities
             }
         }
 
+        public async Task MapJObjectToEntityAsync<TEntity, TId>(JObject jObject, TEntity entity)
+            where TEntity : class, IEntity<TId>
+        {
+            var dynamicProperties = (await DtoTypeBuilder.GetEntityPropertiesAsync(entity.GetType()))
+                .Where(p => p.Source == MetadataSourceType.UserDefined).ToList();
+            var dtoProps = jObject.Properties();
+            foreach (var property in dynamicProperties)
+            {
+                var dtoProp = dtoProps.FirstOrDefault(p => p.Name == property.Name);
+                if (dtoProp != null)
+                {
+                    var rawValue = dtoProp.Value.ToString();
+                    var convertedValue = SerializationManager.SerializeProperty(property, rawValue);
+                    await SetValueAsync(entity, property, convertedValue, false);
+                }
+            }
+        }
+
         public async Task<object> GetPropertyAsync(object entity, string propertyName) 
         {
             try 
@@ -212,5 +232,5 @@ namespace Shesha.DynamicEntities
 
             return rawValue;
         }
-     }
+    }
 }
