@@ -58,11 +58,11 @@ namespace Shesha.DynamicEntities
                     var appServiceType = DynamicAppServiceHelper.MakeApplicationServiceType(entityType);
                     if (appServiceType != null) 
                     {
-                        entityConfigurationStore.SetDefaultAppService(entityType, appServiceType);
-
                         var controllerName = MvcHelper.GetControllerName(appServiceType);
                         if (!existingControllerNames.Contains(controllerName)) 
                         {
+                            entityConfigurationStore.SetDefaultAppService(entityType, appServiceType);
+
                             feature.Controllers.Add(appServiceType.GetTypeInfo());
                             
                             if (!_iocManager.IsRegistered(appServiceType))
