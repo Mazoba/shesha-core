@@ -16,11 +16,6 @@ namespace Shesha.DataTables
         public string PropertyName { get; set; }
 
         /// <summary>
-        /// Filter caption
-        /// </summary>
-        public string FilterCaption { get; set; }
-
-        /// <summary>
         /// Column name
         /// </summary>
         public string Name { get; set; }
@@ -36,19 +31,9 @@ namespace Shesha.DataTables
         public string Description { get; set; }
 
         /// <summary>
-        /// 
-        /// </summary>
-        public bool AllowShowHide { get; set; }
-
-        /// <summary>
         /// Data type
         /// </summary>
         public string DataType { get; set; }
-
-        /// <summary>
-        /// Custom data type
-        /// </summary>
-        public string CustomDataType { get; set; }
 
         /// <summary>
         /// Reference list name
@@ -76,11 +61,6 @@ namespace Shesha.DataTables
         public bool AllowInherited { get; set; }
 
         /// <summary>
-        /// Indicates is column visible or not
-        /// </summary>
-        public bool IsVisible { get; set; }
-
-        /// <summary>
         /// Indicates is column filterable or not
         /// </summary>
         public bool IsFilterable { get; set; }
@@ -89,42 +69,5 @@ namespace Shesha.DataTables
         /// Indicates is column sortable or not
         /// </summary>
         public bool IsSortable { get; set; }
-
-        /// <summary>
-        /// If true, indicates that column is editable
-        /// </summary>
-        public bool IsEditable { get; set; }
-
-        /// <summary>
-        /// Column width
-        /// </summary>
-        public string Width { get; set; }
-
-        /// <summary>
-        /// Default sorting (asc/desc)
-        /// </summary>
-        public ListSortDirection? DefaultSorting { get; set; }
-
-        /// <summary>
-        /// Indicates is column hidden by default or not
-        /// </summary>
-        public bool IsHiddenByDefault { get; set; }
-
-        #region backward compatibility 
-
-        /// <summary>
-        /// Indicates is column hidden by default or not
-        /// </summary>
-        [Obsolete("replaced with `IsHiddenByDefault`, this property will be removed in next version")]
-        public bool HiddenByDefault => IsHiddenByDefault;
-
-        /// <summary>
-        /// Indicates is column visible or not
-        /// </summary>
-        [Obsolete("replaced with `IsVisible`, this property will be removed in next version")]
-        public bool Visible => IsVisible;
-
-        #endregion
     }
-
 }

@@ -1,17 +1,14 @@
-﻿using System;
-using System.Reflection;
-using Abp.Domain.Entities;
+﻿using Abp.Domain.Entities;
 using Abp.Domain.Entities.Auditing;
 using Abp.MultiTenancy;
 using FluentMigrator;
 using FluentMigrator.Builders;
 using FluentMigrator.Builders.Alter.Table;
 using FluentMigrator.Builders.Create.Table;
-using FluentMigrator.Builders.Delete;
-using FluentMigrator.Builders.Insert;
-using FluentMigrator.Expressions;
 using FluentMigrator.Infrastructure;
 using Shesha.Domain;
+using System;
+using System.Reflection;
 
 namespace Shesha.FluentMigrator
 {
@@ -488,28 +485,6 @@ namespace Shesha.FluentMigrator
         {
             // NOTE: Don't change this code, it's used in the migrations
             return $"idx_{table}_{column}";
-        }
-
-        /// <summary>
-        /// Registers an exclusive (not for multi-selection) stored filter. Please use fluent methods to provide more details when needed
-        /// </summary>
-        /// <param name="filterName">Filter name to display to user</param>
-        /// <param name="hqlExpression">HQL expression. Example for My Items filter: `ent.CreatorUserId={userId}`</param>
-        /// <param name="orderIndex">Order index within a container. Please use it when alphabetical ordering is not what you need</param>
-        public static RegisterStoredFilterFluent RegisterStoredFilter(this Migration migration, string filterName, string hqlExpression, int? orderIndex)
-        {
-            return new RegisterStoredFilterFluent(migration, filterName, hqlExpression, true, orderIndex);
-        }
-
-        /// <summary>
-        /// Registers a stored filter that can be multi-selected with other filters. Please use fluent methods to provide more details when needed
-        /// </summary>
-        /// <param name="filterName">Filter name to display to user</param>
-        /// <param name="hqlExpression">HQL expression. Example for My Items filter: `ent.CreatorUserId={userId}`</param>
-        /// <param name="orderIndex">Order index within a container. Please use it when alphabetical ordering is not what you need</param>
-        public static RegisterStoredFilterFluent RegisterNonExclusiveStoredFilter(this Migration migration, string filterName, string hqlExpression, int? orderIndex)
-        {
-            return new RegisterStoredFilterFluent(migration, filterName, hqlExpression, isExclusive: false, orderIndex);
         }
 
         #region Add syntax

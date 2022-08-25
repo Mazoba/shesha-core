@@ -167,7 +167,7 @@ namespace Shesha.DynamicEntities
 
             return context.UseDtoForEntityReferences
                 ? typeof(EntityWithDisplayNameDto<>).MakeGenericType(entityConfig.IdType)
-                : entityConfig?.IdType;
+                : typeof(Nullable<>).MakeGenericType(entityConfig?.IdType);
         }
 
         private async Task<Type> GetNestedTypeAsync(EntityPropertyDto propertyDto, DynamicDtoTypeBuildingContext context) 

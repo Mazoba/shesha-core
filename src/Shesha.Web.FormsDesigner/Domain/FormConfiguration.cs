@@ -10,10 +10,6 @@ namespace Shesha.Web.FormsDesigner.Domain
     /// </summary>
     public class FormConfiguration: ConfigurationItemBase
     {
-        public FormConfiguration() : base("form")
-        {
-        }
-
         /// <summary>
         /// Form markup
         /// </summary>
@@ -31,6 +27,8 @@ namespace Shesha.Web.FormsDesigner.Domain
         /// </summary>
         [StringLength(100)]
         public virtual string Type { get; set; }
+
+        public override string ItemType => "form";
 
         public override Task<IConfigurationItem> GetDependencies()
         {

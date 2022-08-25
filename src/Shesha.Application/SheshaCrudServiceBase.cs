@@ -4,6 +4,7 @@ using Abp.Domain.Repositories;
 using Abp.Runtime.Validation;
 using GraphQL;
 using Microsoft.AspNetCore.Mvc;
+using Shesha.Application.Services;
 using Shesha.Application.Services.Dto;
 using Shesha.DynamicEntities.Cache;
 using Shesha.DynamicEntities.Dtos;
@@ -57,7 +58,7 @@ namespace Shesha
     /// <summary>
     /// CRUD service base
     /// </summary>
-    public abstract class SheshaCrudServiceBase<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput, TGetInput> : AbpAsyncCrudAppService<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput, TGetInput>
+    public abstract class SheshaCrudServiceBase<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput, TGetInput> : AbpAsyncCrudAppService<TEntity, TEntityDto, TPrimaryKey, TGetAllInput, TCreateInput, TUpdateInput, TGetInput>, IEntityAppService<TEntity, TPrimaryKey>
         where TEntity : class, IEntity<TPrimaryKey>
         where TEntityDto : IEntityDto<TPrimaryKey>
         where TUpdateInput : IEntityDto<TPrimaryKey>
@@ -134,7 +135,7 @@ namespace Shesha
 
             var properties = string.IsNullOrWhiteSpace(input.Properties)
                     ? await GetGqlTopLevelPropertiesAsync()
-                    : input.Properties;
+                    : CleanupProperties(input.Properties);
 
             var query = $@"query{{
   {schemaName}(id: ""{input.Id}"") {{
@@ -188,8 +189,8 @@ namespace Shesha
             var properties = string.IsNullOrWhiteSpace(input.Properties)
                 ? await GetGqlTopLevelPropertiesAsync()
                 : CleanupProperties(input.Properties);
-            var query = $@"query getAll($filter: String, $quickSearch: String, $sorting: String, $skipCount: Int, $maxResultCount: Int){{
-  {schemaName}List(input: {{ filter: $filter, quickSearch: $quickSearch, sorting: $sorting, skipCount: $skipCount, maxResultCount: $maxResultCount }}){{
+            var query = $@"query getAll($filter: String, $quickSearch: String, $quickSearchProperties: [String], $sorting: String, $skipCount: Int, $maxResultCount: Int){{
+  {schemaName}List(input: {{ filter: $filter, quickSearch: $quickSearch, quickSearchProperties: $quickSearchProperties, sorting: $sorting, skipCount: $skipCount, maxResultCount: $maxResultCount }}){{
     totalCount
     items {{
         {properties}
@@ -205,6 +206,7 @@ namespace Shesha
                 s.Variables = new Inputs(new Dictionary<string, object> {
                     { "filter", input.Filter },
                     { "quickSearch", input.QuickSearch },
+                    { "quickSearchProperties", ExtractProperties(properties) },
                     { "sorting", input.Sorting },
                     { "skipCount", input.SkipCount },
                     { "maxResultCount", input.MaxResultCount },
@@ -227,6 +229,12 @@ namespace Shesha
             }
 
             return new GraphQLDataResult<PagedResultDto<TEntity>>(result);
+        }
+
+        private List<string> ExtractProperties(string properties) 
+        {
+            var regex = new Regex(@"\s");
+            return regex.Split(properties).ToList();
         }
 
         private string CleanupProperties(string properties) 
@@ -280,6 +288,16 @@ namespace Shesha
             }
 
             return sb.ToString();
+        }
+
+        async Task<IDynamicDataResult> IEntityAppService.QueryAllAsync(PropsFilteredPagedAndSortedResultRequestDto input)
+        {
+            return await this.QueryAllAsync(input);
+        }
+
+        async Task<IDynamicDataResult> IEntityAppService<TEntity, TPrimaryKey>.QueryAsync(GetDynamicEntityInput<TPrimaryKey> input)
+        {
+            return await this.QueryAsync(input);
         }
 
         #endregion

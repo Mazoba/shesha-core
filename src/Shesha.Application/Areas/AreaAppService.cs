@@ -1,8 +1,8 @@
-﻿using Abp.Application.Services;
-using Abp.Application.Services.Dto;
+﻿using Abp.Application.Services.Dto;
 using Abp.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using NHibernate.Linq;
+using Shesha.Application.Services.Dto;
 using Shesha.Areas.Dto;
 using Shesha.AutoMapper.Dto;
 using Shesha.Domain;
@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Shesha.Areas
 {
-    public class AreaAppService : AsyncCrudAppService<Area, AreaDto, Guid, PagedAndSortedResultRequestDto, AreaCreateDto, AreaUpdateDto>
+    public class AreaAppService : SheshaCrudServiceBase<Area, AreaDto, Guid, FilteredPagedAndSortedResultRequestDto, AreaCreateDto, AreaUpdateDto>
     {
         private readonly IRepository<AreaTreeItem, Guid> _areaTreeItemRepository;
         private readonly IRepository<AreaHierarchyItem, string> _areaHierarchyItemRepository;

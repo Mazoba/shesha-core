@@ -1,4 +1,5 @@
-﻿using Abp.Domain.Repositories;
+﻿using Abp.Application.Services.Dto;
+using Abp.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.Web.FormsDesigner.Domain;
 using Shesha.Web.FormsDesigner.Dtos;
@@ -22,11 +23,10 @@ namespace Shesha.Web.FormsDesigner.Services
         }
 
         /// inheritedDoc
-        /*
-        [HttpGet, Route("{id}")]
-        public async Task<FormDto> GetAsync(Guid id)
+        //[HttpGet, Route("{id}")]
+        public override async Task<FormDto> GetAsync(EntityDto<Guid> input)
         {
-            var form = await _formStore.GetAsync(id);
+            var form = await _formStore.GetAsync(input.Id);
 
             // Note: temporary stuff, is used for development only, to be removed
             if (!string.IsNullOrWhiteSpace(form.Path) && File.Exists(form.Path))
@@ -36,7 +36,6 @@ namespace Shesha.Web.FormsDesigner.Services
 
             return form;
         }
-        */
 
         /*
         /// inheritedDoc

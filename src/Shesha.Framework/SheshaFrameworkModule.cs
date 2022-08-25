@@ -3,10 +3,12 @@ using Abp.Authorization;
 using Abp.AutoMapper;
 using Abp.Dependency;
 using Abp.Modules;
+using Abp.Web.Models;
 using Castle.MicroKernel.Registration;
 using Microsoft.Extensions.Configuration;
 using Shesha.Authorization;
 using Shesha.Configuration;
+using Shesha.Exceptions;
 using Shesha.Extensions;
 using Shesha.Locks;
 using Shesha.Permissions;
@@ -64,6 +66,9 @@ namespace Shesha
             IocManager.Resolve<ShaPermissionManager>().Initialize();
 
             var def = IocManager.Resolve<IPermissionDefinitionContext>();
+
+            // register Shesha exception to error converter
+            IocManager.Resolve<ErrorInfoBuilder>().AddExceptionConverter(IocManager.Resolve<ShaExceptionToErrorInfoConverter>());
         }
     }
 }

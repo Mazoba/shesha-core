@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -59,5 +60,8 @@ namespace Shesha.Domain.ConfigurationItems
         /// Import session that created this configuration item
         /// </summary>
         public virtual ImportResult CreatedByImport { get; set; }
+
+        //[NotMapped]
+        //public virtual ConfigurationItemBase Owner { get; set; }
     }
 }

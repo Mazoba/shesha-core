@@ -1,16 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Reflection;
-using Abp.Dependency;
+﻿using Microsoft.AspNetCore.Mvc;
 using NHibernate;
 using NHibernate.Persister.Entity;
+using Shesha.Application.Services;
+using Shesha.Application.Services.Dto;
 using Shesha.Domain;
 using Shesha.Domain.Attributes;
 using Shesha.Extensions;
 using Shesha.Reflection;
 using Shesha.Services;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Shesha.Configuration.Runtime
 {
@@ -45,16 +48,6 @@ namespace Shesha.Configuration.Runtime
         /// The name of the property that will be used to display the entity to the user.
         /// </summary>
         public PropertyInfo DisplayNamePropertyInfo { get; set; }
-        public PropertyInfo InactiveFlagPropertyInfo { get; set; }
-        public PropertyInfo InactivateTimestampPropertyInfo { get; set; }
-        public PropertyInfo InactivateUserPropertyInfo { get; set; }
-        public PropertyInfo InactivateReasonPropertyInfo { get; set; }
-        public PropertyInfo CreatedUserPropertyInfo { get; set; }
-        public PropertyInfo CreatedTimestampPropertyInfo { get; set; }
-        public PropertyInfo LastUpdatedUserPropertyInfo { get; set; }
-        public PropertyInfo LastUpdatedTimestampPropertyInfo { get; set; }
-        public PropertyInfo TestObjectFlagPropertyInfo { get; set; }
-        public PropertyInfo DefaultSortOrderPropertyInfo { get; set; }
 
         public bool HasTypeShortAlias => !string.IsNullOrEmpty(_typeShortAlias);
 
@@ -82,17 +75,6 @@ namespace Shesha.Configuration.Runtime
             set => _typeShortAlias = value;
         }
         public string FriendlyName { get; set; }
-        public string ControllerName { get; set; }
-        public string DrillToView { get; set; }
-
-        /// <summary>
-        /// The view that should be used by default to view the details of the entity.
-        /// </summary>
-        public string DetailsActionName { get; set; } = "Details";
-        public string CreateActionName { get; set; } = "Create";
-        public string EditActionName { get; set; } = "Edit";
-        public string InactivateActionName { get; set; } = "Inactivate";
-        public string DeleteActionName { get; set; } = "Delete";
 
         public string TableName => MappingMetadata?.TableName;
         public string DiscriminatorValue => MappingMetadata?.DiscriminatorValue;
@@ -163,15 +145,7 @@ namespace Shesha.Configuration.Runtime
         public Type EntityType { get; set; }
         public Type IdType => EntityType?.GetEntityIdType();
 
-        /// <summary>
-        /// Gets whether the repository supports the inactivation of objects. When an
-        /// object is inactivated it is not deleted but flagged in the database as inactive and 
-        /// prevented from being returned to any calling application by default.
-        /// </summary>
-        public bool SupportsInactivate => InactiveFlagPropertyInfo != null;
-
         public IList<PropertySetChangeLoggingConfiguration> ChangeLogConfigurations = new List<PropertySetChangeLoggingConfiguration>();
-        public bool HasPropertiesNeedToLogChangesFor { get; set; }
 
         public Dictionary<string, PropertyConfiguration> Properties { get; set; }
 
@@ -194,6 +168,11 @@ namespace Shesha.Configuration.Runtime
 
         #endregion
 
+        /// <summary>
+        /// Type of the default application service
+        /// </summary>
+        public Type ApplicationServiceType { get; set; }
+
         public class PropertySetChangeLoggingConfiguration
         {
             public PropertySetChangeLoggingConfiguration()
@@ -205,5 +184,4 @@ namespace Shesha.Configuration.Runtime
             public virtual IList<string> AuditedProperties { get; internal set; }
         }
     }
-
 }

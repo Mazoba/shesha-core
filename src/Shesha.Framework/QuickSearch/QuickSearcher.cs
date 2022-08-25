@@ -6,6 +6,7 @@ using Shesha.Domain;
 using Shesha.JsonLogic;
 using Shesha.Reflection;
 using Shesha.Services;
+using Shesha.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -320,6 +321,24 @@ namespace Shesha.QuickSearch
             return QuickSearchPropertiesCache.Get(cacheKey, (s) => DoGetPropertiesForSqlQuickSearch<TEntity>(properties));
         }
 
+        private bool TryGetProperty(EntityConfiguration entityConfig, string name, out PropertyConfiguration propConfig) 
+        {
+            if (name == EntityConstants.DisplayNameField) 
+            {
+                propConfig = null;
+
+                var displayNameProp = entityConfig.DisplayNamePropertyInfo?.Name;
+                return displayNameProp != null && entityConfig.Properties.TryGetValue(displayNameProp, out propConfig);
+            }
+
+            if (entityConfig.Properties.TryGetValue(name, out propConfig))
+                return true;
+
+            // try to search using camel case
+            var key = entityConfig.Properties.Keys.FirstOrDefault(k => k.ToCamelCase() == name);
+            return key != null && entityConfig.Properties.TryGetValue(key, out propConfig);
+        }
+
         /// <summary>
         /// Get detailed properties information required for quick search
         /// </summary>
@@ -333,6 +352,8 @@ namespace Shesha.QuickSearch
             var props = properties
                 .Select(propName =>
                 {
+                    var effectivePathParts = new List<string>();
+
                     var currentEntityConfig = entityConfig;
                     PropertyConfiguration property = null;
                     if (propName.Contains('.'))
@@ -341,7 +362,7 @@ namespace Shesha.QuickSearch
 
                         for (int i = 0; i < parts.Length; i++)
                         {
-                            if (!currentEntityConfig.Properties.TryGetValue(parts[i], out property))
+                            if (!TryGetProperty(currentEntityConfig, parts[i], out property))
                                 return null;
 
                             if (!property.IsMapped)
@@ -357,25 +378,32 @@ namespace Shesha.QuickSearch
                             else
                                 if (i != parts.Length - 1)
                                 return null; // only last part can be not an entity reference
+
+                            effectivePathParts.Add(property.PropertyInfo.Name);
                         }
                     }
-                    else
-                        currentEntityConfig.Properties.TryGetValue(propName, out property);
+                    else {
+                        TryGetProperty(currentEntityConfig, propName, out property);
+                        if (property != null)
+                            effectivePathParts.Add(property.PropertyInfo.Name);
+                    }
 
                     if (property == null)
                         return null;
 
+                    /*
                     if (property.PropertyInfo.Name == currentEntityConfig.CreatedUserPropertyInfo?.Name ||
                         property.PropertyInfo.Name == currentEntityConfig.LastUpdatedUserPropertyInfo?.Name ||
                         property.PropertyInfo.Name == currentEntityConfig.InactivateUserPropertyInfo?.Name)
                         return null;
+                    */
 
                     if (!property.IsMapped)
                         return null;
                     
                     return new
                     {
-                        Path = propName,
+                        Path = effectivePathParts.Delimited("."),
                         Property = property,
                         ReferenceListNamespace = property.ReferenceListNamespace,
                         ReferenceListName = property.ReferenceListName

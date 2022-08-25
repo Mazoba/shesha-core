@@ -1,5 +1,4 @@
-﻿using Abp.Application.Services;
-using Abp.Application.Services.Dto;
+﻿using Abp.Application.Services.Dto;
 using Abp.Dependency;
 using Abp.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +12,7 @@ namespace Shesha.Scheduler.Services.ScheduledJobs
     /// <summary>
     /// Scheduled Job Trigger application service
     /// </summary>
-    public class ScheduledJobTriggerAppService : AsyncCrudAppService<ScheduledJobTrigger, ScheduledJobTriggerDto, Guid>, ITransientDependency
+    public class ScheduledJobTriggerAppService : SheshaCrudServiceBase<ScheduledJobTrigger, ScheduledJobTriggerDto, Guid>, ITransientDependency
     {
         private readonly IScheduledJobManager _jobManager;
 

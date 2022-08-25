@@ -273,6 +273,76 @@ namespace Shesha.Tests.JsonLogic
 
         #region int operators
 
+        [Fact]
+        public void Int32Field_EqualsInt64_Convert()
+        {
+            var expression = ConvertToExpression<EntityWithDateProps>(@"{
+  ""and"": [
+    {
+      ""=="": [
+        {
+          ""var"": ""IntProp""
+        },
+        100
+      ]
+    }
+  ]
+}");
+            Assert.Equal($@"ent => (ent.IntProp == 100)", expression.ToString());
+        }
+
+        [Fact]
+        public void NullableInt32Field_EqualsInt64_Convert()
+        {
+            var expression = ConvertToExpression<EntityWithDateProps>(@"{
+  ""and"": [
+    {
+      ""=="": [
+        {
+          ""var"": ""NullableIntProp""
+        },
+        100
+      ]
+    }
+  ]
+}");
+            Assert.Equal($@"ent => (ent.NullableIntProp == Convert(100, Nullable`1))", expression.ToString());
+        }
+
+        #endregion
+
+        #region int64 operators
+
+        #region Equals
+        private readonly string _int64Field_Equals_expression = @"{
+  ""and"": [
+    {
+      ""=="": [
+        {
+          ""var"": ""CreatorUserId""
+        },
+        100
+      ]
+    }
+  ]
+}";
+
+        [Fact]
+        public void Int64Field_Equals_Convert()
+        {
+            var expression = ConvertToExpression<Person>(_int64Field_Equals_expression);
+            Assert.Equal($@"ent => (ent.{nameof(Person.CreatorUserId)} == Convert(100, Nullable`1))", expression.ToString());
+        }
+
+        [Fact]
+        public async Task Int64Field_Equals_Fetch()
+        {
+            var data = await TryFetchData<Person, Guid>(_int64Field_Equals_expression);
+            Assert.NotNull(data);
+        }
+
+        #endregion
+
         #region Less Than
         private readonly string _int64Field_LessThan_expression = @"{
   ""and"": [
@@ -1023,6 +1093,71 @@ namespace Shesha.Tests.JsonLogic
 
         #endregion
 
+        #region reference list
+
+        #region Equals
+        private readonly string _reflistField_Contains_expression = @"{
+  ""and"": [
+    {
+      ""in"": [
+        {
+          ""var"": ""Title""
+        },
+        [1,2,3]
+      ]
+    }
+  ]
+}";
+
+        [Fact]
+        public void reflistField_Equals_Convert()
+        {
+            var expression = ConvertToExpression<Person>(_reflistField_Contains_expression);
+            Assert.Equal(@"ent => (((Convert(ent.Title, Nullable`1) == Convert(1, Nullable`1)) OrElse (Convert(ent.Title, Nullable`1) == Convert(2, Nullable`1))) OrElse (Convert(ent.Title, Nullable`1) == Convert(3, Nullable`1)))", expression.ToString());
+        }
+
+        [Fact]
+        public async Task reflistField_Equals_Fetch()
+        {
+            var data = await TryFetchData<Person, Guid>(_reflistField_Contains_expression);
+            Assert.NotNull(data);
+        }
+
+        #endregion
+
+        #region Entity reference `in`
+
+        private readonly string _entityReference_In_Convert_expression = @"{
+  ""and"": [
+    {
+      ""in"": [
+        {
+          ""var"": ""Id""
+        },
+        [""24007BA5-697B-417C-91BA-ED92F3F31F3A"", ""D197A7B3-5505-430C-9D98-CD64F1A638FA""]
+      ]
+    }
+  ]
+}";
+
+        [Fact]
+        public void entityReference_In_Convert()
+        {
+            var expression = ConvertToExpression<Person>(_entityReference_In_Convert_expression);
+            Assert.Equal(@"ent => ((ent.Id == ""24007BA5-697B-417C-91BA-ED92F3F31F3A"".ToGuid()) OrElse (ent.Id == ""D197A7B3-5505-430C-9D98-CD64F1A638FA"".ToGuid()))", expression.ToString());
+        }
+
+        [Fact]
+        public async Task entityReference_In_Fetch()
+        {
+            var data = await TryFetchData<Person, Guid>(_entityReference_In_Convert_expression);
+            Assert.NotNull(data);
+        }
+
+        #endregion
+
+        #endregion
+
         public class EntityWithDateProps: Entity<Guid> 
         {
             public virtual DateTime? NullableDateTimeProp { get; set; }
@@ -1038,6 +1173,8 @@ namespace Shesha.Tests.JsonLogic
             public virtual DateTime DateProp { get; set; }
             
             public virtual TimeSpan TimeProp { get; set; }
+            public virtual int IntProp { get; set; }
+            public virtual int? NullableIntProp { get; set; }
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using Abp.Application.Services;
-using Abp.Domain.Repositories;
+﻿using Abp.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Shesha.Domain;
 using Shesha.Services;
@@ -10,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Shesha.ReferenceLists
 {
-    public class ReferenceListAppService: AsyncCrudAppService<ReferenceList, ReferenceListDto, Guid>
+    public class ReferenceListAppService: SheshaCrudServiceBase<ReferenceList, ReferenceListDto, Guid>
     {
         private readonly ReferenceListHelper _refListHelper;
 

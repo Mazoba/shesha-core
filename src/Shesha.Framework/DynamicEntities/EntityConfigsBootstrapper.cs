@@ -170,7 +170,7 @@ namespace Shesha.DynamicEntities
                             Source = Domain.Enums.MetadataSourceType.ApplicationCode,
                             SortOrder = nextSortOrder++,
                         };
-                        MapProperty(cp, dbp);
+                        MapProperty(cp, dbp, false);
 
                         await _entityPropertyRepository.InsertAsync(dbp);
                     }
@@ -225,7 +225,7 @@ namespace Shesha.DynamicEntities
                     dbp.ItemsType = new EntityProperty();
 
                 dbp.ItemsType.EntityConfig = dbp.EntityConfig;
-                MapProperty(cp.ItemsType, dbp.ItemsType);
+                MapProperty(cp.ItemsType, dbp.ItemsType, false);
 
                 dbp.ItemsType.Source = Domain.Enums.MetadataSourceType.ApplicationCode;
                 dbp.ItemsType.SortOrder = 0;
@@ -233,7 +233,7 @@ namespace Shesha.DynamicEntities
             }
         }
 
-        private void MapProperty(PropertyMetadataDto src, EntityProperty dst, bool skipConfigurable = true) 
+        private void MapProperty(PropertyMetadataDto src, EntityProperty dst, bool skipConfigurable) 
         {
             dst.Name = src.Path;
             dst.DataType = src.DataType;

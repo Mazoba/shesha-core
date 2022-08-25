@@ -11,15 +11,19 @@ namespace Shesha.JsonLogic
     public interface IJsonLogic2LinqConverter
     {
         /// <summary>
-        /// Convert Json Logic to HQL
+        /// Parse JsonLogic expression
         /// </summary>
+        /// <typeparam name="T"></typeparam>
         /// <param name="rule"></param>
-        /// <param name="context"></param>
         /// <returns></returns>
-        void Convert(JToken rule, JsonLogic2LinqConverterContext context);
-
         Expression<Func<T, bool>> ParseExpressionOf<T>(JObject rule);
         
+        /// <summary>
+        /// Parse predicate
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="rule"></param>
+        /// <returns></returns>
         Func<T, bool> ParsePredicateOf<T>(JObject rule);
     }
 }

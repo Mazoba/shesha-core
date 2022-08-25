@@ -21,11 +21,6 @@ namespace Shesha.JsonLogic
     /// </summary>
     public class JsonLogic2LinqConverter : IJsonLogic2LinqConverter, ITransientDependency
     {
-        public void Convert(JToken rule, JsonLogic2LinqConverterContext context)
-        {
-            throw new NotImplementedException();
-        }
-
         private const string StringStr = "string";
 
         private readonly string BooleanStr = nameof(Boolean).ToLower();
@@ -76,7 +71,7 @@ namespace Shesha.JsonLogic
             if (rule is JValue value)
                 return Expression.Constant(value.Value);
 
-            if (rule is JArray array)
+            if (rule is JArray array) 
                 throw new NotImplementedException();
 
             if (rule is JObject ruleObj)
@@ -434,19 +429,40 @@ namespace Shesha.JsonLogic
 
                     case JsOperators.In:
                         {
-                            var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new Type[] { typeof(string) });
-
                             if (@operator.Arguments.Count() != 2)
                                 throw new Exception($"{JsOperators.In} operator require two arguments");
 
-                            var arg1 = ParseTree<T>(@operator.Arguments[0], param);
-                            var arg2 = ParseTree<T>(@operator.Arguments[1], param);
 
-                            // note: `in` arguments are reversed
-                            return Expression.Call(
-                                    arg2,
-                                    containsMethod,
-                                    arg1);
+                            if (@operator.Arguments[1] is JArray arrayArg)
+                            {
+                                var parsedArray = arrayArg.Select(i => ParseTree<T>(i, param)).ToArray();
+                                var arg = ParseTree<T>(@operator.Arguments[0], param);
+                                if (arg is MemberExpression memberExpr && memberExpr.Member.IsReferenceListProperty()) 
+                                {
+                                    arg = Expression.Convert(arg, typeof(Int64?));
+                                }
+
+                                var arrExpressions = parsedArray.Select(item => {
+                                    ConvertGuids(arg, ref item);
+                                    ConvertNumericConsts(arg, ref item);
+                                    ConvertNullable(arg, ref item);
+
+                                    return Expression.Equal(arg, item/*Expression.Convert(item, typeof(Int64?))*/);
+                                }).ToArray();
+                                return CombineExpressions<T>(arrExpressions, Expression.OrElse, param);
+                            }
+                            else {
+                                var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new Type[] { typeof(string) });
+
+                                var arg1 = ParseTree<T>(@operator.Arguments[0], param);
+                                var arg2 = ParseTree<T>(@operator.Arguments[1], param);
+
+                                // note: `in` arguments are reversed
+                                return Expression.Call(
+                                        arg2,
+                                        containsMethod,
+                                        arg1);
+                            }
                         }
 
                     case JsOperators.EndsWith:
@@ -583,8 +599,8 @@ namespace Shesha.JsonLogic
 
         private Expression SafeNullable(Expression left, Expression right, Binder binder) 
         {
-            ConvertNullable(ref left, ref right);
-            ConvertNullable(ref right, ref left);
+            ConvertNullable(left, ref right);
+            ConvertNullable(right, ref left);
 
             return binder(left, right);
         }
@@ -637,7 +653,7 @@ namespace Shesha.JsonLogic
             return expression is MemberExpression && expression.Type.GetUnderlyingTypeIfNullable() == typeof(TimeSpan);
         }
         
-        private void ConvertGuids(ref Expression a, ref Expression b)
+        private void ConvertGuids(Expression a, ref Expression b)
         {
             if (a.Type == typeof(Guid) && b.Type == typeof(string))
             {
@@ -650,7 +666,26 @@ namespace Shesha.JsonLogic
             }
         }
 
-        private void ConvertTicksTimeSpan(ref Expression a, ref Expression b)
+        private void ConvertNumericConsts(Expression memberExpressionToCompare, ref Expression numericConstToConvert)
+        {
+            if (!(memberExpressionToCompare is MemberExpression memberExpr && numericConstToConvert is ConstantExpression constExpr))
+                return;
+
+            if (memberExpr.Type.GetUnderlyingTypeIfNullable() == typeof(int) && constExpr.Type == typeof(Int64)) 
+            {
+                var constValue = (Int64)constExpr.Value;
+                if (constValue <= int.MaxValue)
+                    numericConstToConvert = Expression.Constant(Convert.ToInt32(constValue));
+                else
+                    throw new OverflowException($"Constant value must be not grester than {int.MaxValue} (max int size) to compare with {memberExpr.Member.Name}, currtent value is {constValue}");
+            }
+            if (memberExpr.Type.GetUnderlyingTypeIfNullable() == typeof(Int64) && constExpr.Type == typeof(int))
+            {
+                numericConstToConvert = Expression.Constant((Int64)constExpr.Value);
+            }
+        }
+
+        private void ConvertTicksTimeSpan(Expression a, ref Expression b)
         {
             if (a.Type == typeof(TimeSpan) && b.Type == typeof(Int64))
             {
@@ -663,7 +698,7 @@ namespace Shesha.JsonLogic
             }
         }
 
-        private void ConvertNullable(ref Expression a, ref Expression b) 
+        private void ConvertNullable(Expression a, ref Expression b) 
         {
             if (ExpressionExtensions.IsNullableExpression(a) && !ExpressionExtensions.IsNullableExpression(b))
                 b = Expression.Convert(b, a.Type);
@@ -686,12 +721,15 @@ namespace Shesha.JsonLogic
             var right = pair.Right;
 
             // if one of arguments is a Guid and another one is a string - convert string to Guid
-            ConvertGuids(ref left, ref right);
-            ConvertGuids(ref right, ref left);
+            ConvertGuids(left, ref right);
+            ConvertGuids(right, ref left);
+
+            ConvertNumericConsts(left, ref right);
+            ConvertNumericConsts(right, ref left);
 
             // check nullability in pairs and convert not nullable argument to nullable if required
-            ConvertNullable(ref left, ref right);
-            ConvertNullable(ref right, ref left);
+            ConvertNullable(left, ref right);
+            ConvertNullable(right, ref left);
 
             return new ExpressionPair(left, right);
         }

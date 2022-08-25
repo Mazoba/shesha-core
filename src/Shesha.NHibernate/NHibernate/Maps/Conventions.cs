@@ -114,9 +114,14 @@ namespace Shesha.NHibernate.Maps
             });
             mapper.IsTablePerConcreteClass((type, declared) => false);
 
+            mapper.IsOneToOne((mi, declared) =>
+            {
+                return Attribute.IsDefined(mi, (typeof(OneToOneAttribute))) || declared || _defaultMapper.ModelInspector.IsOneToOne(mi);
+            });
             mapper.IsOneToMany((mi, declared) =>
             {
-                if (Attribute.IsDefined(mi, (typeof(ManyToManyAttribute))))
+                if (Attribute.IsDefined(mi, (typeof(ManyToManyAttribute))) ||
+                    Attribute.IsDefined(mi, (typeof(OneToOneAttribute))))
                 {
                     return false;
                 }
@@ -324,7 +329,15 @@ namespace Shesha.NHibernate.Maps
                 }
             };
 
-            mapper.BeforeMapManyToOne += (modelInspector, propertyPath, map) =>
+            mapper.BeforeMapOneToOne += (modelInspector, member, map) =>
+            {
+                map.Cascade(Cascade.All);
+                map.Constrained(true);
+                map.Fetch(FetchKind.Join);
+                map.ForeignKey("none");
+            };
+
+             mapper.BeforeMapManyToOne += (modelInspector, propertyPath, map) =>
             {
                 string columnPrefix = MappingHelper.GetColumnPrefix(propertyPath.LocalMember.DeclaringType);
 
