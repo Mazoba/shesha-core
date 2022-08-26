@@ -1,11 +1,10 @@
 ﻿using Abp.Domain.Entities;
+using GraphQL;
 using GraphQL.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Shesha.GraphQL.Provider.GraphTypes;
 using Shesha.GraphQL.Provider.Queries;
 using System;
-using GraphQL;
-using Abp.Application.Services.Dto;
 
 namespace Shesha.GraphQL.Provider.Schemas
 {
@@ -26,6 +25,8 @@ namespace Shesha.GraphQL.Provider.Schemas
             */
             this.RegisterTypeMapping<TEntity, GraphQLGenericType<TEntity>>();
             this.RegisterTypeMapping<PagedResultDtoType<TEntity>, GraphQLGenericType<PagedResultDtoType<TEntity>>>();
+
+            this.NameConverter = ShaCamelCaseNameConverter.Instance;
         }
     }
 }
