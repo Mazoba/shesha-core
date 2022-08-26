@@ -15,6 +15,7 @@ using Shesha.GraphQL.Mvc;
 using Shesha.GraphQL.Provider;
 using Shesha.Metadata;
 using Shesha.QuickSearch;
+using Shesha.Utilities;
 using Shesha.Web;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -128,7 +129,7 @@ namespace Shesha
         {
             CheckGetAllPermission();
 
-            var schemaName = Abp.Extensions.StringExtensions.ToCamelCase(typeof(TEntity).Name);
+            var schemaName = StringHelper.ToCamelCase(typeof(TEntity).Name);
 
             var schema = await SchemaContainer.GetOrDefaultAsync(schemaName);
             var httpContext = AppContextHelper.Current;
@@ -181,7 +182,7 @@ namespace Shesha
         {
             CheckGetAllPermission();
 
-            var schemaName = Abp.Extensions.StringExtensions.ToCamelCase(typeof(TEntity).Name);
+            var schemaName = StringHelper.ToCamelCase(typeof(TEntity).Name);
 
             var schema = await SchemaContainer.GetOrDefaultAsync(schemaName);
             var httpContext = AppContextHelper.Current;
@@ -243,13 +244,13 @@ namespace Shesha
                 return properties;
 
             var regex = new Regex(@"\s");
-            return string.Join(' ', regex.Split(properties).Select(p => p.ToCamelCase()));
+            return string.Join(' ', regex.Split(properties).Select(p => StringHelper.ToCamelCase(p)));
         }
 
         private void AppendProperty(StringBuilder sb, EntityPropertyDto property)
         {
             // todo: use FieldNameConverter to get correct case of the field names
-            var propertyName = property.Name.ToCamelCase();
+            var propertyName = StringHelper.ToCamelCase(property.Name);
 
             switch (property.DataType)
             {
