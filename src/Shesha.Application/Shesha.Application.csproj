@@ -26,6 +26,13 @@
     <None Remove="ObjectMapper\**" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Excel\template.xlsx" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Excel\template.xlsx" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" Version="2.10.1" />
     <PackageReference Include="Hangfire.Core" Version="1.7.25" />
     <PackageReference Include="MediaTypeMap.Core" Version="2.3.3" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="5.0.0" />
