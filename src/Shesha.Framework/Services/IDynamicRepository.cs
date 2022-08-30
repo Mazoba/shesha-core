@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Shesha.Configuration.Runtime;
@@ -47,5 +48,7 @@ namespace Shesha.Services
         /// Returns queryable source (<see cref="IQueryable"/>) with entities of the specified type
         /// </summary>
         IQueryable<T> Query<T>();
+
+        bool Any(Type type, Dictionary<string, object> keys);
     }
 }

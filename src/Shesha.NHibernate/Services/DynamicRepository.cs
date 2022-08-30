@@ -1,12 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Abp.Dependency;
 using Abp.Domain.Uow;
 using NHibernate;
 using NHibernate.Context;
+using NHibernate.Criterion;
+using NHibernate.Util;
 using Shesha.Configuration.Runtime;
+using Shesha.Domain;
 using Shesha.Domain.Attributes;
+using Shesha.NHibernate.Session;
 using Shesha.NHibernate.UoW;
 using Shesha.Utilities;
 
@@ -75,6 +80,20 @@ namespace Shesha.Services
         public IQueryable<T> Query<T>()
         {
             return CurrentSession.Query<T>();
+        }
+
+        /// <inheritdoc/>
+        public bool Any(Type type, Dictionary<string, object> keys)
+        {
+            var criteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
+            foreach (var key in keys)
+            {
+                criteria.FilterClauses.Add($"ent.{key.Key} = '{key.Value}'");
+            }
+
+            var q = CurrentSession.CreateQuery(type, criteria);
+
+            return q.Enumerable<object>().Any();
         }
     }
 }
