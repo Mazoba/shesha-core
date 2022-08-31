@@ -10,7 +10,7 @@ namespace Shesha.DynamicEntities
 {
     public interface IEntityModelBinder
     {
-        bool BindProperties(JObject jobject, object entity, List<ValidationResult> validationResult,
+        Task<bool> BindPropertiesAsync(JObject jobject, object entity, List<ValidationResult> validationResult,
             string propertyName = null);
     }
 }

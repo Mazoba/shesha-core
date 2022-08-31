@@ -32,14 +32,14 @@ namespace Shesha.DynamicEntities
         /// </summary>
         public bool DeleteUnreferenced { get; set; }
 
-        public Type CascadeRuleEntityFinder { get; set; }
+        public Type CascadeEntityCreator { get; set; }
 
-        public CascadeUpdateRulesAttribute(bool canUpdate = false, bool canCreate = false , bool deleteUnreferenced = false, Type cascadeRuleEntityFinder = null)
+        public CascadeUpdateRulesAttribute(bool canUpdate = false, bool canCreate = false , bool deleteUnreferenced = false, Type cascadeEntityCreator = null)
         {
             CanUpdate = canUpdate;
             CanCreate = canCreate;
             DeleteUnreferenced = deleteUnreferenced;
-            CascadeRuleEntityFinder = cascadeRuleEntityFinder;
+            CascadeEntityCreator = cascadeEntityCreator;
         }
     }
 }

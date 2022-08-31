@@ -45,10 +45,13 @@ namespace Shesha.Services
         Task SaveOrUpdateAsync(object entity);
 
         /// <summary>
+        /// Delete specified entity
+        /// </summary>
+        Task DeleteAsync(object entity);
+
+        /// <summary>
         /// Returns queryable source (<see cref="IQueryable"/>) with entities of the specified type
         /// </summary>
         IQueryable<T> Query<T>();
-
-        bool Any(Type type, Dictionary<string, object> keys);
     }
 }

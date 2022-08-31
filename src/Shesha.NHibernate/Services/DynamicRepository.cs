@@ -77,23 +77,16 @@ namespace Shesha.Services
         }
 
         /// <inheritdoc/>
-        public IQueryable<T> Query<T>()
+        public async Task DeleteAsync(object entity)
         {
-            return CurrentSession.Query<T>();
+            var session = CurrentSession;
+            await session.DeleteAsync(entity);
         }
 
         /// <inheritdoc/>
-        public bool Any(Type type, Dictionary<string, object> keys)
+        public IQueryable<T> Query<T>()
         {
-            var criteria = new FilterCriteria(FilterCriteria.FilterMethod.Hql);
-            foreach (var key in keys)
-            {
-                criteria.FilterClauses.Add($"ent.{key.Key} = '{key.Value}'");
-            }
-
-            var q = CurrentSession.CreateQuery(type, criteria);
-
-            return q.Enumerable<object>().Any();
+            return CurrentSession.Query<T>();
         }
     }
 }

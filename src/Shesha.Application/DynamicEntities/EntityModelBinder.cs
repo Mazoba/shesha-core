@@ -1,13 +1,19 @@
 ﻿using Abp.Dependency;
 using Abp.Domain.Entities;
+using Abp.Domain.Entities.Auditing;
+using Abp.Domain.Repositories;
 using Abp.Extensions;
 using Abp.Reflection;
 using ElmahCore;
 using log4net.Util;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Newtonsoft.Json.Linq;
+using NHibernate;
+using NHibernate.Type;
 using NHibernate.Util;
 using Shesha.Configuration.Runtime;
+using Shesha.Domain;
+using Shesha.Domain.Attributes;
 using Shesha.DynamicEntities.Dtos;
 using Shesha.EntityHistory;
 using Shesha.Extensions;
@@ -20,6 +26,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Linq.Dynamic.Core;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,22 +36,31 @@ namespace Shesha.DynamicEntities
 {
     public class EntityModelBinder : IEntityModelBinder, ITransientDependency
     {
-        private IDynamicRepository _dynamicRepository;
-        private IMetadataProvider _metadataProvider;
-        private IIocManager _iocManager;
+        private readonly IDynamicRepository _dynamicRepository;
+        private readonly IRepository<EntityProperty, Guid> _entityPropertyRepository;
+        private readonly IMetadataProvider _metadataProvider;
+        private readonly IIocManager _iocManager;
+        private readonly ISessionFactory _sessionFactory;
+        private readonly ITypeFinder _typeFinder;
 
         public EntityModelBinder(
             IDynamicRepository dynamicRepository,
+            IRepository<EntityProperty, Guid> entityPropertyRepository,
             IMetadataProvider metadataProvider,
-            IIocManager iocManager
+            IIocManager iocManager,
+            ISessionFactory sessionFactory,
+            ITypeFinder typeFinder
             )
         {
             _dynamicRepository = dynamicRepository;
+            _entityPropertyRepository = entityPropertyRepository;
             _metadataProvider = metadataProvider;
             _iocManager = iocManager;
+            _sessionFactory = sessionFactory;
+            _typeFinder = typeFinder;
         }
 
-        public bool BindProperties(
+        public async Task<bool> BindPropertiesAsync(
             JObject jobject,
             object entity,
             List<ValidationResult> validationResult,
@@ -87,7 +104,7 @@ namespace Shesha.DynamicEntities
                                 case DataTypes.ReferenceListItem:
                                 case DataTypes.Boolean:
                                 case DataTypes.Guid:
-                                //case DataTypes.Enum: // Enum binded as integer
+                                    //case DataTypes.Enum: // Enum binded as integer
                                     object parsedValue = null;
                                     result = Parser.TryParseToValueType(jproperty.Value.ToString(), property.PropertyType, out parsedValue, isDateOnly: propType.DataType == DataTypes.Date);
                                     if (result)
@@ -100,7 +117,7 @@ namespace Shesha.DynamicEntities
                                     {
                                         var newObject = Activator.CreateInstance(property.PropertyType);
                                         // create a new object
-                                        if (BindProperties(childSimplyObject, newObject, validationResult, jproperty.Name))
+                                        if (await BindPropertiesAsync(childSimplyObject, newObject, validationResult, jproperty.Name))
                                             property.SetValue(entity, newObject);
                                     }
                                     else
@@ -109,12 +126,12 @@ namespace Shesha.DynamicEntities
                                     }
                                     break;
                                 case DataTypes.EntityReference:
+                                    // Get the rules of cascade update
+                                    var cascadeAttr = property.GetCustomAttribute<CascadeUpdateRulesAttribute>()
+                                        ?? property.PropertyType.GetCustomAttribute<CascadeUpdateRulesAttribute>();
+
                                     if (jproperty.Value is JObject childObject)
                                     {
-                                        // Get the rules of cascade update
-                                        var cascadeAttr = property.GetCustomAttribute<CascadeUpdateRulesAttribute>()
-                                            ?? property.PropertyType.GetCustomAttribute<CascadeUpdateRulesAttribute>();
-
                                         var jchildId = childObject.Property("id")?.Value.ToString();
                                         if (!string.IsNullOrEmpty(jchildId))
                                         {
@@ -142,7 +159,7 @@ namespace Shesha.DynamicEntities
                                                     validationResult.Add(new ValidationResult($"`{property.Name}` is not allowed to be updated."));
                                                     break;
                                                 }
-                                                if (!BindProperties(childObject, newChildEntity, validationResult, jproperty.Name))
+                                                if (!(await BindPropertiesAsync(childObject, newChildEntity, validationResult, jproperty.Name)))
                                                     break;
                                             }
 
@@ -151,7 +168,7 @@ namespace Shesha.DynamicEntities
                                                 property.SetValue(entity, newChildEntity);
                                                 if (childEntity != null && (cascadeAttr?.DeleteUnreferenced ?? false))
                                                 {
-                                                    DeleteUnreferencedEntity(childEntity, validationResult);
+                                                    await DeleteUnreferencedEntityAsync(childEntity, entity);
                                                 }
                                             }
                                         }
@@ -162,25 +179,31 @@ namespace Shesha.DynamicEntities
                                             {
                                                 var childEntity = Activator.CreateInstance(property.PropertyType);
                                                 // create a new object
-                                                if (!BindProperties(childObject, childEntity, validationResult, jproperty.Name))
+                                                if (!(await BindPropertiesAsync(childObject, childEntity, validationResult, jproperty.Name)))
                                                     break;
 
-                                                if (cascadeAttr?.CascadeRuleEntityFinder != null)
+                                                if (cascadeAttr?.CascadeEntityCreator != null)
                                                 {
                                                     // try to select entity by key fields
-                                                    if (Activator.CreateInstance(cascadeAttr.CascadeRuleEntityFinder) is ICascadeRuleEntityFinder finder)
+                                                    if (Activator.CreateInstance(cascadeAttr.CascadeEntityCreator) is ICascadeEntityCreator creator)
                                                     {
-                                                        finder.IocManager = _iocManager;
-                                                        var foundEntity = finder.FindEntity(new CascadeRuleEntityFinderInfo(childEntity));
+                                                        creator.IocManager = _iocManager;
+                                                        var data = new CascadeRuleEntityFinderInfo(childEntity);
+                                                        if (!creator.VerifyEntity(data, validationResult))
+                                                            break;
+
+                                                        data._NewObject = childEntity = creator.PrepareEntity(data);
+
+                                                        var foundEntity = creator.FindEntity(data);
                                                         if (foundEntity != null)
                                                         {
-                                                            if (BindProperties(childObject, foundEntity, validationResult, jproperty.Name))
-                                                                property.SetValue(entity, childEntity);
+                                                            if (await BindPropertiesAsync(childObject, foundEntity, validationResult, jproperty.Name))
+                                                                property.SetValue(entity, foundEntity);
                                                             break;
                                                         }
                                                     }
                                                 }
-                                                
+
                                                 if (!(cascadeAttr?.CanCreate ?? false))
                                                 {
                                                     validationResult.Add(new ValidationResult($"`{property.Name}` is not allowed to be created."));
@@ -198,7 +221,39 @@ namespace Shesha.DynamicEntities
 
                                                 if (childEntity != null && (cascadeAttr?.DeleteUnreferenced ?? false))
                                                 {
-                                                    DeleteUnreferencedEntity(childEntity, validationResult);
+                                                    await DeleteUnreferencedEntityAsync(childEntity, entity);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        var jchildId = jproperty.Value.ToString();
+                                        if (!string.IsNullOrEmpty(jchildId))
+                                        {
+                                            var childEntity = property.GetValue(entity);
+                                            var newChildEntity = childEntity;
+                                            var childId = childEntity?.GetType().GetProperty("Id")?.GetValue(childEntity)?.ToString();
+
+                                            // if child entity is specified
+                                            if (childId?.ToLower() != jchildId?.ToLower())
+                                            {
+                                                // id changed
+                                                newChildEntity = _dynamicRepository.Get(property.PropertyType, jchildId);
+
+                                                if (newChildEntity == null)
+                                                {
+                                                    validationResult.Add(new ValidationResult($"Entity with Id='{jchildId}' not found for `{jproperty.Path}`."));
+                                                    break;
+                                                }
+                                            }
+
+                                            if (childEntity != newChildEntity)
+                                            {
+                                                property.SetValue(entity, newChildEntity);
+                                                if (childEntity != null && (cascadeAttr?.DeleteUnreferenced ?? false))
+                                                {
+                                                    await DeleteUnreferencedEntityAsync(childEntity, entity);
                                                 }
                                             }
                                         }
@@ -281,9 +336,64 @@ namespace Shesha.DynamicEntities
             return !validationResult.Any();
         }
 
-        private bool DeleteUnreferencedEntity(object entity, List<ValidationResult> validationResult)
+        private async Task<bool> DeleteUnreferencedEntityAsync(object entity, object parentEntity)
         {
-            return true;
+            var typeShortAlias = entity.GetType().GetCustomAttribute<EntityAttribute>()?.TypeShortAlias ?? entity.GetType().FullName;
+            var references = _entityPropertyRepository.GetAll().Where(x => x.EntityType == typeShortAlias);
+            if (!references.Any())
+                return false;
+
+            var parentId = Shesha.Extensions.EntityExtensions.GetId(parentEntity);
+            if (parentId == null)
+                throw new CascadeUpdateRuleException("Parent object does not implement IEntity interface");
+
+            var id = Shesha.Extensions.EntityExtensions.GetId(entity);
+            if (id == null)
+                throw new CascadeUpdateRuleException("Related object does not implement IEntity interface");
+
+            var any = false;
+            foreach (var reference in references)
+            {
+                var refType = _typeFinder.Find(x => x.Name == reference.EntityConfig.ClassName).FirstOrDefault();
+                // Do not raise error becase some EntityConfig can be irrelevant
+                if (refType == null) continue;
+
+                var refParam = Expression.Parameter(refType);
+                var query = Expression.Lambda(
+                    Expression.Equal(
+                        Expression.Property(Expression.Property(refParam, reference.Name), "Id"),
+                        Expression.Constant(id is Guid ? (Guid)id : id is Int64 ? (Int64)id : id.ToString())
+                        ),
+                    refParam);
+
+                var repoType = typeof(IRepository<,>).MakeGenericType(refType, refType.GetProperty("Id")?.PropertyType);
+                var repo = _iocManager.Resolve(repoType);
+                var where = (repoType.GetMethod("GetAll")?.Invoke(repo, null) as IQueryable).Where(query);
+
+                var test = where.Any();
+
+                if (refType.IsAssignableFrom(parentEntity.GetType()))
+                {
+                    var queryExclude = Expression.Lambda(
+                        Expression.NotEqual(
+                            Expression.Property(refParam, "Id"),
+                            Expression.Constant(parentId is Guid ? (Guid)parentId : parentId is Int64 ? (Int64)parentId : parentId.ToString())
+                            ),
+                        refParam);
+                    where = where.Where(queryExclude);
+                }
+
+                any = where.Any();
+                if (any)
+                    break;
+            }
+
+            if (!any)
+            {
+                await _dynamicRepository.DeleteAsync(entity);
+                return true;
+            }
+            return false;
         }
     }
 }
