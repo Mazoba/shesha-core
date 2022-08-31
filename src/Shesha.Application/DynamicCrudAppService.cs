@@ -43,7 +43,7 @@ namespace Shesha
             if (jObject != null)
             {
                 var validationResults = new List<ValidationResult>();
-                var result = MapJObjectToStaticPropertiesEntityAsync<TEntity, TPrimaryKey>(jObject, entity, validationResults);
+                var result = await MapJObjectToStaticPropertiesEntityAsync<TEntity, TPrimaryKey>(jObject, entity, validationResults);
                 if (!result)
                     throw new AbpValidationException("Please correct the errors and try again", validationResults);
 
@@ -79,7 +79,7 @@ namespace Shesha
             if (jObject != null)
             {
                 var validationResults = new List<ValidationResult>();
-                var result = MapJObjectToStaticPropertiesEntityAsync<TEntity, TPrimaryKey>(jObject, entity, validationResults);
+                var result = await MapJObjectToStaticPropertiesEntityAsync<TEntity, TPrimaryKey>(jObject, entity, validationResults);
 
                 if (!result)
                     throw new AbpValidationException("Please correct the errors and try again", validationResults);

@@ -353,13 +353,13 @@ namespace Shesha
         /// <param name="entity">Destination entity</param>
         /// <param name="validationResult">Validation result</param>
         /// <returns></returns>
-        protected bool MapJObjectToStaticPropertiesEntityAsync<TEntity, TPrimaryKey>(
+        protected async Task<bool> MapJObjectToStaticPropertiesEntityAsync<TEntity, TPrimaryKey>(
             JObject jObject,
             TEntity entity,
             List<ValidationResult> validationResult)
             where TEntity : class, IEntity<TPrimaryKey>
         {
-            return EntityModelBinder.BindProperties(jObject, entity, validationResult);
+            return await EntityModelBinder.BindPropertiesAsync(jObject, entity, validationResult);
         }
 
         /// <summary>

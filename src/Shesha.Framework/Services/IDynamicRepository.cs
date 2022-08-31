@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Shesha.Configuration.Runtime;
@@ -42,6 +43,11 @@ namespace Shesha.Services
         /// Saves or update specified entity
         /// </summary>
         Task SaveOrUpdateAsync(object entity);
+
+        /// <summary>
+        /// Delete specified entity
+        /// </summary>
+        Task DeleteAsync(object entity);
 
         /// <summary>
         /// Returns queryable source (<see cref="IQueryable"/>) with entities of the specified type
