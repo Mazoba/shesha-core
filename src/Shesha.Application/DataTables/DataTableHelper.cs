@@ -355,7 +355,7 @@ namespace Shesha.DataTables
         {
             var prop = propName == null
                 ? null
-                : ReflectionHelper.GetProperty(rowType, propName);
+                : ReflectionHelper.GetProperty(rowType, propName, true);
 
             var displayAttribute = prop != null
                 ? prop.GetAttribute<DisplayAttribute>()
