@@ -85,6 +85,7 @@ namespace Shesha.Scheduler.Services.ScheduledJobs
         /// <param name="triggerId">Trigger Id</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
+        [ForwardDisableConcurrentExecution]
         public async Task RunTriggerAsync(Guid triggerId, CancellationToken cancellationToken)
         {
             var triggerService = IocManager.Resolve<IRepository<ScheduledJobTrigger, Guid>>();
