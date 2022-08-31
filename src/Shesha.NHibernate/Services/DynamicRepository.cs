@@ -1,12 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Abp.Dependency;
 using Abp.Domain.Uow;
 using NHibernate;
 using NHibernate.Context;
+using NHibernate.Criterion;
+using NHibernate.Util;
 using Shesha.Configuration.Runtime;
+using Shesha.Domain;
 using Shesha.Domain.Attributes;
+using Shesha.NHibernate.Session;
 using Shesha.NHibernate.UoW;
 using Shesha.Utilities;
 
@@ -69,6 +74,13 @@ namespace Shesha.Services
         {
             var session = CurrentSession;
             await session.SaveOrUpdateAsync(entity);
+        }
+
+        /// <inheritdoc/>
+        public async Task DeleteAsync(object entity)
+        {
+            var session = CurrentSession;
+            await session.DeleteAsync(entity);
         }
 
         /// <inheritdoc/>
