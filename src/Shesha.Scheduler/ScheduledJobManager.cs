@@ -10,6 +10,7 @@ using Shesha.Reflection;
 using Shesha.Scheduler.Attributes;
 using Shesha.Scheduler.Domain;
 using Shesha.Scheduler.Domain.Enums;
+using Shesha.Scheduler.Exceptions;
 using Shesha.Scheduler.Services.ScheduledJobs;
 using Shesha.Scheduler.Utilities;
 using System;
@@ -42,7 +43,7 @@ namespace Shesha.Scheduler
             try
             {
                 var activeTriggers = await _triggerRepository.GetAll()
-                    .Where(t => t.Job.JobStatus == JobStatus.Active && t.Job.StartupMode == StartUpMode.Automatic && t.Status == TriggerStatus.Enabled)
+                    .Where(t => !t.Job.IsDeleted && t.Job.JobStatus == JobStatus.Active && t.Job.StartupMode == StartUpMode.Automatic && t.Status == TriggerStatus.Enabled)
                     .ToListAsync();
 
                 // remove all unused triggers
@@ -83,10 +84,10 @@ namespace Shesha.Scheduler
                 {
                     var trigger = _triggerRepository.Get(triggerId);
                     if (trigger.IsDeleted)
-                        throw new Exception($"Trigger with Id = '{triggerId}' is deleted, execution skipped");
+                        throw new TriggerDeletedException(triggerId);
 
                     if (trigger.Job.IsDeleted)
-                        throw new Exception($"Job with Id = '{triggerId}' is deleted, execution of trigger '{triggerId}' skipped");
+                        throw new JobDeletedException(trigger.Job.Id, trigger.Id);
 
                     jobId = trigger.Job.Id;
                 }

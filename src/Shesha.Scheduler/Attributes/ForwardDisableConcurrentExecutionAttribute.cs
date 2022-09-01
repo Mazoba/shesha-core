@@ -1,7 +1,10 @@
 ﻿using Hangfire;
 using Hangfire.Common;
+using Hangfire.Logging;
 using Hangfire.Server;
+using Hangfire.States;
 using Shesha.Reflection;
+using Shesha.Scheduler.Exceptions;
 using Shesha.Scheduler.Services.ScheduledJobs;
 using Shesha.Services;
 using System;
@@ -13,10 +16,12 @@ namespace Shesha.Scheduler.Attributes
     /// <summary>
     /// Attribute to forward <see cref="DisableConcurrentExecutionAttribute"/> to <see cref="ScheduledJobAppService"/>
     /// </summary>
-    public class ForwardDisableConcurrentExecutionAttribute : JobFilterAttribute, IServerFilter
+    public class ForwardDisableConcurrentExecutionAttribute : JobFilterAttribute, IServerFilter, IElectStateFilter
     {
         private const string LockAcquiredKey = "ShaLockAcquired";
         private const string DistributedLockKey = "DistributedLock";
+
+        private readonly ILog _logger = LogProvider.For<ForwardDisableConcurrentExecutionAttribute>();
 
         public ForwardDisableConcurrentExecutionAttribute()
         {
@@ -32,6 +37,9 @@ namespace Shesha.Scheduler.Attributes
             var jobManager = StaticContext.IocManager.Resolve<IScheduledJobManager>();
 
             var jobType = jobManager.GetJobType(triggerId);
+            
+            if (jobType == null)
+                return;
 
             var jobAttribute = jobType.GetAttribute<ScheduledJobAttribute>();
             if (jobAttribute == null)
@@ -76,6 +84,18 @@ namespace Shesha.Scheduler.Attributes
         private bool IsApplicable(PerformContext filterContext) 
         {
             return filterContext.BackgroundJob.Job.Method.DeclaringType == typeof(ScheduledJobAppService) && filterContext.BackgroundJob.Job.Method.Name == nameof(ScheduledJobAppService.RunTriggerAsync);
+        }
+
+        public void OnStateElection(ElectStateContext context)
+        {
+            var failedState = context.CandidateState as FailedState;
+            if (failedState != null && (failedState.Exception is TriggerDeletedException || failedState.Exception is JobDeletedException))
+            {
+                context.CandidateState = new DeletedState
+                {
+                    Reason = failedState.Exception.Message
+                };
+            }
         }
     }
 }
