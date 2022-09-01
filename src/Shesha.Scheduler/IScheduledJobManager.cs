@@ -1,9 +1,10 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace Shesha.Scheduler
 {
     /// <summary>
-    /// Scheduled jobs manages
+    /// Scheduled jobs manager
     /// </summary>
     public interface IScheduledJobManager
     {
@@ -11,5 +12,12 @@ namespace Shesha.Scheduler
         /// Enqueue all jobs using Hangfire
         /// </summary>
         Task EnqueueAllAsync();
+
+        /// <summary>
+        /// Get job type by trigger Id
+        /// </summary>
+        /// <param name="triggerId">Trigger Id</param>
+        /// <returns></returns>
+        Type GetJobType(Guid triggerId);
     }
 }
