@@ -35,6 +35,48 @@ namespace Shesha.Tests.DynamicEntities
         }
 
         [Fact]
+        public async Task FormField_Test()
+        {
+            LoginAsHostAdmin();
+
+            var repoOrg = Resolve<IRepository<Organisation, Guid>>();
+            var testOrgRepo = Resolve<IRepository<TestOrganisationAllowContactUpdate, Guid>>();
+
+            using (var uow = _unitOfWorkManager.Begin())
+            {
+                var nhuow = uow as NhUnitOfWork;
+                Person newTestPerson1 = null;
+                TestOrganisationAllowContactUpdate newTestOrg1 = null;
+
+                try
+                {
+                    // Child creation is allowed and success
+                    var json1 =
+                        @"{ '_formFields': ['name', 'primaryContact.firstName'], 'name': 'TestOrganisation', 'description': 'TestDescription', 'primaryContact': { 'firstName': 'TestPerson', 'customShortName': 'TestCustomShortName' } }";
+                    var jObject1 = JObject.Parse(json1);
+                    var testErrors1 = new List<ValidationResult>();
+                    newTestOrg1 = new TestOrganisationAllowContactUpdate();
+                    var testResult1 = await _entityModelBinder.BindPropertiesAsync(jObject1, newTestOrg1, testErrors1);
+                    Assert.True(testResult1);
+                    testOrgRepo.Insert(newTestOrg1);
+                    await nhuow.SaveChangesAsync();
+                    newTestOrg1 = testOrgRepo.GetAll().FirstOrDefault(x => x.Name == "TestOrganisation");
+                    newTestPerson1 = _personRepo.GetAll().FirstOrDefault(x => x.FirstName == "TestPerson");
+                    Assert.True(newTestPerson1 != null);
+                    Assert.True(string.IsNullOrEmpty(newTestOrg1.Description));
+                    Assert.True(string.IsNullOrEmpty(newTestPerson1.CustomShortName));
+                }
+                finally
+                {
+                    if (newTestOrg1 != null) testOrgRepo.HardDelete(newTestOrg1);
+                    if (newTestPerson1 != null) _personRepo.HardDelete(newTestPerson1);
+                    await nhuow.SaveChangesAsync();
+                }
+            }
+        }
+
+
+        /*[Fact]
         public void Expression_Test()
         {
             var entityType = Resolve<ITypeFinder>().Find(x => x.Name == "Organisation").FirstOrDefault();
@@ -52,7 +94,7 @@ namespace Shesha.Tests.DynamicEntities
                 var repo = Resolve(repoType);
                 var p3 = (repoType.GetMethod("GetAll")?.Invoke(repo, null) as IQueryable).FirstOrDefault(query);
             }
-        }
+        }*/
 
         [Fact]
         public async Task CascadeRuleEntityFinder_Test()
@@ -262,7 +304,7 @@ namespace Shesha.Tests.DynamicEntities
     {
         public override void VerifyEntity(CascadeRuleEntityFinderInfo<Person, Guid> info, List<ValidationResult> errors)
         {
-            if (string.IsNullOrEmpty(info.NewObject.FirstName)) 
+            if (string.IsNullOrEmpty(info.NewObject.FirstName))
                 errors.Add(new ValidationResult($"`{nameof(Person.FirstName)}` is mandatory"));
         }
 

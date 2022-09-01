@@ -11,6 +11,6 @@ namespace Shesha.DynamicEntities
     public interface IEntityModelBinder
     {
         Task<bool> BindPropertiesAsync(JObject jobject, object entity, List<ValidationResult> validationResult,
-            string propertyName = null);
+            string propertyName = null, List<string> formFields = null);
     }
 }
