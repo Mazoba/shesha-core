@@ -35,6 +35,38 @@ namespace Shesha.Tests.DynamicEntities
         }
 
         [Fact]
+        public async Task RefList_Test()
+        {
+            LoginAsHostAdmin();
+
+            using (var uow = _unitOfWorkManager.Begin())
+            {
+                var nhuow = uow as NhUnitOfWork;
+                TestOrganisationAllowContactUpdate newTestOrg1 = null;
+
+                try
+                {
+                    // Child creation is allowed and success
+                    var json1 =
+                        @"{ 'name': 'TestOrganisation', 'testEnum': [1, 4], 'primaryContact': { 'firstName': 'TestPerson', 'gender': 'Male' } }";
+                    var jObject1 = JObject.Parse(json1);
+                    var testErrors1 = new List<ValidationResult>();
+                    newTestOrg1 = new TestOrganisationAllowContactUpdate();
+                    var testResult1 = await _entityModelBinder.BindPropertiesAsync(jObject1, newTestOrg1, testErrors1);
+                    Assert.True(testResult1);
+                    Assert.True(newTestOrg1.TestEnum == (TestEnum.One | TestEnum.Four));
+                    Assert.True(newTestOrg1.PrimaryContact?.Gender == Domain.Enums.RefListGender.Male);
+                }
+                finally
+                {
+                    /*if (newTestOrg1 != null) testOrgRepo.HardDelete(newTestOrg1);
+                    if (newTestPerson1 != null) _personRepo.HardDelete(newTestPerson1);
+                    await nhuow.SaveChangesAsync();*/
+                }
+            }
+        }
+
+        [Fact]
         public async Task FormField_Test()
         {
             LoginAsHostAdmin();
@@ -74,7 +106,6 @@ namespace Shesha.Tests.DynamicEntities
                 }
             }
         }
-
 
         /*[Fact]
         public void Expression_Test()
@@ -325,5 +356,16 @@ namespace Shesha.Tests.DynamicEntities
     {
         [CascadeUpdateRules(true, true, true, typeof(SimplyFinder))]
         public override Person PrimaryContact { get; set; }
+
+        [MultiValueReferenceList("Test", "TestEnum")]
+        public virtual TestEnum TestEnum { get; set; }
+    }
+
+    [Flags, ReferenceList("Test", "TestEnum")]
+    public enum TestEnum
+    {
+        One = 1,
+        Two = 2,
+        Four = 4
     }
 }

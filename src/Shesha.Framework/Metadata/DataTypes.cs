@@ -24,6 +24,24 @@ namespace Shesha.Metadata
     }
 
     /// <summary>
+    /// Custom array formats
+    /// </summary>
+    public static class ArrayFormats
+    {
+        public const string Guid = "guid";
+        public const string String = "string";
+        public const string Number = "number";
+        public const string Date = "date";
+        public const string Time = "time";
+        public const string DateTime = "date-time";
+        public const string EntityReference = "entity";
+        public const string File = "file";
+        public const string ReferenceListItem = "reference-list-item";
+        public const string Boolean = "boolean";
+        public const string Object = "object";
+    }
+
+    /// <summary>
     /// Custom string formats
     /// </summary>
     public static class StringFormats 

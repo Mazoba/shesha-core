@@ -121,15 +121,75 @@ namespace Shesha.DynamicEntities
                                 case DataTypes.Time:
                                 case DataTypes.DateTime:
                                 case DataTypes.Number:
-                                case DataTypes.ReferenceListItem:
                                 case DataTypes.Boolean:
                                 case DataTypes.Guid:
-                                    //case DataTypes.Enum: // Enum binded as integer
+                                case DataTypes.ReferenceListItem:
+                                //case DataTypes.Enum: // Enum binded as integer
                                     object parsedValue = null;
                                     result = Parser.TryParseToValueType(jproperty.Value.ToString(), property.PropertyType, out parsedValue, isDateOnly: propType.DataType == DataTypes.Date);
                                     if (result)
                                     {
                                         property.SetValue(entity, parsedValue);
+                                    }
+                                    break;
+                                case DataTypes.Array:
+                                    switch (propType.DataFormat)
+                                    {
+                                        case ArrayFormats.ReferenceListItem:
+                                            string[] valComponents;
+                                            if (jproperty.Value is JArray jArray)
+                                            {
+                                                valComponents = jArray.Select(x => x.ToString()).ToArray();
+                                            }
+                                            else
+                                            {
+                                                var propertyValue = jproperty.Value.ToString();
+                                                // Removing the redundant ',' from the hidden element.
+                                                if (propertyValue.EndsWith(",")) propertyValue = propertyValue.Substring(0, propertyValue.Length - 1);
+                                                else if (propertyValue.StartsWith(",")) propertyValue = propertyValue.Substring(1, propertyValue.Length - 1);
+                                                else propertyValue.Replace(",,", ",");
+                                                valComponents = propertyValue.Split(',');
+                                            }
+                                            var totalVal = 0;
+                                            for (int i = 0; i < valComponents.Length; i++)
+                                            {
+                                                if (!string.IsNullOrEmpty(valComponents[i]))
+                                                {
+                                                    int val;
+                                                    if (!int.TryParse(valComponents[i], out val))
+                                                    {
+                                                        // Try parse enum
+                                                        var prop = entity.GetType().GetProperty(propertyName);
+                                                        if (prop != null && prop.PropertyType.IsEnum)
+                                                        {
+                                                            var type = ReflectionHelper.GetUnderlyingTypeIfNullable(prop.PropertyType);
+                                                            object enumVal;
+                                                            try
+                                                            {
+                                                                enumVal = Enum.Parse(type, valComponents[i], true);
+                                                            }
+                                                            catch (Exception e)
+                                                            {
+                                                                validationResult.Add(new ValidationResult($"Value of '{jproperty.Path}' is not valid."));
+                                                                break;
+                                                            }
+                                                            if (enumVal != null)
+                                                            {
+                                                                totalVal += (int)enumVal;
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                        totalVal += val;
+                                                }
+                                            }
+                                            object refValue = null;
+                                            result = Parser.TryParseToValueType(totalVal.ToString(), property.PropertyType, out refValue);
+                                            if (result)
+                                            {
+                                                property.SetValue(entity, refValue);
+                                            }
+                                            break;
                                     }
                                     break;
                                 case DataTypes.Object:
@@ -279,55 +339,6 @@ namespace Shesha.DynamicEntities
                                         }
                                     }
                                     break;
-                                #region // case DataTypes.MultiValueReferenceList:
-                                /*case DataTypes.MultiValueReferenceList:
-                                    var propertyValue = jproperty.Value.ToString();
-                                    // Removing the redundant ',' from the hidden element.
-                                    if (propertyValue.EndsWith(","))
-                                        propertyValue = propertyValue.Substring(0, propertyValue.Length - 1);
-                                    else if (propertyValue.StartsWith(","))
-                                        propertyValue = propertyValue.Substring(1, propertyValue.Length - 1);
-                                    else
-                                        propertyValue.Replace(",,", ",");
-
-                                    // Adding up the selected values to save to the property. (Each individual values should be a bitflag number)
-                                    var valComponents = propertyValue.Split(',');
-                                    var totalVal = 0;
-                                    for (int i = 0; i < valComponents.Length; i++)
-                                    {
-                                        if (!string.IsNullOrEmpty(valComponents[i]))
-                                        {
-                                            int val;
-                                            if (!int.TryParse(valComponents[i], out val))
-                                            {
-                                                // Try parse enum
-                                                var prop = entity.GetType().GetProperty(propertyName);
-                                                if (prop != null && prop.PropertyType.IsEnum)
-                                                {
-                                                    var type = ReflectionHelper.GetUnderlyingTypeIfNullable(prop.PropertyType);
-                                                    object enumVal;
-                                                    try
-                                                    {
-                                                        enumVal = Enum.Parse(type, valComponents[i], true);
-                                                    }
-                                                    catch (Exception e)
-                                                    {
-                                                        validationResult.Add(new ValidationResult($"Value of '{jproperty.Path}' is not valid."));
-                                                        break;
-                                                    }
-                                                    if (enumVal != null)
-                                                    {
-                                                        totalVal += (int)enumVal;
-                                                    }
-                                                }
-                                            }
-                                            else
-                                                totalVal += val;
-                                        }
-                                    }
-                                    result = entity.SetPropertyValue(property, totalVal.ToString());
-                                    break;*/
-                                #endregion
                                 default:
                                     break;
                             }

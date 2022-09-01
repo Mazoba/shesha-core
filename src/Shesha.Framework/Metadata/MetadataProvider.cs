@@ -200,7 +200,7 @@ namespace Shesha.Metadata
                 return new DataTypeInfo(DataTypes.Boolean);
 
             if (propInfo.IsMultiValueReferenceListProperty())
-                return new DataTypeInfo(DataTypes.Array);
+                return new DataTypeInfo(DataTypes.Array, ArrayFormats.ReferenceListItem);
 
             if (propInfo.IsReferenceListProperty())
                 return new DataTypeInfo(DataTypes.ReferenceListItem);
