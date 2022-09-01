@@ -1,5 +1,6 @@
 ﻿using Shesha.ConfigurationItems;
 using Shesha.Domain;
+using Shesha.Domain.Attributes;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
@@ -8,6 +9,7 @@ namespace Shesha.Web.FormsDesigner.Domain
     /// <summary>
     /// Form configuration
     /// </summary>
+    [Entity(TypeShortAlias = "Shesha.Core.FormConfiguration")]
     public class FormConfiguration: ConfigurationItemBase
     {
         /// <summary>

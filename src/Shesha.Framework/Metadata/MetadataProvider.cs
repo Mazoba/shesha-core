@@ -76,7 +76,7 @@ namespace Shesha.Metadata
                 DataType = dataType.DataType,
                 DataFormat = dataType.DataFormat,
                 EntityTypeShortAlias = property.PropertyType.IsEntityType()
-                    ? _entityConfigurationStore.Get(property.PropertyType)?.SafeTypeShortAlias
+                    ? _entityConfigurationStore.Get(property.PropertyType)?.SafeTypeShortAlias ?? property.PropertyType.FullName
                     : null,
                 ReferenceListName = epc?.ReferenceListName,
                 ReferenceListNamespace = epc?.ReferenceListNamespace,
