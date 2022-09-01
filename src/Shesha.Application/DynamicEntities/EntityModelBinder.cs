@@ -31,6 +31,7 @@ using System.Linq.Dynamic.Core;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Abp.Collections.Extensions;
 
 namespace Shesha.DynamicEntities
 {
@@ -64,7 +65,8 @@ namespace Shesha.DynamicEntities
             JObject jobject,
             object entity,
             List<ValidationResult> validationResult,
-            string propertyName = null)
+            string propertyName = null,
+            List<string> formFields = null)
         {
             var properties = entity.GetType().StripCastleProxyType()
                 .GetProperties()
@@ -73,10 +75,28 @@ namespace Shesha.DynamicEntities
 
             validationResult ??= new List<ValidationResult>();
 
-            foreach (var jproperty in jobject.Properties().ToList().Where(x => x.Name != "id"))
+            var formFieldsInternal = formFields;
+            if (formFields == null)
+            {
+                var _formFields = jobject.Property(nameof(IHasFormFieldsList._formFields));
+                var formFieldsArray = _formFields?.Value as JArray;
+                formFieldsInternal = formFieldsArray?.Select(f => f.Value<string>()).ToList() ?? new List<string>();
+            }
+
+            foreach (var jproperty in jobject.Properties().ToList().Where(x => x.Name != "id" && x.Name != nameof(IHasFormFieldsList._formFields)))
             {
                 try
                 {
+                    // Skip property if _formFields is specified and doesn't contain propertyName
+                    if (formFieldsInternal.Any() && !formFieldsInternal.Any(x => x.Equals(jproperty.Name) || x.StartsWith(jproperty.Name + ".")))
+                        continue;
+
+                    var childFormFields = formFieldsInternal
+                        .Where(x => x.Equals(jproperty.Name) || x.StartsWith(jproperty.Name + "."))
+                        .Select(x => x.RemovePrefix(jproperty.Name))
+                        .Select(x => x.RemovePrefix(".")).ToList();
+                    childFormFields = childFormFields.Any() ? childFormFields : null;
+
                     var property = properties.FirstOrDefault(x => x.Name.ToCamelCase() == jproperty.Name);
                     if (property == null && jproperty.Name.EndsWith("Id"))
                     {
@@ -117,7 +137,7 @@ namespace Shesha.DynamicEntities
                                     {
                                         var newObject = Activator.CreateInstance(property.PropertyType);
                                         // create a new object
-                                        if (await BindPropertiesAsync(childSimplyObject, newObject, validationResult, jproperty.Name))
+                                        if (await BindPropertiesAsync(childSimplyObject, newObject, validationResult, jproperty.Name, childFormFields))
                                             property.SetValue(entity, newObject);
                                     }
                                     else
@@ -159,7 +179,7 @@ namespace Shesha.DynamicEntities
                                                     validationResult.Add(new ValidationResult($"`{property.Name}` is not allowed to be updated."));
                                                     break;
                                                 }
-                                                if (!(await BindPropertiesAsync(childObject, newChildEntity, validationResult, jproperty.Name)))
+                                                if (!(await BindPropertiesAsync(childObject, newChildEntity, validationResult, jproperty.Name, childFormFields)))
                                                     break;
                                             }
 
@@ -179,7 +199,7 @@ namespace Shesha.DynamicEntities
                                             {
                                                 var childEntity = Activator.CreateInstance(property.PropertyType);
                                                 // create a new object
-                                                if (!(await BindPropertiesAsync(childObject, childEntity, validationResult, jproperty.Name)))
+                                                if (!(await BindPropertiesAsync(childObject, childEntity, validationResult, jproperty.Name, childFormFields)))
                                                     break;
 
                                                 if (cascadeAttr?.CascadeEntityCreator != null)
@@ -197,7 +217,7 @@ namespace Shesha.DynamicEntities
                                                         var foundEntity = creator.FindEntity(data);
                                                         if (foundEntity != null)
                                                         {
-                                                            if (await BindPropertiesAsync(childObject, foundEntity, validationResult, jproperty.Name))
+                                                            if (await BindPropertiesAsync(childObject, foundEntity, validationResult, jproperty.Name, childFormFields))
                                                                 property.SetValue(entity, foundEntity);
                                                             break;
                                                         }
@@ -395,5 +415,31 @@ namespace Shesha.DynamicEntities
             }
             return false;
         }
+
+        /*private class FormField
+        {
+            public static List<FormField> GetList(JProperty _formFields)
+            {
+                var list = new List<FormField>();
+                var formFieldsArray = _formFields.Value as JArray;
+                var formFields = formFieldsArray.Select(f => f.Value<string>()).ToList();
+                foreach (var formField in formFields)
+                {
+                    var parts = formField.Split(".");
+                    var field = new FormField() { Name = parts[0] };
+                    list.Add(field);
+                    foreach (var part in parts.Skip(1))
+                    {
+                        var hField = new FormField() { Name = part, Parent = field };
+                        field.ch
+                    }
+                }
+                return list;
+            }
+
+            public FormField Parent { get; set; }
+            public string Name { get; set; }
+            public List<FormField> FormFields { get; set; } = new List<FormField>();
+        }*/
     }
 }
