@@ -48,6 +48,7 @@ BEGIN
         SELECT @RetVal = substring(@ConcatenatedList, LEN(@Separator) + 1, len(@ConcatenatedList))
     END
     
+
     RETURN @RetVal
 END           
             ");
